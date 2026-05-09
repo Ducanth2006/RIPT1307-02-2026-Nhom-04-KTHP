@@ -2,6 +2,9 @@
   "name": "7webclothesstore",
   "version": "1.0.0",
   "private": true,
+  "engines": {
+    "node": ">=22.22.2"
+  },
   "workspaces": [
     "frontend",
     "backend"
