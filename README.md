@@ -14,4 +14,4 @@ Bước 2: Cài đặt toàn bộ thư viện (Chỉ cần chạy 1 lệnh ở t
 npm install
 (Lệnh này sẽ tự động cài node_modules cho cả root, frontend và backend nhờ tính năng Workspaces).
 
-Bước 3 Npm run dev ở thư mục gốc và Các thành viên cần vào thư mục backend, sao chép file .env.example và đổi tên thành .env. Tại đây, mỗi người có thể chỉnh sửa các thông số (như cổng PORT hoặc chuỗi kết nối Database) phù hợp với máy cá nhân của họ.
+Bước 3 Npm run dev ở thư mục gốc và Các thành viên làm sau  cần vào thư mục backend, sao chép file .env.example và đổi tên thành .env. Tại đây, mỗi người có thể chỉnh sửa các thông số (như cổng PORT hoặc chuỗi kết nối Database) phù hợp với máy cá nhân của họ.
