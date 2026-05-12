@@ -31,8 +31,8 @@ export const createNewVoucher = async (req: Request, res: Response): Promise<any
         // Đóng gói dữ liệu và ÉP KIỂU THẬT SỰ (Runtime casting)
         const voucherData = {
             code: String(code), // Ép chắc chắn thành chuỗi
-            discount_amount: Number(discountAmount), // Ép chắc chắn thành số
-            usage_limit: usageLimit ? Number(usageLimit) : 100 // Nếu không có thì mặc định 100
+            discount_value: Number(discountAmount), // Đổi thành discount_value theo đúng DB
+            quantity: usageLimit ? Number(usageLimit) : 100 // Đổi thành quantity theo đúng DB
         };
 
         const result = await createVoucher(voucherData);

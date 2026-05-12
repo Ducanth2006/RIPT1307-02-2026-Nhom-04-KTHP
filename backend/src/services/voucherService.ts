@@ -5,7 +5,7 @@ export const fetchAllVouchers = async () => {
     const { data: voucherList, error: fetchError } = await supabaseClient
         .from('vouchers')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('id', { ascending: false });
 
     if (fetchError) {
         console.error("Lỗi khi lấy danh sách voucher:", fetchError);
