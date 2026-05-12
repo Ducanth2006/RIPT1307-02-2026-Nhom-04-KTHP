@@ -1,4 +1,4 @@
-﻿# Sportswear-ecommerce-website
+# Sportswear-ecommerce-website
 
 ## 🚀 Hướng dẫn Cài đặt & Chạy dự án (Quick Start)
 
@@ -14,4 +14,17 @@ Bước 2: Cài đặt toàn bộ thư viện (Chỉ cần chạy 1 lệnh ở t
 npm install
 (Lệnh này sẽ tự động cài node_modules cho cả root, frontend và backend nhờ tính năng Workspaces).
 
-Bước 3 Npm run dev ở thư mục gốc và phần này làm sau Các thành viên   cần vào thư mục backend, sao chép file .env.example và đổi tên thành .env. Tại đây, mỗi người có thể chỉnh sửa các thông số (như cổng PORT hoặc chuỗi kết nối Database) phù hợp với máy cá nhân của họ.
+**Bước 3: Cấu hình biến môi trường (Database) và Chạy Server**
+
+Bạn cần thiết lập file `.env` trước khi khởi chạy Backend. Có thể làm theo 1 trong 2 cách sau:
+- **Cách 1:** Vào thư mục `backend/`, copy file `.env.example` và đổi tên thành `.env`. File này đã chứa sẵn key kết nối Database.
+- **Cách 2:** Tạo file `.env` trong thư mục `backend/` và dán thủ công đoạn code sau vào:
+  ```env
+  SUPABASE_URL=https://roijqlkzkwezvkfckunm.supabase.co
+  SUPABASE_KEY=sb_publishable__WsOnwu4Uj9uW1aGIWMaxQ_DCGjvnAL
+  ```
+
+Sau khi có file `.env`, bạn có thể khởi chạy server bằng lệnh:
+```bash
+npm run dev
+```
