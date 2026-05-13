@@ -3,6 +3,8 @@ import type { Request, Response } from 'express';
 import supabaseClient from './config/supabase';
 import orderRoutes from './routes/orderRoutes';
 import voucherRoutes from './routes/voucherRoutes';
+import customerRoutes from './routes/customerRoutes';
+import dashboardRoutes from './routes/dashboardRoutes';
 
 const app = express();
 const port = 5000;
@@ -31,6 +33,8 @@ app.get('/api/test-db', async (req: Request, res: Response) => {
 // 2. Kích hoạt toàn bộ API Đơn hàng chạy trên đường dẫn /api/admin/orders
 app.use('/api/admin/orders', orderRoutes);
 app.use('/api/admin/vouchers', voucherRoutes);
+app.use('/api/admin/customers', customerRoutes);
+app.use('/api/admin/dashboard', dashboardRoutes);
 
 app.listen(port, () => {
     console.log(`Server is running at http://localhost:${port}`);
