@@ -5,6 +5,7 @@ import orderRoutes from './routes/orderRoutes';
 import voucherRoutes from './routes/voucherRoutes';
 import customerRoutes from './routes/customerRoutes';
 import dashboardRoutes from './routes/dashboardRoutes';
+import productRoutes from './routes/productRoutes';
 
 const app = express();
 const port = 5000;
@@ -35,6 +36,18 @@ app.use('/api/admin/orders', orderRoutes);
 app.use('/api/admin/vouchers', voucherRoutes);
 app.use('/api/admin/customers', customerRoutes);
 app.use('/api/admin/dashboard', dashboardRoutes);
+app.use('/api/admin/products', productRoutes);
+
+// Middleware xử lý lỗi 404 (Route không tồn tại)
+app.use((req: Request, res: Response) => {
+    res.status(404).json({ message: "Đường dẫn không tồn tại (404 Not Found)" });
+});
+
+// Middleware xử lý lỗi tập trung (500 Internal Server Error)
+app.use((err: any, req: Request, res: Response, next: express.NextFunction) => {
+    console.error("🔥 Lỗi hệ thống:", err);
+    res.status(500).json({ message: "Lỗi hệ thống (Internal Server Error)", error: err.message });
+});
 
 app.listen(port, () => {
     console.log(`Server is running at http://localhost:${port}`);
