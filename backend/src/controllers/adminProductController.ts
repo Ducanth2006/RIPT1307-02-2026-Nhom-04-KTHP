@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { fetchAllProducts, createProduct, updateProduct, deleteProductById, fetchProductById } from '../services/productService';
+import { fetchAllProducts, createProduct, updateProduct, deleteProductById, fetchProductById } from '../services/adminProductService';
 
 // Helper function để parse số an toàn, tránh lỗi NaN hoặc chuỗi rỗng ""
 const parseNumberSafe = (value: any): number | null => {
@@ -66,8 +66,7 @@ export const editProduct = async (req: Request, res: Response): Promise<any> => 
     try {
         const id = req.params.id as string;
         const updateData: any = {};
-        
-        // 1. Phải lấy dữ liệu cũ từ DB để so sánh logic chéo (Cross-field Validation)
+
         let existingProduct;
         try {
             existingProduct = await fetchProductById(id);
@@ -75,7 +74,6 @@ export const editProduct = async (req: Request, res: Response): Promise<any> => 
             return res.status(404).json({ message: "Không tìm thấy sản phẩm." });
         }
 
-        // 2. Validate Price an toàn
         if (req.body.price !== undefined) {
             const parsedPrice = parseNumberSafe(req.body.price);
             if (parsedPrice === null || parsedPrice < 0) {
@@ -84,10 +82,9 @@ export const editProduct = async (req: Request, res: Response): Promise<any> => 
             updateData.price = parsedPrice;
         }
 
-        // 3. Validate Discount Price an toàn
         if (req.body.discount_price !== undefined) {
             if (req.body.discount_price === null || req.body.discount_price === "") {
-                updateData.discount_price = null; // Cho phép xoá giá giảm
+                updateData.discount_price = null;
             } else {
                 const parsedDiscount = parseNumberSafe(req.body.discount_price);
                 if (parsedDiscount === null || parsedDiscount < 0) {
@@ -97,7 +94,6 @@ export const editProduct = async (req: Request, res: Response): Promise<any> => 
             }
         }
 
-        // 4. Kiểm tra Logic Giá chéo (Sử dụng giá mới hoặc rơi lại giá DB cũ)
         const finalPrice = updateData.price !== undefined ? updateData.price : existingProduct.price;
         const finalDiscount = updateData.discount_price !== undefined ? updateData.discount_price : existingProduct.discount_price;
 
@@ -105,7 +101,6 @@ export const editProduct = async (req: Request, res: Response): Promise<any> => 
             return res.status(400).json({ message: "Giá giảm phải nhỏ hơn Giá gốc." });
         }
 
-        // 5. Validate Stock an toàn
         if (req.body.stock !== undefined) {
             const parsedStock = parseNumberSafe(req.body.stock);
             if (parsedStock === null || parsedStock < 0) {
@@ -113,15 +108,13 @@ export const editProduct = async (req: Request, res: Response): Promise<any> => 
             }
             updateData.stock = parsedStock;
         }
-        
-        // 6. Cập nhật các trường Text bình thường
+
         if (req.body.name !== undefined) updateData.name = String(req.body.name).trim();
         if (req.body.description !== undefined) updateData.description = String(req.body.description).trim();
         if (req.body.category_id !== undefined) updateData.category_id = req.body.category_id || null;
         if (req.body.image_url !== undefined) updateData.image_url = String(req.body.image_url).trim();
         if (req.body.status !== undefined) updateData.status = req.body.status;
 
-        // Bỏ qua update nếu không có trường nào thay đổi
         if (Object.keys(updateData).length === 0) {
             return res.status(400).json({ message: "Không có dữ liệu hợp lệ để cập nhật." });
         }
