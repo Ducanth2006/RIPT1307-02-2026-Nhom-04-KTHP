@@ -17,12 +17,11 @@ export const fetchAllVouchers = async () => {
 
 // Tạo một voucher mới
 export const createVoucher = async (voucherData: any) => {
-    // Dùng hàm .insert() của Supabase để thêm dữ liệu mới
     const { data: newVoucher, error: insertError } = await supabaseClient
         .from('vouchers')
         .insert([voucherData])
         .select()
-        .single(); // Trả về đúng object vừa tạo
+        .single();
 
     if (insertError) {
         console.error("Lỗi khi tạo voucher mới:", insertError);
