@@ -1,4 +1,16 @@
 # Sportswear-ecommerce-website
+Tôi mới tích hợp tài liệu Swagger vào dự án tại: http://localhost:5000/api/docs/client  (nhớ cài thư viện và npm run dev ms chạy đc nha)
+nơi chứa toàn bộ API public của dự án; API admin chưa có chỉ có client thôi.
+
+## ⚠️ thư viện cần cài thêm cài trên thư mục chính luôn cũng được 
+Lệnh cài thư viện supabase 
+```bash
+npm install @supabase/supabase-js
+```
+Lệnh cài thư viện Swagger
+```bash
+npm install swagger-ui-express swagger-jsdoc
+```
 
 ## 🚀 Hướng dẫn Cài đặt & Chạy dự án (Quick Start)
 
