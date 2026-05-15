@@ -1,4 +1,16 @@
-﻿# Sportswear-ecommerce-website
+# Sportswear-ecommerce-website
+Tôi mới tích hợp tài liệu Swagger vào dự án tại: http://localhost:5000/api/docs/client  (nhớ cài thư viện và npm run dev ms chạy đc nha)
+nơi chứa toàn bộ API public của dự án; API admin chưa có chỉ có client thôi.
+
+## ⚠️ thư viện cần cài thêm cài trên thư mục chính luôn cũng được 
+Lệnh cài thư viện supabase 
+```bash
+npm install @supabase/supabase-js
+```
+Lệnh cài thư viện Swagger
+```bash
+npm install swagger-ui-express swagger-jsdoc
+```
 
 ## 🚀 Hướng dẫn Cài đặt & Chạy dự án (Quick Start)
 
@@ -10,8 +22,15 @@ Chỉ với 3 bước, bạn đã có thể khởi chạy toàn bộ hệ thốn
 
 **Bước 1: Clone code về máy**
 
-Bước 2: Cài đặt toàn bộ thư viện (Chỉ cần chạy 1 lệnh ở thư mục gốc)
+**Bước 2: Cài đặt toàn bộ thư viện (Chỉ cần chạy 1 lệnh ở thư mục gốc)**
+```bash
 npm install
+```
 (Lệnh này sẽ tự động cài node_modules cho cả root, frontend và backend nhờ tính năng Workspaces).
 
-Bước 3 Npm run dev ở thư mục gốc và phần này làm sau Các thành viên   cần vào thư mục backend, sao chép file .env.example và đổi tên thành .env. Tại đây, mỗi người có thể chỉnh sửa các thông số (như cổng PORT hoặc chuỗi kết nối Database) phù hợp với máy cá nhân của họ.
+**Bước 3: Khởi chạy Server**
+
+Do dự án đã cấu hình sẵn file `.env` kết nối Database, giảng viên không cần thao tác tạo mới hay điền key. Chỉ cần chạy lệnh sau tại thư mục gốc:
+```bash
+npm run dev
+```

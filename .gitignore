@@ -8,7 +8,7 @@ frontend/dist/
 backend/dist/
 
 # Môi trường
-.env
+# .env (Đã mở khóa để nộp bài tập lớn)
 *.env.local
 !.env.example
 
