@@ -1,20 +1,10 @@
 import type { Request, Response } from 'express';
-import { fetchAllProducts, createProduct, updateProduct, deleteProductById, fetchProductById } from '../services/adminProductService';
-
-// Helper function để parse số an toàn, tránh lỗi NaN hoặc chuỗi rỗng ""
-const parseNumberSafe = (value: any): number | null => {
-    if (value === undefined || value === null || value === '') return null;
-    const num = Number(value);
-    return isNaN(num) ? null : num;
-};
+import { fetchAllProducts, createProductWithDetails, deleteProductById } from '../services/adminProductService';
 
 export const getProducts = async (req: Request, res: Response) => {
     try {
         const data = await fetchAllProducts();
-        res.status(200).json({
-            message: "Lấy danh sách sản phẩm thành công!",
-            data: data
-        });
+        res.status(200).json({ message: "Lấy danh sách sản phẩm thành công!", data });
     } catch (error) {
         res.status(500).json({ message: "Lỗi hệ thống khi tải sản phẩm.", errorDetails: error });
     }
@@ -22,116 +12,68 @@ export const getProducts = async (req: Request, res: Response) => {
 
 export const addProduct = async (req: Request, res: Response): Promise<any> => {
     try {
-        const { name, price, discount_price, description, stock, category_id, image_url, status } = req.body;
+        const { name, description, category_id, base_price, status, variants, images } = req.body;
 
+        // ── Validate dữ liệu bắt buộc ──
         if (!name || !String(name).trim()) {
             return res.status(400).json({ message: "Tên sản phẩm là bắt buộc." });
         }
-
-        const numericPrice = parseNumberSafe(price);
-        if (numericPrice === null) {
-            return res.status(400).json({ message: "Giá gốc (price) không hợp lệ hoặc bị thiếu." });
+        if (base_price === undefined || base_price === null || base_price === '') {
+            return res.status(400).json({ message: "Giá cơ bản (base_price) là bắt buộc." });
         }
 
-        const numericDiscount = parseNumberSafe(discount_price);
-        const numericStock = parseNumberSafe(stock) ?? 0;
-
-        if (numericPrice < 0 || numericStock < 0) {
-            return res.status(400).json({ message: "Giá sản phẩm và Số lượng kho không được là số âm." });
+        const numericBasePrice = Number(base_price);
+        // Fix BUG #3: isNaN bắt trường hợp "abc" → NaN
+        if (isNaN(numericBasePrice) || numericBasePrice <= 0) {
+            return res.status(400).json({ message: "Giá cơ bản (base_price) phải là số dương lớn hơn 0." });
         }
 
-        if (numericDiscount !== null && numericDiscount >= numericPrice) {
-            return res.status(400).json({ message: "Giá giảm (discount_price) phải nhỏ hơn Giá gốc (price)." });
-        }
-
+        // ── Đóng gói thông tin sản phẩm chính ──
         const productData = {
             name: String(name).trim(),
-            description: description ? String(description).trim() : '',
-            price: numericPrice,
-            discount_price: numericDiscount,
-            stock: numericStock,
-            category_id: category_id || null,
-            image_url: image_url ? String(image_url).trim() : '',
+            description: description ? String(description).trim() : null,
+            category_id: category_id ? Number(category_id) : null,
+            base_price: numericBasePrice,
             status: status || 'Active'
         };
 
-        const result = await createProduct(productData);
-        res.status(201).json({ message: "Thêm sản phẩm mới thành công!", data: result });
-    } catch (error) {
+        // ── Chuẩn hóa dữ liệu Biến thể (Variants) ──
+        const cleanVariants = Array.isArray(variants) ? variants.map((v: any, index: number) => ({
+            // Fix BUG #5: Thêm index vào SKU tự tạo để tránh trùng
+            sku: v.sku ? String(v.sku).trim() : `AUTO-${Date.now()}-${index}`,
+            size: v.size ? String(v.size).trim() : null,
+            color: v.color ? String(v.color).trim() : null,
+            // Fix BUG #4: Dùng ?? (nullish coalescing) thay vì || để giá 0 không bị fallback
+            price: (v.price !== undefined && v.price !== null) ? Number(v.price) : numericBasePrice,
+            stock_quantity: Number(v.stock_quantity ?? 0)
+        })) : [];
+
+        // ── Chuẩn hóa dữ liệu Hình ảnh ──
+        const cleanImages = Array.isArray(images) ? images.map((img: any) => ({
+            image_url: String(img.image_url).trim(),
+            is_main: Boolean(img.is_main)
+        })) : [];
+
+        const result = await createProductWithDetails(productData, cleanVariants, cleanImages);
+        res.status(201).json({ message: "Thêm sản phẩm tích hợp thành công!", data: result });
+    } catch (error: any) {
+        // Bắt lỗi rollback từ Service
+        if (error?.code === 'VARIANT_FAILED' || error?.code === 'IMAGE_FAILED') {
+            return res.status(500).json({ message: error.message, errorDetails: error.details });
+        }
         res.status(500).json({ message: "Lỗi hệ thống khi thêm sản phẩm.", errorDetails: error });
     }
 };
 
-export const editProduct = async (req: Request, res: Response): Promise<any> => {
+export const removeProduct = async (req: Request, res: Response): Promise<any> => {
     try {
-        const id = req.params.id as string;
-        const updateData: any = {};
+        const id = Number(req.params.id);
+        if (isNaN(id)) return res.status(400).json({ message: "ID sản phẩm không hợp lệ." });
 
-        let existingProduct;
-        try {
-            existingProduct = await fetchProductById(id);
-        } catch (err) {
-            return res.status(404).json({ message: "Không tìm thấy sản phẩm." });
-        }
-
-        if (req.body.price !== undefined) {
-            const parsedPrice = parseNumberSafe(req.body.price);
-            if (parsedPrice === null || parsedPrice < 0) {
-                return res.status(400).json({ message: "Giá gốc không hợp lệ hoặc bị âm." });
-            }
-            updateData.price = parsedPrice;
-        }
-
-        if (req.body.discount_price !== undefined) {
-            if (req.body.discount_price === null || req.body.discount_price === "") {
-                updateData.discount_price = null;
-            } else {
-                const parsedDiscount = parseNumberSafe(req.body.discount_price);
-                if (parsedDiscount === null || parsedDiscount < 0) {
-                    return res.status(400).json({ message: "Giá giảm không hợp lệ hoặc bị âm." });
-                }
-                updateData.discount_price = parsedDiscount;
-            }
-        }
-
-        const finalPrice = updateData.price !== undefined ? updateData.price : existingProduct.price;
-        const finalDiscount = updateData.discount_price !== undefined ? updateData.discount_price : existingProduct.discount_price;
-
-        if (finalDiscount !== null && finalDiscount >= finalPrice) {
-            return res.status(400).json({ message: "Giá giảm phải nhỏ hơn Giá gốc." });
-        }
-
-        if (req.body.stock !== undefined) {
-            const parsedStock = parseNumberSafe(req.body.stock);
-            if (parsedStock === null || parsedStock < 0) {
-                return res.status(400).json({ message: "Kho hàng không hợp lệ hoặc bị âm." });
-            }
-            updateData.stock = parsedStock;
-        }
-
-        if (req.body.name !== undefined) updateData.name = String(req.body.name).trim();
-        if (req.body.description !== undefined) updateData.description = String(req.body.description).trim();
-        if (req.body.category_id !== undefined) updateData.category_id = req.body.category_id || null;
-        if (req.body.image_url !== undefined) updateData.image_url = String(req.body.image_url).trim();
-        if (req.body.status !== undefined) updateData.status = req.body.status;
-
-        if (Object.keys(updateData).length === 0) {
-            return res.status(400).json({ message: "Không có dữ liệu hợp lệ để cập nhật." });
-        }
-
-        const result = await updateProduct(id, updateData);
-        res.status(200).json({ message: "Cập nhật sản phẩm thành công!", data: result });
-    } catch (error) {
-        res.status(500).json({ message: "Lỗi hệ thống khi cập nhật sản phẩm.", errorDetails: error });
-    }
-};
-
-export const removeProduct = async (req: Request, res: Response) => {
-    try {
-        const id = req.params.id as string;
         await deleteProductById(id);
-        res.status(200).json({ message: "Đã xóa sản phẩm thành công!" });
-    } catch (error) {
+        res.status(200).json({ message: "Đã xóa sản phẩm và toàn bộ biến thể, hình ảnh thành công!" });
+    } catch (error: any) {
+        if (error?.code === 'NOT_FOUND') return res.status(404).json({ message: "Sản phẩm không tồn tại." });
         res.status(500).json({ message: "Lỗi hệ thống khi xóa sản phẩm.", errorDetails: error });
     }
 };
