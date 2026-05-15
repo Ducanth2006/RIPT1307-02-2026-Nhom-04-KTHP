@@ -10,6 +10,7 @@ import adminOrderRoutes from './routes/adminOrderRoutes';
 import adminCustomerRoutes from './routes/adminCustomerRoutes';
 import adminVoucherRoutes from './routes/adminVoucherRoutes';
 import adminDashboardRoutes from './routes/adminDashboardRoutes';
+import adminCategoryRoutes from './routes/adminCategoryRoutes';
 
 // ── Client Routes (Khách mua hàng) ────────────────────────────
 import clientProductRoutes from './routes/clientProductRoutes';
@@ -59,6 +60,7 @@ app.use('/api/admin/orders', adminOrderRoutes);
 app.use('/api/admin/customers', adminCustomerRoutes);
 app.use('/api/admin/vouchers', adminVoucherRoutes);
 app.use('/api/admin/dashboard', adminDashboardRoutes);
+app.use('/api/admin/categories', adminCategoryRoutes);
 
 // =============================================================
 // 🛍️ CLIENT APIs - Dành cho giao diện Khách mua hàng
@@ -84,4 +86,4 @@ app.listen(port, () => {
     console.log(`✅ Server đang chạy tại: http://localhost:${port}`);
     console.log(`📚 Swagger Admin:  http://localhost:${port}/api/docs/admin`);
     console.log(`📚 Swagger Client: http://localhost:${port}/api/docs/client`);
-});
+});
