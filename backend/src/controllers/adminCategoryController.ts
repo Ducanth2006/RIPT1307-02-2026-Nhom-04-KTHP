@@ -38,7 +38,7 @@ export const addCategory = async (req: Request, res: Response): Promise<any> => 
     } catch (error: any) {
         // Bắt lỗi trùng slug từ Supabase (Mã lỗi 23505) — 409 Conflict đúng chuẩn HTTP
         if (error?.code === '23505') {
-            return res.status(409).json({ message: `Slug "${categoryData.slug}" đã tồn tại. Hãy đổi tên hoặc truyền slug khác.` });
+            return res.status(409).json({ message: "Slug (đường dẫn) đã tồn tại. Hãy đổi tên hoặc truyền slug khác." });
         }
         res.status(500).json({ message: "Lỗi khi thêm danh mục.", errorDetails: error });
     }
