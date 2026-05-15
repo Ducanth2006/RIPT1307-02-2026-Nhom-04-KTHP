@@ -1,24 +1,92 @@
 import { Router } from 'express';
-import { getProducts, addProduct, editProduct, removeProduct } from '../controllers/adminProductController';
+import { getProducts, addProduct, removeProduct } from '../controllers/adminProductController';
 
 const router = Router();
 
 /**
  * @swagger
  * tags:
- *   name: "[Admin] Products"
- *   description: API Quản lý Sản phẩm (Dành cho Admin)
+ *   - name: "[Admin] Products"
+ *     description: API Quản lý Sản phẩm đa phân loại (Dành cho Admin)
+ */
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     ProductPayload:
+ *       type: object
+ *       required:
+ *         - name
+ *         - base_price
+ *       properties:
+ *         name:
+ *           type: string
+ *           description: Tên sản phẩm chung
+ *           example: "Giày Chạy Bộ Nike Air Pegasus"
+ *         description:
+ *           type: string
+ *           example: "Giày chạy bộ chuyên nghiệp, siêu nhẹ"
+ *         category_id:
+ *           type: integer
+ *           description: ID của danh mục (Từ bảng Categories)
+ *           example: 5
+ *         base_price:
+ *           type: number
+ *           description: Giá cơ bản của sản phẩm
+ *           example: 2500000
+ *         status:
+ *           type: string
+ *           enum: [Active, Hidden]
+ *           example: "Active"
+ *         variants:
+ *           type: array
+ *           description: Danh sách các phân loại (size, màu) của sản phẩm
+ *           items:
+ *             type: object
+ *             properties:
+ *               sku:
+ *                 type: string
+ *                 description: Mã SKU (tự tạo nếu để trống)
+ *                 example: "NK-PEG-42-RED"
+ *               size:
+ *                 type: string
+ *                 example: "42"
+ *               color:
+ *                 type: string
+ *                 example: "Đỏ"
+ *               price:
+ *                 type: number
+ *                 description: Giá biến thể (mặc định lấy base_price nếu để trống)
+ *                 example: 2500000
+ *               stock_quantity:
+ *                 type: integer
+ *                 example: 50
+ *         images:
+ *           type: array
+ *           description: Danh sách link ảnh sản phẩm
+ *           items:
+ *             type: object
+ *             properties:
+ *               image_url:
+ *                 type: string
+ *                 example: "https://example.com/nike-red.jpg"
+ *               is_main:
+ *                 type: boolean
+ *                 example: true
  */
 
 /**
  * @swagger
  * /admin/products:
  *   get:
- *     summary: Lấy danh sách toàn bộ sản phẩm
+ *     summary: Lấy danh sách toàn bộ sản phẩm (kèm biến thể, hình ảnh và danh mục)
  *     tags: ["[Admin] Products"]
  *     responses:
  *       200:
- *         description: Danh sách sản phẩm lấy thành công
+ *         description: Trả về danh sách sản phẩm siêu chi tiết
+ *       500:
+ *         description: Lỗi hệ thống
  */
 router.get('/', getProducts);
 
@@ -26,123 +94,44 @@ router.get('/', getProducts);
  * @swagger
  * /admin/products:
  *   post:
- *     summary: Thêm sản phẩm mới vào Database
+ *     summary: Thêm mới một sản phẩm tích hợp (Lưu cùng lúc 3 bảng — có Rollback)
  *     tags: ["[Admin] Products"]
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             required:
- *               - name
- *               - price
- *             properties:
- *               name:
- *                 type: string
- *                 description: Tên sản phẩm (bắt buộc)
- *                 example: "Áo thun thể thao nam ProSports"
- *               price:
- *                 type: number
- *                 description: Giá gốc (bắt buộc, không được âm)
- *                 example: 350000
- *               discount_price:
- *                 type: number
- *                 description: Giá sau khi giảm (phải nhỏ hơn giá gốc)
- *                 example: 299000
- *               description:
- *                 type: string
- *                 description: Mô tả chi tiết sản phẩm
- *                 example: "Chất liệu Dri-FIT, thấm hút tốt"
- *               stock:
- *                 type: integer
- *                 description: Số lượng tồn kho
- *                 example: 150
- *               category_id:
- *                 type: string
- *                 description: ID danh mục sản phẩm
- *                 example: "uuid-category-001"
- *               image_url:
- *                 type: string
- *                 description: Đường dẫn ảnh sản phẩm
- *                 example: "https://example.com/images/ao-the-thao.jpg"
- *               status:
- *                 type: string
- *                 enum: [Active, Hidden]
- *                 description: Trạng thái hiển thị (mặc định là Active)
- *                 example: "Active"
+ *             $ref: '#/components/schemas/ProductPayload'
  *     responses:
  *       201:
- *         description: Thêm sản phẩm thành công
+ *         description: Thêm thành công (sản phẩm + biến thể + hình ảnh)
  *       400:
- *         description: Dữ liệu không hợp lệ (thiếu tên, giá âm, v.v.)
+ *         description: Thiếu dữ liệu bắt buộc hoặc sai định dạng
+ *       500:
+ *         description: Lỗi hệ thống hoặc Rollback do thêm biến thể/ảnh thất bại
  */
 router.post('/', addProduct);
 
 /**
  * @swagger
  * /admin/products/{id}:
- *   patch:
- *     summary: Cập nhật thông tin một sản phẩm
- *     tags: ["[Admin] Products"]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: ID của sản phẩm cần cập nhật
- *         example: "uuid-product-001"
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               name:
- *                 type: string
- *                 example: "Áo thun ProSports V2"
- *               price:
- *                 type: number
- *                 example: 380000
- *               discount_price:
- *                 type: number
- *                 example: 320000
- *               stock:
- *                 type: integer
- *                 example: 200
- *               status:
- *                 type: string
- *                 enum: [Active, Hidden]
- *                 example: "Hidden"
- *     responses:
- *       200:
- *         description: Cập nhật thành công
- *       400:
- *         description: Dữ liệu không hợp lệ
- *       404:
- *         description: Không tìm thấy sản phẩm
- */
-router.patch('/:id', editProduct);
-
-/**
- * @swagger
- * /admin/products/{id}:
  *   delete:
- *     summary: Xóa một sản phẩm khỏi hệ thống
+ *     summary: Xóa một sản phẩm (CASCADE xóa luôn biến thể và ảnh)
  *     tags: ["[Admin] Products"]
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
  *         schema:
- *           type: string
+ *           type: integer
  *         description: ID của sản phẩm cần xóa
- *         example: "uuid-product-001"
  *     responses:
  *       200:
- *         description: Xóa sản phẩm thành công
+ *         description: Xóa thành công
+ *       404:
+ *         description: Sản phẩm không tồn tại
+ *       400:
+ *         description: ID không hợp lệ
  *       500:
  *         description: Lỗi hệ thống
  */
