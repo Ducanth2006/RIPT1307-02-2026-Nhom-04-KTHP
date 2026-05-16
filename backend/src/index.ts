@@ -68,10 +68,12 @@ app.use('/api/admin/inventory', adminInventoryRoutes);
 // =============================================================
 // 🛍️ CLIENT APIs - Dành cho giao diện Khách mua hàng
 // =============================================================
+import clientOrderRoutes from './routes/clientOrderRoutes';
+
 app.use('/api/products', clientProductRoutes);
 app.use('/api/categories', clientCategoryRoutes);
 app.use('/api/cart', clientCartRoutes);
-
+app.use('/api/orders', clientOrderRoutes);
 
 // =============================================================
 // ❌ XỬ LÝ LỖI TẬP TRUNG

@@ -30,7 +30,13 @@ const router = Router();
  *         description: Thiếu userId
  *       500:
  *         description: Lỗi hệ thống
- * 
+ */
+router.route('/')
+    .get(getCart);
+
+/**
+ * @swagger
+ * /cart/items:
  *   post:
  *     summary: Thêm sản phẩm vào giỏ hàng (Public)
  *     description: Thêm một biến thể sản phẩm (variant) vào giỏ hàng của user. Nếu đã có, hệ thống sẽ cộng dồn số lượng.
@@ -60,13 +66,12 @@ const router = Router();
  *       500:
  *         description: Lỗi hệ thống
  */
-router.route('/')
-    .get(getCart)
+router.route('/items')
     .post(addToCart);
 
 /**
  * @swagger
- * /cart/{itemId}:
+ * /cart/items/{itemId}:
  *   put:
  *     summary: Cập nhật số lượng sản phẩm trong giỏ (Public)
  *     tags: [Client Cart]
@@ -114,7 +119,7 @@ router.route('/')
  *       500:
  *         description: Lỗi hệ thống
  */
-router.route('/:itemId')
+router.route('/items/:itemId')
     .put(updateCartItem)
     .delete(removeFromCart);
 

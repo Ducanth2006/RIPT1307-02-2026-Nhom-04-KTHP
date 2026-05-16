@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { 
+import {
     validateAndApplyVoucher,
     getCartByUserId,
     addItemToCart,
@@ -33,9 +33,8 @@ export const applyVoucher = async (req: Request, res: Response): Promise<any> =>
     }
 };
 
-// -------------------------------------------------------------
 // CART CRUD CONTROLLERS
-// -------------------------------------------------------------
+
 
 export const getCart = async (req: Request, res: Response): Promise<any> => {
     try {
@@ -58,7 +57,7 @@ export const getCart = async (req: Request, res: Response): Promise<any> => {
 export const addToCart = async (req: Request, res: Response): Promise<any> => {
     try {
         const { userId, variantId, quantity } = req.body;
-        
+
         if (!userId || !variantId || !quantity) {
             return res.status(400).json({ message: "Vui lòng cung cấp đầy đủ userId, variantId và quantity." });
         }
