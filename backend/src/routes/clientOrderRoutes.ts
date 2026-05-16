@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createOrder, getOrders } from '../controllers/clientOrderController';
+import { createOrder, getOrders, getOrderById } from '../controllers/clientOrderController';
 
 const router = Router();
 
@@ -59,20 +59,6 @@ const router = Router();
  *     responses:
  *       201:
  *         description: Đặt hàng thành công
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Đặt hàng thành công!"
- *                 executionTime:
- *                   type: string
- *                   example: "500.00 ms"
- *                 data:
- *                   type: object
- *                   description: Chi tiết order vừa tạo
  *       400:
  *         description: Lỗi dữ liệu đầu vào hoặc hết hàng
  *       401:
@@ -83,5 +69,37 @@ const router = Router();
 router.route('/')
     .get(getOrders)
     .post(createOrder);
+
+/**
+ * @swagger
+ * /orders/{id}:
+ *   get:
+ *     summary: Xem chi tiết lộ trình và trạng thái đơn hàng (Public)
+ *     description: Lấy chi tiết thông tin của 1 đơn hàng cụ thể, bao gồm danh sách sản phẩm, trạng thái xử lý, và thông tin thanh toán.
+ *     tags: [Client Orders]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID của đơn hàng
+ *       - in: query
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID của khách hàng (để xác thực quyền sở hữu)
+ *     responses:
+ *       200:
+ *         description: Lấy dữ liệu thành công
+ *       401:
+ *         description: Thiếu userId
+ *       404:
+ *         description: Không tìm thấy đơn hàng hoặc không có quyền truy cập
+ *       500:
+ *         description: Lỗi hệ thống
+ */
+router.get('/:id', getOrderById);
 
 export default router;
