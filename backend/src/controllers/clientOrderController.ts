@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { checkoutOrder } from '../services/clientOrderService';
+import { checkoutOrder, getUserOrders } from '../services/clientOrderService';
 
 export const createOrder = async (req: Request, res: Response): Promise<any> => {
     // Bắt đầu đếm thời gian thực thi (Performance tracking)
@@ -49,5 +49,24 @@ export const createOrder = async (req: Request, res: Response): Promise<any> => 
             message: error.message || "Đã xảy ra lỗi trong quá trình đặt hàng.",
             executionTime: `${executionTimeMs} ms`
         });
+    }
+};
+
+export const getOrders = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const userId = req.query.userId;
+        if (!userId) {
+            return res.status(401).json({ message: "Vui lòng cung cấp userId để xem lịch sử đơn hàng." });
+        }
+
+        const orders = await getUserOrders(Number(userId));
+        
+        return res.status(200).json({
+            message: "Lấy lịch sử đơn hàng thành công",
+            data: orders
+        });
+    } catch (error: any) {
+        console.error("Lỗi getOrders:", error);
+        return res.status(500).json({ message: error.message || "Lỗi hệ thống khi lấy lịch sử đơn hàng." });
     }
 };
