@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { checkoutOrder, getUserOrders } from '../services/clientOrderService';
+import { checkoutOrder, getUserOrders, getOrderDetails } from '../services/clientOrderService';
 
 export const createOrder = async (req: Request, res: Response): Promise<any> => {
     // Bắt đầu đếm thời gian thực thi (Performance tracking)
@@ -68,5 +68,29 @@ export const getOrders = async (req: Request, res: Response): Promise<any> => {
     } catch (error: any) {
         console.error("Lỗi getOrders:", error);
         return res.status(500).json({ message: error.message || "Lỗi hệ thống khi lấy lịch sử đơn hàng." });
+    }
+};
+
+export const getOrderById = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const orderId = req.params.id;
+        const userId = req.query.userId; // Dùng req.user.id nếu có middleware sau này
+
+        if (!orderId || isNaN(Number(orderId))) {
+            return res.status(400).json({ message: "Mã đơn hàng không hợp lệ." });
+        }
+        if (!userId) {
+            return res.status(401).json({ message: "Vui lòng cung cấp userId để xem chi tiết đơn hàng." });
+        }
+
+        const orderDetails = await getOrderDetails(Number(orderId), Number(userId));
+        
+        return res.status(200).json({
+            message: "Lấy chi tiết đơn hàng thành công",
+            data: orderDetails
+        });
+    } catch (error: any) {
+        console.error("Lỗi getOrderById:", error);
+        return res.status(404).json({ message: error.message || "Không tìm thấy đơn hàng." });
     }
 };
