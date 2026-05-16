@@ -1,3 +1,8 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 @import "antd/dist/reset.css";
 @import "tailwindcss";
 
@@ -11,8 +16,6 @@ body {
 #root {
   min-height: 100vh;
 }
-
-@import "tailwindcss";
 
 @layer utilities {
   .custom-scrollbar::-webkit-scrollbar {

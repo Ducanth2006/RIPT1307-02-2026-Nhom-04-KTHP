@@ -1,40 +1,38 @@
 {
   "name": "react-example",
   "private": true,
-  "version": "0.0.0",
-  "type": "module",
+  "version": "1.0.0",
+  "type": "commonjs",
+  "description": "",
+  "main": "index.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
   "workspaces": [
     "frontend",
     "backend"
   ],
   "scripts": {
     "install-all": "npm install",
-    "dev": "concurrently \"npm run dev --workspace=backend\" \"npm run dev --workspace=frontend\""
+    "dev": "concurrently \"npm run dev --workspace=backend\" \"npm run dev --workspace=frontend\"",
+    "build": "tsc"
   },
+
   "dependencies": {
-    "@ant-design/icons": "^6.2.2",
-    "@google/genai": "^1.29.0",
-    "@tailwindcss/vite": "^4.1.14",
-    "@vitejs/plugin-react": "^5.0.4",
-    "antd": "^6.3.7",
-    "dotenv": "^17.2.3",
-    "express": "^4.21.2",
-    "lucide-react": "^0.546.0",
-    "motion": "^12.23.24",
-    "react": "^19.0.1",
-    "react-dom": "^19.0.1",
-    "react-router-dom": "^7.15.0",
-    "recharts": "^3.8.1",
-    "vite": "^6.2.3"
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1"
   },
   "devDependencies": {
-    "@types/express": "^4.17.21",
-    "@types/node": "^22.14.0",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.6.2",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^6.0.3",
     "autoprefixer": "^10.5.0",
     "concurrently": "^8.2.2",
     "postcss": "^8.5.14",
     "tailwindcss": "^4.3.0",
-    "tsx": "^4.21.0",
-    "typescript": "~5.8.2"
+    "tsx": "^4.21.0"
   }
 }
