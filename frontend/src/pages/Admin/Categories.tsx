@@ -91,19 +91,9 @@ export default function Categories() {
     }
   };
 
-  // Computed flat list for dropdown parent selection
-  const flatCategories = useMemo(() => {
-    const result: { label: string; value: number }[] = [];
-    const traverse = (cats: Category[], prefix = '') => {
-      cats.forEach(c => {
-        result.push({ label: prefix + c.name, value: c.id });
-        if (c.children) {
-          traverse(c.children, prefix + '-- ');
-        }
-      });
-    };
-    traverse(categories);
-    return result;
+  // Chỉ hiển thị các danh mục gốc (không có parent_id) trong dropdown
+  const parentCategoryOptions = useMemo(() => {
+    return categories.map(c => ({ label: c.name, value: c.id }));
   }, [categories]);
 
   // Filtering
@@ -411,7 +401,7 @@ export default function Categories() {
               <Select 
                 allowClear
                 placeholder="Làm danh mục gốc"
-                options={flatCategories.filter(c => c.value !== editingCategory?.id)}
+                options={parentCategoryOptions.filter(c => c.value !== editingCategory?.id)}
               />
             </Form.Item>
 
