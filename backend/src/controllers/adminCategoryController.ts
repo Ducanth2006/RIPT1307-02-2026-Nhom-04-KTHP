@@ -1,6 +1,5 @@
 import type { Request, Response } from 'express';
-import { fetchAllCategories, createCategory, updateCategory, deleteCategoryById } from '../services/adminCategoryService';
-
+import { fetchAllCategories, createCategory, updateCategory, deleteCategoryById, fetchCategoryStats } from '../services/adminCategoryService';
 // Hàm tự động tạo slug (Ví dụ: "Áo Nam" -> "ao-nam")
 const generateSlug = (text: string) => {
     return text.toString().toLowerCase()
@@ -38,7 +37,7 @@ export const addCategory = async (req: Request, res: Response): Promise<any> => 
     } catch (error: any) {
         // Bắt lỗi trùng slug từ Supabase (Mã lỗi 23505) — 409 Conflict đúng chuẩn HTTP
         if (error?.code === '23505') {
-            return res.status(409).json({ message: "Slug (đường dẫn) đã tồn tại. Hãy đổi tên hoặc truyền slug khác." });
+            return res.status(409).json({ message: "Slug (đường dẫn) đã tồn tại. Hãy đổi tên hoặc truyền slug khác.", errorDetails: error });
         }
         res.status(500).json({ message: "Lỗi khi thêm danh mục.", errorDetails: error });
     }
@@ -56,8 +55,8 @@ export const editCategory = async (req: Request, res: Response): Promise<any> =>
         const result = await updateCategory(id, updateData);
         res.status(200).json({ message: "Cập nhật thành công!", data: result });
     } catch (error: any) {
-        if (error?.code === '23505') return res.status(409).json({ message: "Slug đã tồn tại!" });
-        if (error?.code === 'PGRST116') return res.status(404).json({ message: "Danh mục không tồn tại." });
+        if (error?.code === '23505') return res.status(409).json({ message: "Slug đã tồn tại!", errorDetails: error });
+        if (error?.code === 'PGRST116') return res.status(404).json({ message: "Danh mục không tồn tại.", errorDetails: error });
         res.status(500).json({ message: "Lỗi khi cập nhật danh mục.", errorDetails: error });
     }
 };
@@ -70,7 +69,16 @@ export const removeCategory = async (req: Request, res: Response): Promise<any> 
         await deleteCategoryById(id);
         res.status(200).json({ message: "Xóa danh mục thành công!" });
     } catch (error: any) {
-        if (error?.code === 'NOT_FOUND') return res.status(404).json({ message: "Danh mục không tồn tại." });
+        if (error?.code === 'NOT_FOUND') return res.status(404).json({ message: "Danh mục không tồn tại.", errorDetails: error });
+        if (error?.code === 'CATEGORY_IN_USE') return res.status(400).json({ message: error.message, errorDetails: error });
         res.status(500).json({ message: "Lỗi khi xóa danh mục.", errorDetails: error });
+    }
+};
+export const getCategoryStats = async (req: Request, res: Response) => {
+    try {
+        const stats = await fetchCategoryStats();
+        res.status(200).json({ message: "Lấy thống kê danh mục thành công!", data: stats });
+    } catch (error) {
+        res.status(500).json({ message: "Lỗi hệ thống khi tính toán thống kê.", errorDetails: error });
     }
 };

@@ -11,7 +11,7 @@ import Categories from "../pages/Admin/Categories";
 import Orders from "../pages/Admin/Orders";
 import UsersPage from "../pages/Admin/UsersPage";
 import ReportsPage from "../pages/Admin/ReportsPage";
-import Support from "../pages/Admin/Support";
+import Support from "../pages/Admin/ComplaintsPage";
 import SettingsPage from "../pages/Admin/SettingsPage";
 import AccountProfile from "../pages/Admin/AccountProfile";
 import HelpCenter from "../pages/Admin/HelpCenter";
