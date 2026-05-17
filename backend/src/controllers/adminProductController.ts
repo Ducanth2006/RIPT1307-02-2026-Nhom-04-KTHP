@@ -45,6 +45,7 @@ export const addProduct = async (req: Request, res: Response): Promise<any> => {
             color: v.color ? String(v.color).trim() : null,
             // Fix BUG #4: Dùng ?? (nullish coalescing) thay vì || để giá 0 không bị fallback
             price: (v.price !== undefined && v.price !== null) ? Number(v.price) : numericBasePrice,
+            cost_price: (v.cost_price !== undefined && v.cost_price !== null) ? Number(v.cost_price) : 0,
             stock_quantity: Number(v.stock_quantity ?? 0)
         })) : [];
 
