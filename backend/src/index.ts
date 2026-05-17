@@ -1,5 +1,6 @@
 import express from 'express';
 import type { Request, Response } from 'express';
+import cors from 'cors';
 import supabaseClient from './config/supabase';
 import swaggerUi from 'swagger-ui-express';
 import { clientSwaggerSpec, adminSwaggerSpec } from './config/swagger';
@@ -20,6 +21,19 @@ import clientCartRoutes from './routes/clientCartRoutes';
 
 const app = express();
 const port = 5000;
+
+// =============================================================
+// 🌐 CORS - Cho phép Frontend gọi API từ domain khác
+// =============================================================
+app.use(cors({
+    origin: [
+        'http://localhost:5173',  // Vite dev server (Frontend)
+        'http://localhost:3000',  // Fallback nếu dùng CRA
+    ],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
+}));
 
 app.use(express.json());
 
