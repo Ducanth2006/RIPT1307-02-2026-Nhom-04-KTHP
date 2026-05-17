@@ -1,34 +1,32 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import axios from 'axios';
+import axiosInstance from '../../utils/axiosConfig';
+import ip from '../../utils/ip';
 import { 
   Button, Input, Table, Tag, Space, 
-  Modal, Form, Select, Upload, Switch, message, Popconfirm 
+  Modal, Form, Select, Switch, message, Popconfirm 
 } from 'antd';
 import { 
   Plus, Search, Edit2, Trash2, 
-  Upload as UploadIcon, Filter, FolderTree, Activity, AlertCircle 
+  FolderTree, Activity, AlertCircle 
 } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
-import type { UploadFile } from 'antd/es/upload/interface';
 
 interface Category {
-  key: string;
+  id: number;
   name: string;
-  description: string;
-  productCount: number;
-  displayOrder: number;
-  status: 'active' | 'inactive';
-  parentId?: string;
-  thumbnail?: string;
+  description: string | null;
+  items: number;
+  status: 'Active' | 'Draft';
+  parent_id: number | null;
   slug: string;
-  metaTitle?: string;
-  metaDescription?: string;
+  created_at: string;
   children?: Category[];
 }
 
 const generateSlug = (text: string) => {
   return text
     .toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     .replace(/[^\w\s-]/g, '')
     .replace(/[\s_-]+/g, '-')
     .replace(/^-+|-+$/g, '');
@@ -36,39 +34,34 @@ const generateSlug = (text: string) => {
 
 export default function Categories() {
   const [categories, setCategories] = useState<Category[]>([]);
-  const [stats, setStats] = useState({ totalCategories: 0, activeCategories: 0, emptyCategories: 0 });
+  const [stats, setStats] = useState({ parent_categories: 0, child_categories: 0, active_items: 0 });
   const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState('');
   const [levelFilter, setLevelFilter] = useState<string>('all');
-  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [form] = Form.useForm();
-  const [fileList, setFileList] = useState<UploadFile[]>([]);
 
   useEffect(() => {
     fetchCategories();
   }, []);
 
-  const buildTree = (flatList: Category[]) => {
-    const listMap: Record<string, Category> = {};
+  const buildCategoryTree = (flatList: Category[]) => {
+    const listMap: Record<number, Category> = {};
     const rootNodes: Category[] = [];
 
+    // Lọc và chuẩn bị các node
     flatList.forEach(item => {
-      listMap[item.key] = { ...item, children: undefined };
+      listMap[item.id] = { ...item, children: undefined };
     });
 
     flatList.forEach(item => {
-      const node = listMap[item.key];
-      if (node.parentId) {
-        const parent = listMap[node.parentId];
-        if (parent) {
-          if (!parent.children) parent.children = [];
-          parent.children.push(node);
-        } else {
-          rootNodes.push(node);
-        }
+      const node = listMap[item.id];
+      if (node.parent_id && listMap[node.parent_id]) {
+        const parent = listMap[node.parent_id];
+        if (!parent.children) parent.children = [];
+        parent.children.push(node);
       } else {
         rootNodes.push(node);
       }
@@ -80,18 +73,19 @@ export default function Categories() {
   const fetchCategories = async () => {
     setLoading(true);
     try {
-      const response = await axios.get('/api/admin/categories');
-      if (response.status === 200) {
-        setCategories(buildTree(response.data));
+      const response = await axiosInstance.get(`${ip}/admin/categories`);
+      if (response.status === 200 && response.data.data) {
+        setCategories(buildCategoryTree(response.data.data));
       }
       
-      const statsRes = await axios.get('/api/admin/categories/stats');
-      if (statsRes.status === 200) {
-        setStats(statsRes.data);
+      const statsRes = await axiosInstance.get(`${ip}/admin/categories/stats`);
+      if (statsRes.status === 200 && statsRes.data.data) {
+        setStats(statsRes.data.data);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      message.error('Failed to load categories');
+      const errorMsg = error.response?.data?.message || 'Tải danh sách danh mục thất bại';
+      message.error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -99,10 +93,10 @@ export default function Categories() {
 
   // Computed flat list for dropdown parent selection
   const flatCategories = useMemo(() => {
-    const result: { label: string; value: string }[] = [];
+    const result: { label: string; value: number }[] = [];
     const traverse = (cats: Category[], prefix = '') => {
       cats.forEach(c => {
-        result.push({ label: prefix + c.name, value: c.key });
+        result.push({ label: prefix + c.name, value: c.id });
         if (c.children) {
           traverse(c.children, prefix + '-- ');
         }
@@ -123,8 +117,8 @@ export default function Categories() {
                             item.slug.toLowerCase().includes(searchText.toLowerCase());
         
         let matchLevel = true;
-        if (levelFilter === 'parent') matchLevel = !item.parentId;
-        if (levelFilter === 'child') matchLevel = !!item.parentId;
+        if (levelFilter === 'parent') matchLevel = !item.parent_id;
+        if (levelFilter === 'child') matchLevel = !!item.parent_id;
 
         if (item.children) {
           item.children = cloneAndFilter(item.children);
@@ -147,37 +141,30 @@ export default function Categories() {
 
 
   const handleDelete = async (category: Category) => {
-    if (category.productCount > 0) {
-      message.error(`Cannot delete "${category.name}" because it contains ${category.productCount} products. Please move them to a different category first.`);
-      return;
-    }
-    
     try {
-      const res = await axios.delete(`/api/admin/categories/${category.key}`);
+      const res = await axiosInstance.delete(`${ip}/admin/categories/${category.id}`);
       if (res.status === 200) {
-        message.success('Category deleted.');
+        message.success('Xóa danh mục thành công.');
         fetchCategories();
       }
-    } catch (error) {
-      message.error('Failed to delete category');
+    } catch (error: any) {
+      if (error.response && error.response.data && error.response.data.message) {
+        message.error(error.response.data.message);
+      } else {
+        message.error('Xóa danh mục thất bại');
+      }
     }
   };
 
-  const handleBulkStatusChange = async (status: 'active' | 'inactive') => {
-    if (selectedRowKeys.length === 0) return;
-    
+  const handleToggleStatus = async (category: Category, checked: boolean) => {
+    const newStatus = checked ? 'Active' : 'Draft';
     try {
-      // Create a function mapped to an array of async patches or use a bulk endpoint.
-      // Since no bulk endpoint exists for categories, patch them sequentially.
-      await Promise.all(selectedRowKeys.map(key => 
-        axios.patch(`/api/admin/categories/${key}`, { status })
-      ));
-      
-      message.success(`Updated status for ${selectedRowKeys.length} categories.`);
-      setSelectedRowKeys([]);
+      await axiosInstance.patch(`${ip}/admin/categories/${category.id}`, { status: newStatus });
+      message.success(`Đã cập nhật trạng thái thành ${newStatus}`);
       fetchCategories();
-    } catch (error) {
-      message.error('Failed to update status');
+    } catch (error: any) {
+      message.error('Cập nhật trạng thái thất bại');
+      fetchCategories(); // Reset UI on fail
     }
   };
 
@@ -185,8 +172,11 @@ export default function Categories() {
     if (category) {
       setEditingCategory(category);
       form.setFieldsValue({
-        ...category,
-        status: category.status === 'active'
+        name: category.name,
+        slug: category.slug,
+        parent_id: category.parent_id,
+        description: category.description,
+        status: category.status === 'Active'
       });
     } else {
       setEditingCategory(null);
@@ -197,99 +187,106 @@ export default function Categories() {
 
   const onModalOk = () => {
     form.validateFields().then(async values => {
-      message.loading({ content: 'Saving...', key: 'saveCat' });
+      message.loading({ content: 'Đang lưu...', key: 'saveCat' });
       const payload: any = {
         name: values.name,
-        description: values.description || '',
+        description: values.description || null,
         slug: values.slug || generateSlug(values.name),
-        parentId: values.parentId || null,
-        status: values.status ? 'active' : 'inactive',
-        displayOrder: values.displayOrder || 1,
-        metaTitle: values.metaTitle || null,
-        metaDescription: values.metaDescription || null,
+        parent_id: values.parent_id || null,
+        status: values.status ? 'Active' : 'Draft',
       };
 
       try {
         if (editingCategory) {
           // Update
-          await axios.patch(`/api/admin/categories/${editingCategory.key}`, payload);
-          message.success({ content: 'Category updated successfully.', key: 'saveCat' });
+          await axiosInstance.patch(`${ip}/admin/categories/${editingCategory.id}`, payload);
+          message.success({ content: 'Cập nhật danh mục thành công.', key: 'saveCat' });
         } else {
           // Create
-          payload.id = Date.now().toString();
-          payload.productCount = 0;
-          await axios.post('/api/admin/categories', payload);
-          message.success({ content: 'New category added successfully.', key: 'saveCat' });
+          await axiosInstance.post(`${ip}/admin/categories`, payload);
+          message.success({ content: 'Thêm danh mục mới thành công.', key: 'saveCat' });
         }
         setIsModalVisible(false);
         fetchCategories();
-      } catch (error) {
-        message.error({ content: 'Failed to save category', key: 'saveCat' });
+      } catch (error: any) {
+        const errorMsg = error.response?.data?.message || 'Lưu danh mục thất bại';
+        message.error({ content: errorMsg, key: 'saveCat' });
       }
     });
   };
 
   const columns: ColumnsType<Category> = [
     {
-      title: 'Category Name',
+      title: 'Tên danh mục',
       dataIndex: 'name',
       key: 'name',
-      render: (text, record) => (
-        <div>
-          <div className="font-medium text-[#191c1e]">{text}</div>
-          <div className="text-xs text-[#5b403d] font-mono">/{record.slug}</div>
-        </div>
+      render: (text) => (
+        <div className="font-medium text-[#191c1e]">{text}</div>
       ),
     },
     {
-      title: 'Description',
+      title: 'Mô tả',
       dataIndex: 'description',
       key: 'description',
       ellipsis: true,
       className: 'text-[#5b403d]',
     },
     {
-      title: 'Products',
-      dataIndex: 'productCount',
-      key: 'productCount',
-      width: 120,
+      title: 'Số lượng sản phẩm',
+      dataIndex: 'items',
+      key: 'items',
+      width: 160,
       render: (count) => (
-        <Tag color={count === 0 ? 'default' : 'green'}>{count} items</Tag>
+        <Tag color={count === 0 ? 'default' : 'blue'}>{count} sản phẩm</Tag>
       ),
     },
     {
-      title: 'Order',
-      dataIndex: 'displayOrder',
-      key: 'displayOrder',
-      width: 100,
-      align: 'center',
-    },
-    {
-      title: 'Status',
+      title: 'Trạng thái',
       dataIndex: 'status',
       key: 'status',
-      width: 120,
-      render: (status) => (
-        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-          status === 'active' ? 'bg-[#d5fcde] text-[#2a7a40]' : 'bg-[#eceef0] text-[#5b403d]'
-        }`}>
-          {status === 'active' ? 'Active' : 'Inactive'}
-        </span>
+      width: 140,
+      render: (status, record) => (
+        <Space>
+          <Switch 
+            checked={status === 'Active'} 
+            onChange={(checked) => handleToggleStatus(record, checked)} 
+            size="small" 
+          />
+          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+            status === 'Active' ? 'bg-[#d5fcde] text-[#2a7a40]' : 'bg-[#eceef0] text-[#5b403d]'
+          }`}>
+            {status}
+          </span>
+        </Space>
       ),
     },
     {
-      title: 'Actions',
+      title: 'Ngày tạo',
+      dataIndex: 'created_at',
+      key: 'created_at',
+      width: 120,
+      render: (date) => {
+        if (!date) return <span className="text-sm text-gray-500">-</span>;
+        const formattedDate = new Date(date).toLocaleString('vi-VN', {
+          day: '2-digit', month: '2-digit', year: 'numeric',
+          hour: '2-digit', minute: '2-digit'
+        });
+        return <span className="text-sm text-gray-500">{formattedDate}</span>;
+      }
+    },
+    {
+      title: 'Hành động',
       key: 'action',
       width: 120,
       render: (_, record) => (
         <Space size="middle">
           <Button type="text" icon={<Edit2 size={16} />} onClick={() => openModal(record)} className="text-[#00799c] hover:bg-[#e0f2fe]" />
           <Popconfirm 
-            title="Delete Category" 
-            description={`Are you sure you want to delete "${record.name}"?`}
+            title="Xóa danh mục" 
+            description={`Bạn có chắc muốn xóa "${record.name}"?`}
             onConfirm={() => handleDelete(record)}
-            okText="Delete"
-            cancelText="Cancel"
+            okText="Xóa"
+            cancelText="Hủy"
             okButtonProps={{ danger: true }}
           >
             <Button type="text" danger icon={<Trash2 size={16} />} />
@@ -303,8 +300,8 @@ export default function Categories() {
     <div className="p-4 md:p-6 max-w-[1440px] mx-auto space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-[#191c1e]">Product Categories</h1>
-          <p className="text-sm text-[#5b403d] mt-1">Manage product groups and taxonomies.</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-[#191c1e]">Quản lý Danh Mục</h1>
+          <p className="text-sm text-[#5b403d] mt-1">Sắp xếp và quản lý phân loại sản phẩm.</p>
         </div>
         <Button 
           type="primary" 
@@ -312,15 +309,15 @@ export default function Categories() {
           className="bg-[#d32f2f] hover:bg-[#ba1a20] h-10"
           onClick={() => openModal()}
         >
-          Add Category
+          Tạo danh mục
         </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         {[
-          { label: 'Total Categories', value: stats.totalCategories.toString(), icon: FolderTree, color: 'text-blue-600', bg: 'bg-blue-50' },
-          { label: 'Active Categories', value: stats.activeCategories.toString(), icon: Activity, color: 'text-green-600', bg: 'bg-green-50' },
-          { label: 'Empty Categories', value: stats.emptyCategories.toString(), icon: AlertCircle, color: 'text-amber-600', bg: 'bg-amber-50' },
+          { label: 'Tổng danh mục Hàng (Cha)', value: stats.parent_categories, icon: FolderTree, color: 'text-blue-600', bg: 'bg-blue-50' },
+          { label: 'Tổng danh mục Sản phẩm (Con)', value: stats.child_categories, icon: FolderTree, color: 'text-purple-600', bg: 'bg-purple-50' },
+          { label: 'Sản phẩm đang bán', value: stats.active_items, icon: Activity, color: 'text-green-600', bg: 'bg-green-50' },
         ].map((stat, i) => (
           <div key={i} className="bg-white p-4 rounded-xl border border-[#d8dadc] shadow-sm flex items-center gap-4">
             <div className={`w-12 h-12 flex items-center justify-center rounded-lg ${stat.bg}`}>
@@ -338,7 +335,7 @@ export default function Categories() {
         <div className="p-4 border-b border-[#d8dadc] flex flex-col md:flex-row justify-between gap-4">
           <div className="flex flex-1 gap-4">
             <Input 
-              placeholder="Search by name or slug..." 
+              placeholder="Tìm theo tên hoặc slug..." 
               prefix={<Search size={16} className="text-[#8f6f6c]" />}
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
@@ -350,29 +347,25 @@ export default function Categories() {
               onChange={setLevelFilter}
               className="w-48 rounded-lg"
               options={[
-                { value: 'all', label: 'All levels' },
-                { value: 'parent', label: 'Parent Category' },
-                { value: 'child', label: 'Child Category' },
+                { value: 'all', label: 'Tất cả cấp bậc' },
+                { value: 'parent', label: 'Danh mục cha' },
+                { value: 'child', label: 'Danh mục con' },
               ]}
             />
           </div>
-          {selectedRowKeys.length > 0 && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-[#5b403d]">Selected {selectedRowKeys.length}</span>
-              <Button onClick={() => handleBulkStatusChange('active')} size="small" className="border-green-500 text-green-600">Show</Button>
-              <Button onClick={() => handleBulkStatusChange('inactive')} size="small" danger>Hide</Button>
-            </div>
-          )}
         </div>
         
         <Table<Category>
+          rowKey="id"
           columns={columns}
           dataSource={filteredData}
-          rowSelection={{
-            selectedRowKeys,
-            onChange: setSelectedRowKeys,
+          pagination={{ 
+            defaultCurrent: 1, 
+            pageSize: 10, 
+            showSizeChanger: true, 
+            pageSizeOptions: ['10', '20', '50'] 
           }}
-          pagination={false}
+          scroll={{ x: 'max-content', y: 500 }}
           loading={loading}
           className="overflow-x-auto custom-table"
         />
@@ -380,26 +373,26 @@ export default function Categories() {
 
       {/* Add / Edit Category Modal */}
       <Modal
-        title={<span className="text-lg font-bold">{editingCategory ? 'Edit Category' : 'Add New Category'}</span>}
+        title={<span className="text-lg font-bold">{editingCategory ? 'Chỉnh sửa danh mục' : 'Thêm danh mục mới'}</span>}
         open={isModalVisible}
         onOk={onModalOk}
         onCancel={() => setIsModalVisible(false)}
-        width={700}
-        okText="Save"
-        cancelText="Cancel"
+        width={600}
+        okText="Lưu"
+        cancelText="Hủy"
         okButtonProps={{ className: "bg-[#00799c] hover:bg-[#006280]" }}
       >
         <Form 
           form={form} 
           layout="vertical" 
           className="mt-6 text-[#191c1e]"
-          initialValues={{ status: true, displayOrder: 1 }}
+          initialValues={{ status: true }}
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
             <Form.Item 
               name="name" 
-              label="Category Name" 
-              rules={[{ required: true, message: 'Please enter category name!' }]}
+              label="Tên danh mục" 
+              rules={[{ required: true, message: 'Vui lòng nhập tên danh mục!' }]}
             >
               <Input 
                 onChange={(e) => {
@@ -410,52 +403,27 @@ export default function Categories() {
               />
             </Form.Item>
 
-            <Form.Item name="slug" label="Slug">
-              <Input prefix="/" placeholder="auto-generated-from-name" />
+            <Form.Item name="slug" label="Đường dẫn (Slug)">
+              <Input prefix="/" placeholder="tu-dong-tao" />
             </Form.Item>
 
-            <Form.Item name="parentId" label="Parent Category (Optional)">
+            <Form.Item name="parent_id" label="Danh mục cha (Tùy chọn)">
               <Select 
                 allowClear
-                placeholder="As Root Category"
-                options={flatCategories.filter(c => c.value !== editingCategory?.key)}
+                placeholder="Làm danh mục gốc"
+                options={flatCategories.filter(c => c.value !== editingCategory?.id)}
               />
             </Form.Item>
 
-            <Form.Item name="displayOrder" label="Display Order">
-              <Input type="number" min={1} />
+            <Form.Item name="status" label="Trạng thái" valuePropName="checked">
+              <Switch checkedChildren="Active" unCheckedChildren="Draft" />
             </Form.Item>
           </div>
 
-          <Form.Item name="description" label="Description">
+          <Form.Item name="description" label="Mô tả chi tiết">
             <Input.TextArea rows={3} />
           </Form.Item>
 
-          <div className="bg-[#f7f9fb] p-4 rounded-lg mb-6 border border-[#eceef0]">
-            <h4 className="font-semibold mb-4 text-[#5b403d]">SEO & Display</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
-              <Form.Item name="metaTitle" label="Meta Title">
-                <Input placeholder="Page Title (Meta Title)" />
-              </Form.Item>
-              <Form.Item name="status" label="Status" valuePropName="checked" className="md:row-span-2">
-                <Switch checkedChildren="Active" unCheckedChildren="Inactive" />
-              </Form.Item>
-              <Form.Item name="metaDescription" label="Meta Description">
-                <Input.TextArea rows={2} placeholder="SEO Description..." />
-              </Form.Item>
-            </div>
-          </div>
-
-          <Form.Item label="Thumbnail/Icon">
-            <Upload listType="picture-card" fileList={fileList} onChange={({ fileList: newFileList }) => setFileList(newFileList)}>
-              {fileList.length >= 1 ? null : (
-                <div>
-                  <UploadIcon size={20} className="mx-auto text-gray-400" />
-                  <div className="mt-2 text-xs text-gray-500">Upload</div>
-                </div>
-              )}
-            </Upload>
-          </Form.Item>
         </Form>
       </Modal>
     </div>
