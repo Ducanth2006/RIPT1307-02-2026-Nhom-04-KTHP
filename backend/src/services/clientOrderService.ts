@@ -20,6 +20,7 @@ export const checkoutOrder = async (data: CheckoutRequest) => {
             product_variants (
                 id,
                 price,
+                cost_price,
                 stock_quantity
             )
         `)
@@ -47,7 +48,8 @@ export const checkoutOrder = async (data: CheckoutRequest) => {
         orderItemsToInsert.push({
             variant_id: variant.id,
             quantity: item.quantity,
-            unit_price: variant.price
+            unit_price: variant.price,
+            cost_price: variant.cost_price || 0  // Chốt giá vốn tại thời điểm mua
         });
 
         // Chuẩn bị mảng data để update stock_quantity
