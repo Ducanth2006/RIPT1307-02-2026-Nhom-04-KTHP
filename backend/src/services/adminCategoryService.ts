@@ -62,40 +62,27 @@ export const fetchCategoryStats = async () => {
     // 1. Lấy danh mục
     const { data: categories, error: catError } = await supabaseClient
         .from('categories')
-        .select('id, name');
+        .select('id, parent_id, status');
     if (catError) throw catError;
 
-    // 2. Lấy sản phẩm để tính Active và Top Performing
+    // 2. Phân loại danh mục
+    const parent_categories = categories.filter(c => !c.parent_id).length;
+    const child_categories = categories.filter(c => c.parent_id).length;
+    const activeCategoryIds = new Set(categories.filter(c => c.status === 'Active').map(c => c.id));
+
+    // 3. Lấy sản phẩm để tính Active
     const { data: products, error: prodError } = await supabaseClient
         .from('products')
         .select('category_id, status');
     if (prodError) throw prodError;
 
-    // Tính Active Items
-    const activeItems = products.filter(p => p.status === 'Active').length;
+    // Tính Active Items: Sản phẩm Active VÀ phải thuộc về Danh mục Active
+    const activeItems = products.filter(p => p.status === 'Active' && activeCategoryIds.has(p.category_id)).length;
 
-    // Tính Top Performing
-    const categoryCounts: Record<number, number> = {};
-    products.forEach(p => {
-        if (p.category_id) {
-            categoryCounts[p.category_id] = (categoryCounts[p.category_id] || 0) + 1;
-        }
-    });
-
-    let topCategoryId = null;
-    let maxCount = -1;
-    for (const [catId, count] of Object.entries(categoryCounts)) {
-        if (count > maxCount) {
-            maxCount = count;
-            topCategoryId = Number(catId);
-        }
-    }
-    const topPerforming = categories.find(c => c.id === topCategoryId)?.name || "Chưa có dữ liệu";
-
-    // Trả về đúng 3 thông số
+    // Trả về 3 thông số mới
     return {
-        total_categories: categories.length,
-        active_items: activeItems,
-        top_performing: topPerforming
+        parent_categories,
+        child_categories,
+        active_items: activeItems
     };
 };
