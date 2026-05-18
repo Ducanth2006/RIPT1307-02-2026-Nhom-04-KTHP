@@ -37,11 +37,22 @@ export default function Categories() {
   const [stats, setStats] = useState({ parent_categories: 0, child_categories: 0, active_items: 0 });
   const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState('');
-  const [levelFilter, setLevelFilter] = useState<string>('all');
   
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [form] = Form.useForm();
+
+  const activeCategoriesCount = useMemo(() => {
+    let count = 0;
+    const traverse = (items: Category[]) => {
+      items.forEach(item => {
+        if (item.status === 'Active') count++;
+        if (item.children) traverse(item.children);
+      });
+    };
+    traverse(categories);
+    return count;
+  }, [categories]);
 
   useEffect(() => {
     fetchCategories();
@@ -105,29 +116,25 @@ export default function Categories() {
       return items.map(item => ({ ...item })).filter(item => {
         const matchSearch = item.name.toLowerCase().includes(searchText.toLowerCase()) || 
                             item.slug.toLowerCase().includes(searchText.toLowerCase());
-        
-        let matchLevel = true;
-        if (levelFilter === 'parent') matchLevel = !item.parent_id;
-        if (levelFilter === 'child') matchLevel = !!item.parent_id;
 
         if (item.children) {
           item.children = cloneAndFilter(item.children);
           // If a child matches but parent doesn't, we still want to keep the parent if searching
-          if (item.children.length > 0 && levelFilter === 'all') {
+          if (item.children.length > 0) {
             return true;
           }
         }
 
-        return (matchSearch && matchLevel) || (item.children && item.children.length > 0 && matchLevel);
+        return matchSearch || (item.children && item.children.length > 0);
       });
     };
 
-    if (searchText || levelFilter !== 'all') {
+    if (searchText) {
       result = cloneAndFilter(result);
     }
 
     return result;
-  }, [categories, searchText, levelFilter]);
+  }, [categories, searchText]);
 
 
   const handleDelete = async (category: Category) => {
@@ -211,7 +218,7 @@ export default function Categories() {
       dataIndex: 'name',
       key: 'name',
       render: (text) => (
-        <div className="font-medium text-[#191c1e]">{text}</div>
+        <div className="font-bold text-[15px] text-[#191c1e]">{text}</div>
       ),
     },
     {
@@ -219,16 +226,34 @@ export default function Categories() {
       dataIndex: 'description',
       key: 'description',
       ellipsis: true,
-      className: 'text-[#5b403d]',
+      className: 'text-[15px] text-[#5b403d]',
     },
     {
-      title: 'Số lượng sản phẩm',
-      dataIndex: 'items',
-      key: 'items',
-      width: 160,
-      render: (count) => (
-        <Tag color={count === 0 ? 'default' : 'blue'}>{count} sản phẩm</Tag>
-      ),
+      title: 'Sản phẩm',
+      key: 'has_products',
+      width: 220,
+      render: (_, record) => {
+        // Nếu là danh mục con (có parent_id)
+        if (record.parent_id !== null) {
+          const hasProducts = record.items > 0;
+          return (
+            <Tag color={hasProducts ? 'success' : 'default'} className="text-[13px] font-bold py-0.5 px-2.5 rounded-full">
+              {hasProducts ? `Có sản phẩm (${record.items})` : 'Chưa có sản phẩm'}
+            </Tag>
+          );
+        }
+        
+        // Nếu là danh mục cha (không có parent_id), đếm tổng sản phẩm của danh mục con
+        const totalChildItems = record.children
+          ? record.children.reduce((sum: number, child: any) => sum + (child.items || 0), 0)
+          : 0;
+
+        return (
+          <Tag color="processing" className="text-[13px] font-bold py-0.5 px-2.5 rounded-full">
+            Tổng: {totalChildItems} sản phẩm
+          </Tag>
+        );
+      }
     },
     {
       title: 'Trạng thái',
@@ -242,7 +267,7 @@ export default function Categories() {
             onChange={(checked) => handleToggleStatus(record, checked)} 
             size="small" 
           />
-          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+          <span className={`px-3 py-1 rounded-full text-[13px] font-bold tracking-wide ${
             status === 'Active' ? 'bg-[#d5fcde] text-[#2a7a40]' : 'bg-[#eceef0] text-[#5b403d]'
           }`}>
             {status}
@@ -254,14 +279,14 @@ export default function Categories() {
       title: 'Ngày tạo',
       dataIndex: 'created_at',
       key: 'created_at',
-      width: 120,
+      width: 140,
       render: (date) => {
-        if (!date) return <span className="text-sm text-gray-500">-</span>;
+        if (!date) return <span className="text-[15px] text-gray-500">-</span>;
         const formattedDate = new Date(date).toLocaleString('vi-VN', {
           day: '2-digit', month: '2-digit', year: 'numeric',
           hour: '2-digit', minute: '2-digit'
         });
-        return <span className="text-sm text-gray-500">{formattedDate}</span>;
+        return <span className="text-[15px] font-medium text-gray-500">{formattedDate}</span>;
       }
     },
     {
@@ -288,15 +313,15 @@ export default function Categories() {
 
   return (
     <div className="p-4 md:p-6 max-w-[1440px] mx-auto space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-[#191c1e]">Quản lý Danh Mục</h1>
-          <p className="text-sm text-[#5b403d] mt-1">Sắp xếp và quản lý phân loại sản phẩm.</p>
+          <h1 className="text-2xl md:text-3xl font-extrabold text-[#191c1e] tracking-tight">Quản lý Danh Mục</h1>
+          <p className="text-[15px] text-[#5b403d] mt-2 font-medium">Sắp xếp và quản lý phân loại sản phẩm.</p>
         </div>
         <Button 
           type="primary" 
-          icon={<Plus size={18} />} 
-          className="bg-[#d32f2f] hover:bg-[#ba1a20] h-10"
+          icon={<Plus size={20} />} 
+          className="bg-[#d32f2f] hover:bg-[#ba1a20] h-10 text-[15px] font-bold px-6 rounded-xl shadow-sm"
           onClick={() => openModal()}
         >
           Tạo danh mục
@@ -307,15 +332,15 @@ export default function Categories() {
         {[
           { label: 'Tổng danh mục Hàng (Cha)', value: stats.parent_categories, icon: FolderTree, color: 'text-blue-600', bg: 'bg-blue-50' },
           { label: 'Tổng danh mục Sản phẩm (Con)', value: stats.child_categories, icon: FolderTree, color: 'text-purple-600', bg: 'bg-purple-50' },
-          { label: 'Sản phẩm đang bán', value: stats.active_items, icon: Activity, color: 'text-green-600', bg: 'bg-green-50' },
+          { label: 'Danh mục đang hoạt động', value: activeCategoriesCount, icon: Activity, color: 'text-green-600', bg: 'bg-green-50' },
         ].map((stat, i) => (
-          <div key={i} className="bg-white p-4 rounded-xl border border-[#d8dadc] shadow-sm flex items-center gap-4">
-            <div className={`w-12 h-12 flex items-center justify-center rounded-lg ${stat.bg}`}>
-              <stat.icon className={stat.color} size={24} />
+          <div key={i} className="bg-white p-5 rounded-2xl border border-[#d8dadc] shadow-sm flex items-center gap-5 hover:shadow-md transition-shadow">
+            <div className={`w-14 h-14 flex items-center justify-center rounded-xl ${stat.bg}`}>
+              <stat.icon className={stat.color} size={28} />
             </div>
             <div>
-              <p className="text-2xl font-bold text-[#191c1e]">{stat.value}</p>
-              <p className="text-sm text-[#5b403d] font-medium">{stat.label}</p>
+              <p className="text-2xl md:text-3xl font-extrabold text-[#191c1e]">{stat.value}</p>
+              <p className="text-[14px] text-[#5b403d] font-bold mt-1">{stat.label}</p>
             </div>
           </div>
         ))}
@@ -326,21 +351,11 @@ export default function Categories() {
           <div className="flex flex-1 gap-4">
             <Input 
               placeholder="Tìm theo tên hoặc slug..." 
-              prefix={<Search size={16} className="text-[#8f6f6c]" />}
+              prefix={<Search size={18} className="text-[#8f6f6c]" />}
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
-              className="max-w-sm rounded-lg"
+              className="max-w-md rounded-xl h-10 text-[15px] font-medium px-4"
               allowClear
-            />
-            <Select 
-              value={levelFilter} 
-              onChange={setLevelFilter}
-              className="w-48 rounded-lg"
-              options={[
-                { value: 'all', label: 'Tất cả cấp bậc' },
-                { value: 'parent', label: 'Danh mục cha' },
-                { value: 'child', label: 'Danh mục con' },
-              ]}
             />
           </div>
         </div>
@@ -363,19 +378,20 @@ export default function Categories() {
 
       {/* Add / Edit Category Modal */}
       <Modal
-        title={<span className="text-lg font-bold">{editingCategory ? 'Chỉnh sửa danh mục' : 'Thêm danh mục mới'}</span>}
+        title={<span className="text-xl font-extrabold text-[#191c1e]">{editingCategory ? 'Chỉnh sửa danh mục' : 'Thêm danh mục mới'}</span>}
         open={isModalVisible}
         onOk={onModalOk}
         onCancel={() => setIsModalVisible(false)}
-        width={600}
+        width={650}
         okText="Lưu"
         cancelText="Hủy"
-        okButtonProps={{ className: "bg-[#00799c] hover:bg-[#006280]" }}
+        okButtonProps={{ danger: true, className: "bg-[#d32f2f] hover:bg-[#ba1a20] h-10 font-bold px-6 rounded-lg text-[15px]" }}
+        cancelButtonProps={{ className: "h-10 font-bold px-6 rounded-lg text-[15px]" }}
       >
         <Form 
           form={form} 
           layout="vertical" 
-          className="mt-6 text-[#191c1e]"
+          className="mt-6 text-[#191c1e] text-[15px] font-medium"
           initialValues={{ status: true }}
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
@@ -384,20 +400,10 @@ export default function Categories() {
               label="Tên danh mục" 
               rules={[{ required: true, message: 'Vui lòng nhập tên danh mục!' }]}
             >
-              <Input 
-                onChange={(e) => {
-                  if (!editingCategory) {
-                    form.setFieldsValue({ slug: generateSlug(e.target.value) });
-                  }
-                }}
-              />
+              <Input />
             </Form.Item>
 
-            <Form.Item name="slug" label="Đường dẫn (Slug)">
-              <Input prefix="/" placeholder="tu-dong-tao" />
-            </Form.Item>
-
-            <Form.Item name="parent_id" label="Danh mục cha (Tùy chọn)">
+            <Form.Item name="parent_id" label="Danh mục">
               <Select 
                 allowClear
                 placeholder="Làm danh mục gốc"
