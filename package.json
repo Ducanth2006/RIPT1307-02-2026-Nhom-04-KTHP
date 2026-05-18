@@ -17,24 +17,18 @@
     "dev": "concurrently \"npm run dev --workspace=backend\" \"npm run dev --workspace=frontend\"",
     "build": "tsc"
   },
-
   "dependencies": {
-<<<<<<< HEAD
     "@ant-design/icons": "^6.2.2",
     "@google/genai": "^1.29.0",
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",
     "antd": "^6.3.7",
-    "dotenv": "^17.2.3",
-    "express": "^4.21.2",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
     "react-dom": "^19.0.1",
     "react-router-dom": "^7.15.0",
     "vite": "^6.2.3"
-=======
-    "cors": "^2.8.6",
-    "dotenv": "^17.4.2",
-    "express": "^5.2.1"
->>>>>>> 83a2d502b148d7e5d4efb0b879e0208b4b5f6513
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
