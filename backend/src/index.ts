@@ -23,9 +23,10 @@ import clientProfileRoutes from './routes/clientProfileRoutes';
 import clientReviewRoutes from './routes/clientReviewRoutes';
 import clientComplaintRoutes from './routes/clientComplaintRoutes';
 import clientNotificationRoutes from './routes/clientNotificationRoutes';
+import clientAuthRoutes from './routes/clientAuthRoutes';
 
 const app = express();
-const port = 5000;
+const port = 5001;
 
 // =============================================================
 // 🌐 CORS - Cho phép Frontend gọi API từ domain khác
@@ -98,6 +99,7 @@ app.use('/api/profile', clientProfileRoutes);
 app.use('/api/reviews', clientReviewRoutes);
 app.use('/api/complaints', clientComplaintRoutes);
 app.use('/api/notifications', clientNotificationRoutes);
+app.use('/api/auth', clientAuthRoutes);
 
 // =============================================================
 // ❌ XỬ LÝ LỖI TẬP TRUNG
