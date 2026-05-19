@@ -2,13 +2,14 @@
 node_modules/
 frontend/node_modules/
 backend/node_modules/
+package-lock.json
 
 # Build files
 frontend/dist/
 backend/dist/
 
 # Môi trường
-.env
+# .env (Đã mở khóa để nộp bài tập lớn)
 *.env.local
 !.env.example
 
