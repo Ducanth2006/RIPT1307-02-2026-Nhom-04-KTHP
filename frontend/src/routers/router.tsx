@@ -11,8 +11,9 @@ import Categories from "../pages/Admin/Categories";
 import Orders from "../pages/Admin/Orders";
 import UsersPage from "../pages/Admin/UsersPage";
 import ReportsPage from "../pages/Admin/ReportsPage";
-
+import VouchersPage from "../pages/Admin/VouchersPage";
 import SettingsPage from "../pages/Admin/SettingsPage";
+import ComplaintsPage from "../pages/Admin/ComplaintsPage";
 import AccountProfile from "../pages/Admin/AccountProfile";
 import HelpCenter from "../pages/Admin/HelpCenter";
 import AddProduct from "../pages/Admin/AddProduct";
@@ -83,10 +84,17 @@ const router = createBrowserRouter([
         element: <UsersPage />,
       },
       {
+        path: "vouchers",
+        element: <VouchersPage />,
+      },
+      {
         path: "reports",
         element: <ReportsPage />,
       },
-
+      {
+        path: "complaints",
+        element: <ComplaintsPage/>,
+      },
       {
         path: "settings",
         element: <SettingsPage />,
