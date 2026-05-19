@@ -93,3 +93,22 @@ export const loginUser = async (payload: {
 
     return { user: safeUser, token };
 };
+
+// ── BLACKLIST TOKEN STORE (In-memory) ────────────────────────────────────────
+const tokenBlacklist = new Set<string>();
+
+export const blacklistToken = (token: string): void => {
+    tokenBlacklist.add(token);
+};
+
+export const isTokenBlacklisted = (token: string): boolean => {
+    return tokenBlacklist.has(token);
+};
+
+// ── LOGOUT ────────────────────────────────────────────────────────────────────
+export const logoutUser = async (token: string) => {
+    if (!token) throw new Error('Không tìm thấy token.');
+    blacklistToken(token);
+    return true;
+};
+
