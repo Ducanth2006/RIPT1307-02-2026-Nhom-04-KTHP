@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -8,10 +9,31 @@
 
 body {
   margin: 0;
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
-    Arial, "Noto Sans", sans-serif;
+  font-family: 'Quicksand', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 15px;
 }
+
+/* Force Ant Design components to use the new font and larger size */
+.ant-btn,
+.ant-input,
+.ant-select-selection-item,
+.ant-select-selection-placeholder,
+.ant-table-cell,
+.ant-tag,
+.ant-modal-title,
+.ant-form-item-label > label,
+.ant-popover-inner-content,
+.ant-typography,
+.ant-menu-item,
+.ant-breadcrumb-link {
+  font-family: 'Quicksand', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+  font-size: 15px !important;
+}
+
+/* Ensure headings stay balanced */
+h1.ant-typography, .ant-typography h1 { font-size: 28px !important; }
+h2.ant-typography, .ant-typography h2 { font-size: 24px !important; }
+h3.ant-typography, .ant-typography h3 { font-size: 20px !important; }
 
 #root {
   min-height: 100vh;

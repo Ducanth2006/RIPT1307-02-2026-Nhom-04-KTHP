@@ -11,7 +11,7 @@ import Categories from "../pages/Admin/Categories";
 import Orders from "../pages/Admin/Orders";
 import UsersPage from "../pages/Admin/UsersPage";
 import ReportsPage from "../pages/Admin/ReportsPage";
-import Support from "../pages/Admin/Support";
+
 import SettingsPage from "../pages/Admin/SettingsPage";
 import AccountProfile from "../pages/Admin/AccountProfile";
 import HelpCenter from "../pages/Admin/HelpCenter";
@@ -86,10 +86,7 @@ const router = createBrowserRouter([
         path: "reports",
         element: <ReportsPage />,
       },
-      {
-        path: "support",
-        element: <Support />,
-      },
+
       {
         path: "settings",
         element: <SettingsPage />,

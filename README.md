@@ -1,7 +1,7 @@
 # Sportswear-ecommerce-website
 Tôi mới tích hợp tài liệu Swagger vào dự án tại: http://localhost:5000/api/docs/client  (nhớ cài thư viện và npm run dev ms chạy đc nha)
 nơi chứa toàn bộ API public của dự án; API admin chưa có chỉ có client thôi.
-
+⚠️ Hiện tại trong git Ignore đang chứa package-lock.json tức là nó ko đc push nên vì vậy KHI PULL VỀ NÊN XÓA BỎ package-lock.json RỒI NPM INSTALL Ở FOLDER CHA CỦA BE VÀ FE 
 ## ⚠️ thư viện cần cài thêm cài trên thư mục chính luôn cũng được 
 Lệnh cài thư viện supabase 
 ```bash
