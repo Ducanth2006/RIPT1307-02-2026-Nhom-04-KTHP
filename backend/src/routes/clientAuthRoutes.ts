@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { register, login } from '../controllers/authController';
+import { register, login, logout } from '../controllers/authController';
 
 const router = Router();
 
@@ -30,7 +30,7 @@ const router = Router();
  *                 type: string
  *                 example: "Nguyen Van A"
  *     responses:
- *       21:
+ *       201:
  *         description: Đăng ký tài khoản thành công
  *         content:
  *           application/json:
@@ -120,4 +120,36 @@ router.post('/register', register);
  */
 router.post('/login', login);
 
+/**
+ * @swagger
+ * /auth/logout:
+ *   post:
+ *     summary: Đăng xuất (Vô hiệu hóa Token)
+ *     description: Đăng xuất khỏi hệ thống và đưa token JWT hiện tại vào blacklist để ngăn chặn sử dụng lại.
+ *     tags: [Auth]
+ *     parameters:
+ *       - in: header
+ *         name: Authorization
+ *         required: true
+ *         schema:
+ *           type: string
+ *           example: "Bearer <token>"
+ *         description: JWT Token dạng Bearer
+ *     responses:
+ *       200:
+ *         description: Đăng xuất thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Đăng xuất thành công."
+ *       401:
+ *         description: Không tìm thấy Token hoặc định dạng Token không hợp lệ
+ */
+router.post('/logout', logout);
+
 export default router;
+
