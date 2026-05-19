@@ -61,12 +61,12 @@ const router = Router();
  *                 example: "Đỏ"
  *               price:
  *                 type: number
- *                 description: Giá bán của biến thể
- *                 example: 149.99
+ *                 description: Giá biến thể (mặc định lấy base_price nếu để trống)
+ *                 example: 2500000
  *               cost_price:
  *                 type: number
- *                 description: Giá vốn (Cost per item)
- *                 example: 90.00
+ *                 description: Giá vốn/nhập của biến thể (dùng để tính lợi nhuận)
+ *                 example: 1500000
  *               stock_quantity:
  *                 type: integer
  *                 description: Số lượng tồn kho

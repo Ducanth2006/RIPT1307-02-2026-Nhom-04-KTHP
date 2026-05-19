@@ -20,6 +20,7 @@ export const checkoutOrder = async (data: CheckoutRequest) => {
             product_variants (
                 id,
                 price,
+                cost_price,
                 stock_quantity
             )
         `)
@@ -47,7 +48,8 @@ export const checkoutOrder = async (data: CheckoutRequest) => {
         orderItemsToInsert.push({
             variant_id: variant.id,
             quantity: item.quantity,
-            unit_price: variant.price
+            unit_price: variant.price,
+            cost_price: variant.cost_price || 0  // Chốt giá vốn tại thời điểm mua
         });
 
         // Chuẩn bị mảng data để update stock_quantity
@@ -320,5 +322,107 @@ export const getOrderDetails = async (orderId: number, userId: number) => {
     return {
         ...order,
         order_items: formattedItems
+    };
+};
+
+// -------------------------------------------------------------
+// CANCEL ORDER
+// -------------------------------------------------------------
+
+// Các trạng thái cho phép hủy (chưa đóng gói)
+const CANCELLABLE_STATUSES = ['Pending', 'Confirmed'];
+
+export const cancelOrder = async (orderId: number, userId: number, cancelReason?: string) => {
+    // 1. Lấy thông tin đơn hàng (kèm chi tiết sản phẩm và voucher)
+    const { data: order, error: fetchError } = await supabaseClient
+        .from('orders')
+        .select(`
+            *,
+            order_items (
+                variant_id,
+                quantity
+            )
+        `)
+        .eq('id', orderId)
+        .eq('user_id', userId)
+        .single();
+
+    if (fetchError || !order) {
+        throw new Error('Đơn hàng không tồn tại hoặc bạn không có quyền thực hiện thao tác này.');
+    }
+
+    // 2. Kiểm tra trạng thái có cho phép hủy không
+    if (!CANCELLABLE_STATUSES.includes(order.status)) {
+        throw new Error(
+            `Không thể hủy đơn hàng ở trạng thái "${order.status}". Chỉ có thể hủy khi đơn ở trạng thái Pending hoặc Confirmed.`
+        );
+    }
+
+    // 3. Cập nhật trạng thái đơn hàng → Cancelled
+    const { error: updateError } = await supabaseClient
+        .from('orders')
+        .update({
+            status: 'Cancelled',
+            cancel_reason: cancelReason || 'Khách hàng yêu cầu hủy'
+        })
+        .eq('id', orderId);
+
+    if (updateError) throw new Error('Lỗi khi cập nhật trạng thái đơn hàng: ' + updateError.message);
+
+    // 4. Các tác vụ hoàn lại chạy song song (Restore stock & voucher)
+    const restoreTasks: Promise<any>[] = [];
+
+    // 4a. Hoàn lại tồn kho cho từng sản phẩm (đọc stock hiện tại → cộng thêm)
+    for (const item of (order.order_items as any[])) {
+        const restoreStock = async () => {
+            const { data: variant } = await supabaseClient
+                .from('product_variants')
+                .select('stock_quantity')
+                .eq('id', item.variant_id)
+                .single();
+            if (variant) {
+                await supabaseClient
+                    .from('product_variants')
+                    .update({ stock_quantity: variant.stock_quantity + item.quantity })
+                    .eq('id', item.variant_id);
+            }
+        };
+        restoreTasks.push(restoreStock());
+    }
+
+    // 4b. Hoàn lại số lượt voucher (nếu đơn hàng có dùng voucher)
+    if (order.voucher_id) {
+        const restoreVoucher = async () => {
+            const { data: voucher } = await supabaseClient
+                .from('vouchers')
+                .select('quantity')
+                .eq('id', order.voucher_id)
+                .single();
+            if (voucher && voucher.quantity !== null) {
+                await supabaseClient
+                    .from('vouchers')
+                    .update({ quantity: voucher.quantity + 1 })
+                    .eq('id', order.voucher_id);
+            }
+        };
+        restoreTasks.push(restoreVoucher());
+    }
+
+    // 4c. Cập nhật trạng thái thanh toán → Failed (nếu chưa thanh toán)
+    const markPaymentFailed = async () => {
+        await supabaseClient
+            .from('payments')
+            .update({ status: 'Failed' })
+            .eq('order_id', orderId)
+            .eq('status', 'Pending');
+    };
+    restoreTasks.push(markPaymentFailed());
+
+    await Promise.all(restoreTasks);
+
+    return {
+        orderId,
+        status: 'Cancelled',
+        cancel_reason: cancelReason || 'Khách hàng yêu cầu hủy'
     };
 };

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createOrder, getOrders, getOrderById } from '../controllers/clientOrderController';
+import { createOrder, getOrders, getOrderById, cancelOrderById } from '../controllers/clientOrderController';
 
 const router = Router();
 
@@ -101,5 +101,72 @@ router.route('/')
  *         description: Lỗi hệ thống
  */
 router.get('/:id', getOrderById);
+
+/**
+ * @swagger
+ * /orders/{id}/cancel:
+ *   patch:
+ *     summary: Hủy đơn hàng (User)
+ *     description: |
+ *       Gửi yêu cầu hủy đơn hàng. Chỉ được phép hủy khi đơn đang ở trạng thái **Pending** hoặc **Confirmed** (chưa được đóng gói).
+ *       Khi hủy thành công, hệ thống sẽ tự động:
+ *       - Cập nhật trạng thái đơn hàng thành `Cancelled`
+ *       - Hoàn lại số lượng tồn kho cho từng sản phẩm
+ *       - Hoàn lại số lượt sử dụng Voucher (nếu có)
+ *       - Cập nhật trạng thái thanh toán thành `Failed`
+ *     tags: [Client Orders]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID của đơn hàng cần hủy
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userId
+ *             properties:
+ *               userId:
+ *                 type: integer
+ *                 description: ID của khách hàng (để xác thực quyền sở hữu)
+ *                 example: 1
+ *               cancelReason:
+ *                 type: string
+ *                 description: Lý do hủy đơn (tùy chọn)
+ *                 example: "Tôi muốn thay đổi địa chỉ giao hàng"
+ *     responses:
+ *       200:
+ *         description: Hủy đơn hàng thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Hủy đơn hàng thành công."
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     orderId:
+ *                       type: integer
+ *                     status:
+ *                       type: string
+ *                       example: "Cancelled"
+ *                     cancel_reason:
+ *                       type: string
+ *       400:
+ *         description: Không thể hủy (đơn đang ở trạng thái Packing/Shipping/Completed) hoặc không tìm thấy đơn
+ *       401:
+ *         description: Thiếu userId
+ *       500:
+ *         description: Lỗi hệ thống
+ */
+router.patch('/:id/cancel', cancelOrderById);
 
 export default router;
