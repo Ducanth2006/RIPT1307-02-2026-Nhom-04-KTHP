@@ -34,6 +34,10 @@ const router = Router();
  *         slug:
  *           type: string
  *           description: Đường dẫn đẹp (tự tạo nếu để trống)
+ *         status:
+ *           type: string
+ *           description: Trạng thái hiển thị (Active/Draft)
+ *           default: Active
  */
 
 /**
