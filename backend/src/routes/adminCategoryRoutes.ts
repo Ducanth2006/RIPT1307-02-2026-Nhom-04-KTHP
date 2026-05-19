@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getCategories, addCategory, editCategory, removeCategory } from '../controllers/adminCategoryController';
+import { getCategories, addCategory, editCategory, removeCategory, getCategoryStats } from '../controllers/adminCategoryController';
 
 const router = Router();
 
@@ -34,7 +34,33 @@ const router = Router();
  *         slug:
  *           type: string
  *           description: Đường dẫn đẹp (tự tạo nếu để trống)
+ *         status:
+ *           type: string
+ *           description: Trạng thái hiển thị (Active/Draft)
+ *           default: Active
  */
+
+/**
+ * @swagger
+ * /admin/categories/stats:
+ *   get:
+ *     summary: Lấy 3 chỉ số thống kê đầu trang cho Danh mục
+ *     tags: ["[Admin] Categories"]
+ *     responses:
+ *       200:
+ *         description: Trả về số liệu Total Categories, Active Items, Top Performing
+ *         content:
+ *           application/json:
+ *             example:
+ *               message: "Lấy thống kê danh mục thành công!"
+ *               data:
+ *                 total_categories: 20
+ *                 active_items: 150
+ *                 top_performing: "Giày Thể Thao"
+ *       500:
+ *         description: Lỗi hệ thống khi tính toán thống kê
+ */
+router.get('/stats', getCategoryStats);
 
 /**
  * @swagger

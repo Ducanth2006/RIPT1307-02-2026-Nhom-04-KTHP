@@ -1,112 +1,219 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Table, Input, Select, Space, message, Popconfirm, Dropdown, MenuProps } from 'antd';
-import { Plus, Search, SlidersHorizontal, Edit, Trash2, EyeOff, Eye, Image as ImageIcon, MoreHorizontal, Download } from 'lucide-react';
-import { Product } from '../../types';
-
-const initialData: any[] = [
-  { key: '1', id: 'PRD-8921', img: true, name: 'Pro-Runner X1 Elite', category: 'Footwear', price: 149.99, stock: 420, status: 'ACTIVE' },
-  { key: '2', id: 'PRD-8922', img: false, name: "Tech-Fleece Joggers Men's", category: 'Apparel', price: 85.00, stock: 12, status: 'ACTIVE' },
-  { key: '3', id: 'PRD-8923', img: false, name: 'Championship Series Basketball', category: 'Equipment', price: 110.00, stock: 0, status: 'HIDDEN' },
-  { key: '4', id: 'PRD-8924', img: false, name: 'Compression Sleeve Black', category: 'Accessories', price: 24.50, stock: 1204, status: 'ACTIVE' },
-  { key: '5', id: 'PRD-8925', img: false, name: 'Hydration Pack 2L', category: 'Accessories', price: 45.00, stock: 89, status: 'ACTIVE' },
-];
+import { Button, Table, Input, Select, Space, message, Popconfirm, Dropdown, MenuProps, Switch, Modal, Form, InputNumber } from 'antd';
+import { Plus, Search, SlidersHorizontal, Edit2, Trash2, Image as ImageIcon, Box, Activity, AlertTriangle, CheckCircle } from 'lucide-react';
+import { getAdminProducts, getAdminProductStats, deleteAdminProduct, updateAdminProduct } from '../../services/adminProductService';
+import axiosInstance from '../../utils/axiosConfig';
+import ip from '../../utils/ip';
+import type { ColumnsType } from 'antd/es/table';
 
 export default function Products() {
   const navigate = useNavigate();
 
-  const [data, setData] = useState<any[]>(initialData);
+  const [data, setData] = useState<any[]>([]);
+  const [stats, setStats] = useState<any>({ totalProducts: 0, activeProducts: 0, totalStock: 0, lowStockAlerts: 0 });
+  const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
-  const [category, setCategory] = useState('All Categories');
-  const [priceRange, setPriceRange] = useState('Price: All');
+  const [selectedParent, setSelectedParent] = useState<string | number>('Tất cả');
+  const [selectedChild, setSelectedChild] = useState<string | number>('Tất cả');
+  const [priceRange, setPriceRange] = useState('Tất cả mức giá');
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [allCategories, setAllCategories] = useState<any[]>([]);
 
-  const handleDelete = (id: string) => {
-    setData((prev) => prev.filter((item) => item.id !== id));
-    message.success('Product deleted successfully');
+  // Update Modal State
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<any | null>(null);
+  const [form] = Form.useForm();
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [statsRes, productsRes, categoriesRes] = await Promise.all([
+        getAdminProductStats(),
+        getAdminProducts(),
+        axiosInstance.get(`${ip}/admin/categories`)
+      ]);
+      setStats(statsRes.data || { totalProducts: 0, activeProducts: 0, totalStock: 0, lowStockAlerts: 0 });
+      setData(productsRes.data || []);
+      setAllCategories(categoriesRes.data?.data || []);
+    } catch (error) {
+      message.error('Lỗi khi tải dữ liệu sản phẩm!');
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleToggleStatus = (id: string) => {
-    setData((prev) => prev.map((item) => {
-      if (item.id === id) {
-        const newStatus = item.status === 'ACTIVE' ? 'HIDDEN' : 'ACTIVE';
-        message.success(`Product ${newStatus.toLowerCase()}`);
-        return { ...item, status: newStatus };
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const handleDelete = async (id: string | number) => {
+    try {
+      await deleteAdminProduct(id);
+      message.success('Đã xóa sản phẩm thành công');
+      fetchData(); // Tải lại danh sách
+    } catch (error) {
+      message.error('Xóa sản phẩm thất bại');
+    }
+  };
+
+  const handleToggleStatus = async (record: any, checked: boolean) => {
+    const newStatus = checked ? 'Active' : 'Draft';
+    try {
+      await updateAdminProduct(record.id, { status: newStatus });
+      message.success(`Đã cập nhật trạng thái thành ${newStatus}`);
+      fetchData();
+    } catch (error) {
+      message.error('Cập nhật trạng thái thất bại');
+    }
+  };
+
+  const openEditModal = (product: any) => {
+    setEditingProduct(product);
+    form.setFieldsValue({
+      name: product.name,
+      brand: product.brand,
+      base_price: product.base_price,
+      status: product.status === 'Active'
+    });
+    setIsModalVisible(true);
+  };
+
+  const onEditModalOk = () => {
+    form.validateFields().then(async values => {
+      message.loading({ content: 'Đang lưu...', key: 'saveProd' });
+      const payload = {
+        name: values.name,
+        brand: values.brand,
+        base_price: values.base_price,
+        status: values.status ? 'Active' : 'Draft'
+      };
+
+      try {
+        await updateAdminProduct(editingProduct.id, payload);
+        message.success({ content: 'Cập nhật sản phẩm thành công.', key: 'saveProd' });
+        setIsModalVisible(false);
+        fetchData();
+      } catch (error: any) {
+        message.error({ content: 'Lưu thất bại', key: 'saveProd' });
       }
-      return item;
-    }));
+    });
   };
 
-  const handleBulkAction: MenuProps['onClick'] = (e) => {
+  const handleBulkAction: MenuProps['onClick'] = async (e) => {
     if (selectedRowKeys.length === 0) {
-      message.warning('Please select products first');
+      message.warning('Vui lòng chọn sản phẩm trước');
       return;
     }
-    if (e.key === 'delete') {
-      setData((prev) => prev.filter((item) => !selectedRowKeys.includes(item.key)));
+    
+    message.loading({ content: 'Đang xử lý...', key: 'bulk' });
+    try {
+      if (e.key === 'delete') {
+        await Promise.all(selectedRowKeys.map(id => deleteAdminProduct(id)));
+        message.success({ content: `Đã xóa ${selectedRowKeys.length} sản phẩm`, key: 'bulk' });
+      } else if (e.key === 'hide') {
+        await Promise.all(selectedRowKeys.map(id => updateAdminProduct(id, { status: 'Draft' })));
+        message.success({ content: `Đã ẩn ${selectedRowKeys.length} sản phẩm`, key: 'bulk' });
+      } else if (e.key === 'activate') {
+        await Promise.all(selectedRowKeys.map(id => updateAdminProduct(id, { status: 'Active' })));
+        message.success({ content: `Đã bật bán ${selectedRowKeys.length} sản phẩm`, key: 'bulk' });
+      }
       setSelectedRowKeys([]);
-      message.success(`${selectedRowKeys.length} products deleted`);
-    } else if (e.key === 'hide') {
-      setData((prev) => prev.map((item) => selectedRowKeys.includes(item.key) ? { ...item, status: 'HIDDEN' } : item));
-      setSelectedRowKeys([]);
-      message.success(`${selectedRowKeys.length} products hidden`);
-    } else if (e.key === 'activate') {
-      setData((prev) => prev.map((item) => selectedRowKeys.includes(item.key) ? { ...item, status: 'ACTIVE' } : item));
-      setSelectedRowKeys([]);
-      message.success(`${selectedRowKeys.length} products activated`);
+      fetchData();
+    } catch (error) {
+      message.error({ content: 'Lỗi khi xử lý hàng loạt', key: 'bulk' });
     }
   };
 
   const bulkMenuItems: MenuProps['items'] = [
-    { key: 'activate', label: 'Mark as Active' },
-    { key: 'hide', label: 'Mark as Hidden' },
+    { key: 'activate', label: 'Bật trạng thái (Active)' },
+    { key: 'hide', label: 'Tắt trạng thái (Draft)' },
     { type: 'divider' },
-    { key: 'delete', label: 'Delete Selected', danger: true },
+    { key: 'delete', label: 'Xóa đã chọn', danger: true },
   ];
 
-  const columns = [
-    { title: 'ID', dataIndex: 'id', className: 'font-mono text-xs text-[#5b403d]' },
-    { title: 'Img', dataIndex: 'img', render: (img: boolean) => (
-        <div className="w-8 h-8 rounded border border-[#d8dadc] flex items-center justify-center bg-[#e0e3e5] text-[#8f6f6c]">
-          {img ? <img src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=100&h=100&fit=crop" className="w-full h-full object-cover rounded" alt="product" /> : <ImageIcon size={16} />}
+  const columns: ColumnsType<any> = [
+    { 
+      title: 'Hình ảnh', 
+      dataIndex: 'main_image', 
+      width: 80,
+      render: (img: string) => (
+        <div className="w-12 h-12 rounded-lg border border-[#d8dadc] flex items-center justify-center bg-[#e0e3e5] text-[#8f6f6c] overflow-hidden shadow-sm">
+          {img ? <img src={img} className="w-full h-full object-cover" alt="product" /> : <ImageIcon size={20} />}
         </div>
       ) 
     },
-    { title: 'Product Name', dataIndex: 'name', className: 'font-medium min-w-[200px]' },
-    { title: 'Category', dataIndex: 'category', className: 'text-[#5b403d]' },
-    { title: 'Price', dataIndex: 'price', align: 'right' as const, className: 'font-mono text-sm', render: (val: number) => `$${val.toFixed(2)}` },
-    { title: 'Stock', dataIndex: 'stock', align: 'right' as const, render: (val: number) => (
-        <span className="flex items-center justify-end gap-1">
-          <span className={`w-2 h-2 rounded-full ${val === 0 ? 'bg-red-500' : val < 20 ? 'bg-amber-500' : 'bg-[#00799c]'}`}></span>
+    { 
+      title: 'Tên Sản Phẩm', 
+      dataIndex: 'name', 
+      render: (text: string, record: any) => (
+        <div>
+          <div className="font-bold text-[15px] text-[#191c1e]">{text}</div>
+          <div className="text-[13px] text-[#5b403d] mt-0.5">ID: PRD-{record.id} | {record.brand || 'No Brand'}</div>
+        </div>
+      )
+    },
+    { 
+      title: 'Danh mục', 
+      render: (_: any, record: any) => <span className="text-[#5b403d] font-medium text-[15px]">{record.categories?.name || '---'}</span> 
+    },
+    { 
+      title: 'Giá bán', 
+      dataIndex: 'base_price', 
+      align: 'right' as const, 
+      className: 'font-mono text-[15px] font-bold text-[#af101a]', 
+      render: (val: number) => `${Number(val).toLocaleString('vi-VN')} đ` 
+    },
+    { 
+      title: 'Tồn kho', 
+      dataIndex: 'total_stock', 
+      align: 'right' as const, 
+      render: (val: number) => (
+        <span className="flex items-center justify-end gap-2 text-[15px] font-medium text-[#191c1e]">
+          <span className={`w-2.5 h-2.5 rounded-full ${val === 0 ? 'bg-red-500' : val < 20 ? 'bg-amber-500' : 'bg-green-500'}`}></span>
           {val}
         </span>
       )
     },
-    { title: 'Status', dataIndex: 'status', align: 'center' as const, render: (val: string) => (
-        <span className={`px-2 py-0.5 rounded-sm text-[11px] font-semibold tracking-wide uppercase border ${
-          val === 'ACTIVE' ? 'bg-[#00799c]/10 text-[#00799c] border-[#00799c]/20' : 'bg-[#e0e3e5] text-[#5b403d] border-[#e4beba]'
-        }`}>
-          {val}
-        </span>
+    { 
+      title: 'Trạng thái', 
+      dataIndex: 'status', 
+      align: 'center' as const,
+      width: 140,
+      render: (status: string, record: any) => (
+        <Space>
+          <Switch 
+            checked={status === 'Active'} 
+            onChange={(checked) => handleToggleStatus(record, checked)} 
+            size="small" 
+          />
+          <span className={`px-3 py-1 rounded-full text-[13px] font-bold tracking-wide ${
+            status === 'Active' ? 'bg-[#d5fcde] text-[#2a7a40]' : 'bg-[#eceef0] text-[#5b403d]'
+          }`}>
+            {status}
+          </span>
+        </Space>
       ) 
     },
-    { title: 'Actions', key: 'action', align: 'right' as const, render: (_: any, record: Product) => (
-        <Space className="opacity-50 hover:opacity-100 transition-opacity">
-          <Button type="text" icon={<Edit size={16} />} size="small" className="text-[#5b403d] hover:text-[#af101a]" onClick={() => navigate('/admin/products/new')} title="Edit" />
-          {record.status === 'ACTIVE' ? (
-            <Button type="text" icon={<EyeOff size={16} />} size="small" className="text-[#5b403d] hover:text-red-500" onClick={() => handleToggleStatus(record.id)} title="Hide" />
-          ) : (
-            <Button type="text" icon={<Eye size={16} />} size="small" className="text-[#5b403d] hover:text-[#00799c]" onClick={() => handleToggleStatus(record.id)} title="Show" />
-          )}
+    { 
+      title: 'Hành động', 
+      key: 'action', 
+      align: 'right' as const, 
+      width: 120,
+      render: (_: any, record: any) => (
+        <Space size="middle">
+          <Button type="text" icon={<Edit2 size={16} />} onClick={() => openEditModal(record)} className="text-[#00799c] hover:bg-[#e0f2fe]" title="Sửa" />
           <Popconfirm
-            title="Delete this product?"
-            description="Are you sure you want to delete this product?"
+            title="Xóa sản phẩm"
+            description={`Bạn có chắc muốn xóa "${record.name}"?`}
             onConfirm={() => handleDelete(record.id)}
-            okText="Yes"
-            cancelText="No"
+            okText="Xóa"
+            cancelText="Hủy"
             placement="topRight"
+            okButtonProps={{ danger: true }}
           >
-            <Button type="text" icon={<Trash2 size={16} />} size="small" className="text-[#5b403d] hover:text-red-500" title="Delete" />
+            <Button type="text" danger icon={<Trash2 size={16} />} title="Xóa" />
           </Popconfirm>
         </Space>
       ) 
@@ -118,119 +225,141 @@ export default function Products() {
       // Search filter
       const searchLower = searchText.toLowerCase();
       if (searchText && 
-          !item.name.toLowerCase().includes(searchLower) && 
-          !item.id.toLowerCase().includes(searchLower)) {
+          !item.name?.toLowerCase().includes(searchLower) && 
+          !String(item.id).includes(searchLower)) {
         return false;
       }
       
-      // Category filter
-      if (category !== 'All Categories' && item.category !== category) {
-        return false;
+      // Lọc theo danh mục con trước (ưu tiên cao hơn vì chi tiết hơn)
+      if (selectedChild !== 'Tất cả') {
+        if (item.category_id !== Number(selectedChild)) return false;
+      } 
+      // Nếu không chọn danh mục con cụ thể, lọc theo danh mục cha
+      else if (selectedParent !== 'Tất cả') {
+        const parentId = Number(selectedParent);
+        const childIds = allCategories
+          .filter(c => c.parent_id === parentId)
+          .map(c => c.id);
+        
+        if (item.category_id !== parentId && !childIds.includes(item.category_id)) {
+          return false;
+        }
       }
 
       // Price filter
-      if (priceRange === '$0 - $50' && (item.price < 0 || item.price > 50)) return false;
-      if (priceRange === '$50 - $100' && (item.price <= 50 || item.price > 100)) return false;
-      if (priceRange === '$100+' && item.price <= 100) return false;
+      const price = Number(item.base_price || 0);
+      if (priceRange === 'Dưới 500k' && price >= 500000) return false;
+      if (priceRange === '500k - 1 Triệu' && (price < 500000 || price > 1000000)) return false;
+      if (priceRange === 'Trên 1 Triệu' && price <= 1000000) return false;
 
       return true;
     });
-  }, [data, searchText, category, priceRange]);
+  }, [data, searchText, selectedParent, selectedChild, priceRange, allCategories]);
 
-  const onSelectChange = (newSelectedRowKeys: React.Key[]) => {
-    setSelectedRowKeys(newSelectedRowKeys);
-  };
+  const parentCategoryOptions = useMemo(() => {
+    const parents = allCategories.filter(c => !c.parent_id);
+    return [
+      { value: 'Tất cả', label: 'Tất cả danh mục hàng' },
+      ...parents.map(p => ({ value: p.id, label: p.name }))
+    ];
+  }, [allCategories]);
 
-  const rowSelection = {
-    selectedRowKeys,
-    onChange: onSelectChange,
+  const childCategoryOptions = useMemo(() => {
+    let children = allCategories.filter(c => c.parent_id);
+    if (selectedParent !== 'Tất cả') {
+      children = children.filter(c => c.parent_id === Number(selectedParent));
+    }
+    return [
+      { value: 'Tất cả', label: 'Tất cả danh mục sản phẩm' },
+      ...children.map(c => ({ value: c.id, label: c.name }))
+    ];
+  }, [allCategories, selectedParent]);
+
+  const handleParentChange = (val: string | number) => {
+    setSelectedParent(val);
+    setSelectedChild('Tất cả');
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="p-4 md:p-6 max-w-[1440px] mx-auto space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
         <div>
-          <h1 className="text-3xl font-bold text-[#191c1e]">Product Management</h1>
-          <p className="text-[#5b403d] mt-1 text-sm">Manage catalog inventory, pricing, and status.</p>
+          <h1 className="text-2xl md:text-3xl font-extrabold text-[#191c1e] tracking-tight">Quản lý Sản Phẩm</h1>
+          <p className="text-[15px] text-[#5b403d] mt-2 font-medium">Theo dõi kho hàng, giá bán và trạng thái sản phẩm.</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button 
-            icon={<Download size={18} />} 
-            className="text-[#5b403d] px-4 py-4"
-            onClick={() => message.info('Exporting product catalog...')}
-          >
-            Export
-          </Button>
-          <button 
-            onClick={() => navigate('/admin/products/new')}
-            className="bg-[#d32f2f] text-white text-sm font-medium px-4 py-2 rounded shadow-sm hover:bg-[#b71c1c] transition-colors flex items-center gap-2 border-b border-[#b71c1c]"
-          >
-            <Plus size={18} />
-            Add New Product
-          </button>
-        </div>
+        <Button 
+          type="primary" 
+          icon={<Plus size={20} />} 
+          className="bg-[#d32f2f] hover:bg-[#ba1a20] h-10 text-[15px] font-bold px-6 rounded-xl shadow-sm"
+          onClick={() => navigate('/admin/products/new')}
+        >
+          Tạo Sản Phẩm Mới
+        </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {[
-          { label: 'Total Products', val: '64,230', sub: '+12%', subCls: 'text-[#00799c]', border: 'border-t-4 border-t-[#d32f2f]' },
-          { label: 'Active Listings', val: '59,102', sub: '92%', subCls: 'text-[#5b403d]' },
-          { label: 'Low Stock Alerts', val: '1,432', valCls: 'text-red-600', sub: 'Action Required', subCls: 'text-red-600' },
-          { label: 'Pending Sync', val: '84', sub: 'Warehouse A', subCls: 'text-[#5b403d]' },
+          { label: 'Tổng số Sản Phẩm', value: stats.totalProducts.toLocaleString('vi-VN'), icon: Box, color: 'text-blue-600', bg: 'bg-blue-50' },
+          { label: 'Sản phẩm Hoạt động', value: stats.activeProducts.toLocaleString('vi-VN'), icon: CheckCircle, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+          { label: 'Tổng Tồn Kho', value: stats.totalStock.toLocaleString('vi-VN'), icon: Activity, color: 'text-green-600', bg: 'bg-green-50' },
+          { label: 'Cảnh báo Hết Hàng', value: stats.lowStockAlerts.toLocaleString('vi-VN'), icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-50' },
         ].map((stat, i) => (
-          <div key={i} className={`bg-white border border-[#d8dadc] rounded-lg p-4 shadow-sm ${stat.border || ''}`}>
-            <p className="text-xs font-medium text-[#5b403d] mb-1">{stat.label}</p>
-            <div className="flex items-baseline gap-2">
-              <span className={`text-3xl font-bold ${stat.valCls || 'text-[#191c1e]'}`}>{stat.val}</span>
-              <span className={`text-sm ${stat.subCls}`}>{stat.sub}</span>
+          <div key={i} className="bg-white p-5 rounded-2xl border border-[#d8dadc] shadow-sm flex items-center gap-5 hover:shadow-md transition-shadow">
+            <div className={`w-14 h-14 flex items-center justify-center rounded-xl ${stat.bg}`}>
+              <stat.icon className={stat.color} size={28} />
+            </div>
+            <div>
+              <p className="text-2xl md:text-3xl font-extrabold text-[#191c1e]">{stat.value}</p>
+              <p className="text-[14px] text-[#5b403d] font-bold mt-1">{stat.label}</p>
             </div>
           </div>
         ))}
       </div>
 
-      <div className="bg-white border border-[#d8dadc] rounded-lg shadow-sm flex flex-col">
-        <div className="p-4 border-b border-[#d8dadc] flex flex-col md:flex-row gap-4 justify-between items-center bg-[#f7f9fb] rounded-t-lg">
-          <div className="flex-1 w-full flex flex-col sm:flex-row gap-3">
+      <div className="bg-white border border-[#d8dadc] rounded-xl shadow-sm">
+        <div className="p-4 border-b border-[#d8dadc] flex flex-col md:flex-row gap-4 justify-between items-center bg-[#f7f9fb] rounded-t-xl">
+          <div className="flex-1 w-full flex flex-col md:flex-row gap-3">
             <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#5b403d]" size={20} />
-              <input 
-                type="text" 
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#5b403d]" size={18} />
+              <Input 
+                placeholder="Tìm theo ID hoặc tên sản phẩm..." 
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
-                placeholder="Search by ID, Name, or SKU..." 
-                className="w-full pl-10 pr-4 py-2 bg-white border border-[#d8dadc] rounded-md text-sm focus:outline-none focus:border-[#af101a] focus:ring-1 focus:ring-[#af101a]/20"
+                className="w-full pl-10 h-10 text-[15px] font-medium rounded-xl"
+                allowClear
               />
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Select 
-                value={category}
-                onChange={setCategory}
-                style={{ width: 140 }} 
-                options={[
-                  { value: 'All Categories' }, 
-                  { value: 'Footwear' }, 
-                  { value: 'Apparel' },
-                  { value: 'Equipment' },
-                  { value: 'Accessories' }
-                ]} 
+                value={selectedParent}
+                onChange={handleParentChange}
+                style={{ width: 220 }} 
+                className="h-10 text-[15px] font-medium"
+                options={parentCategoryOptions} 
+              />
+              <Select 
+                value={selectedChild}
+                onChange={setSelectedChild}
+                style={{ width: 220 }} 
+                className="h-10 text-[15px] font-medium"
+                options={childCategoryOptions} 
               />
               <Select 
                 value={priceRange}
                 onChange={setPriceRange}
-                style={{ width: 120 }} 
+                style={{ width: 160 }} 
+                className="h-10 text-[15px] font-medium" 
                 options={[
-                  { value: 'Price: All' }, 
-                  { value: '$0 - $50' },
-                  { value: '$50 - $100' },
-                  { value: '$100+' }
+                  { value: 'Tất cả mức giá' }, 
+                  { value: 'Dưới 500k' },
+                  { value: '500k - 1 Triệu' },
+                  { value: 'Trên 1 Triệu' }
                 ]} 
-                className="hidden sm:block" 
               />
-              <Button icon={<SlidersHorizontal size={18} />} onClick={() => message.info('Toggle advanced filters panel')} />
               {selectedRowKeys.length > 0 && (
                 <Dropdown menu={{ items: bulkMenuItems, onClick: handleBulkAction }} trigger={['click']}>
-                  <Button type="primary" className="bg-[#00799c]">
-                    Bulk Actions ({selectedRowKeys.length})
+                  <Button type="primary" className="bg-[#00799c] h-10 rounded-xl font-bold">
+                    Thao tác ({selectedRowKeys.length})
                   </Button>
                 </Dropdown>
               )}
@@ -241,16 +370,68 @@ export default function Products() {
         <Table 
           columns={columns} 
           dataSource={filteredData} 
-          rowSelection={rowSelection}
+          rowKey="id"
+          rowSelection={{
+            selectedRowKeys,
+            onChange: (keys) => setSelectedRowKeys(keys),
+          }}
+          loading={loading}
+          scroll={{ x: 'max-content', y: 600 }}
           pagination={{
             showSizeChanger: true,
-            showTotal: (total, range) => `${range[0]}-${range[1]} of ${total}`,
-            defaultPageSize: 50
+            showTotal: (total, range) => `${range[0]}-${range[1]} trong ${total} sản phẩm`,
+            defaultPageSize: 20
           }}
-          className="border-b"
-          rowClassName={(r) => r.status === 'HIDDEN' ? 'opacity-75 bg-[#f7f9fb]' : 'hover:bg-[#f2f4f6]'}
+          className="custom-table"
         />
       </div>
+
+      {/* Cập Nhật Sản Phẩm Nổi (Edit Modal) */}
+      <Modal
+        title={<span className="text-xl font-extrabold text-[#191c1e]">Cập nhật Thông tin Cơ bản</span>}
+        open={isModalVisible}
+        onOk={onEditModalOk}
+        onCancel={() => setIsModalVisible(false)}
+        width={600}
+        okText="Lưu Thay Đổi"
+        cancelText="Hủy"
+        okButtonProps={{ className: "bg-[#d32f2f] hover:bg-[#ba1a20] h-10 font-bold px-6 rounded-lg text-[15px]" }}
+        cancelButtonProps={{ className: "h-10 font-bold px-6 rounded-lg text-[15px]" }}
+      >
+        <Form 
+          form={form} 
+          layout="vertical" 
+          className="mt-6 text-[#191c1e] text-[15px] font-medium"
+        >
+          <Form.Item 
+            name="name" 
+            label="Tên sản phẩm" 
+            rules={[{ required: true, message: 'Vui lòng nhập tên!' }]}
+          >
+            <Input size="large" />
+          </Form.Item>
+
+          <div className="grid grid-cols-2 gap-4">
+            <Form.Item 
+              name="base_price" 
+              label="Giá bán cơ bản (VNĐ)" 
+              rules={[{ required: true, message: 'Vui lòng nhập giá!' }]}
+            >
+              <InputNumber size="large" className="w-full" min={0} />
+            </Form.Item>
+
+            <Form.Item name="brand" label="Thương hiệu">
+              <Input size="large" />
+            </Form.Item>
+          </div>
+
+          <Form.Item name="status" label="Trạng thái hiển thị" valuePropName="checked">
+             <Switch checkedChildren="Đang Bán" unCheckedChildren="Tạm Ẩn" />
+          </Form.Item>
+          
+          <p className="text-xs text-gray-500 mt-2 italic">* Để chỉnh sửa sâu về Hình ảnh và Phân loại (Size/Màu), sếp vui lòng xóa và tạo mới sản phẩm để tránh sai lệch kho hàng.</p>
+        </Form>
+      </Modal>
     </div>
   );
 }
