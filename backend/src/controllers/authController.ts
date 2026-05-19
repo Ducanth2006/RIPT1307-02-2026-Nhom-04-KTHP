@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { registerUser, loginUser } from '../services/authService';
+import { registerUser, loginUser, logoutUser } from '../services/authService';
 
 export const register = async (req: Request, res: Response): Promise<any> => {
     try {
@@ -39,3 +39,23 @@ export const login = async (req: Request, res: Response): Promise<any> => {
         return res.status(400).json({ message: error.message });
     }
 };
+
+export const logout = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({ message: 'Không tìm thấy Token hoặc định dạng Token không hợp lệ.' });
+        }
+
+        const token = authHeader.split(' ')[1];
+        if (!token) {
+            return res.status(401).json({ message: 'Không tìm thấy Token hoặc định dạng Token không hợp lệ.' });
+        }
+        await logoutUser(token);
+
+        return res.status(200).json({ message: 'Đăng xuất thành công.' });
+    } catch (error: any) {
+        return res.status(400).json({ message: error.message });
+    }
+};
+
