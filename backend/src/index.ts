@@ -18,6 +18,11 @@ import adminInventoryRoutes from './routes/adminInventoryRoutes';
 import clientProductRoutes from './routes/clientProductRoutes';
 import clientCategoryRoutes from './routes/clientCategoryRoutes';
 import clientCartRoutes from './routes/clientCartRoutes';
+import clientAddressRoutes from './routes/clientAddressRoutes';
+import clientProfileRoutes from './routes/clientProfileRoutes';
+import clientReviewRoutes from './routes/clientReviewRoutes';
+import clientComplaintRoutes from './routes/clientComplaintRoutes';
+import clientNotificationRoutes from './routes/clientNotificationRoutes';
 
 const app = express();
 const port = 5000;
@@ -88,6 +93,11 @@ app.use('/api/products', clientProductRoutes);
 app.use('/api/categories', clientCategoryRoutes);
 app.use('/api/cart', clientCartRoutes);
 app.use('/api/orders', clientOrderRoutes);
+app.use('/api/addresses', clientAddressRoutes);
+app.use('/api/profile', clientProfileRoutes);
+app.use('/api/reviews', clientReviewRoutes);
+app.use('/api/complaints', clientComplaintRoutes);
+app.use('/api/notifications', clientNotificationRoutes);
 
 // =============================================================
 // ❌ XỬ LÝ LỖI TẬP TRUNG
