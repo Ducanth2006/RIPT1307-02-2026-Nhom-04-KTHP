@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { checkoutOrder, getUserOrders, getOrderDetails } from '../services/clientOrderService';
+import { checkoutOrder, getUserOrders, getOrderDetails, cancelOrder } from '../services/clientOrderService';
 
 export const createOrder = async (req: Request, res: Response): Promise<any> => {
     // Bắt đầu đếm thời gian thực thi (Performance tracking)
@@ -92,5 +92,31 @@ export const getOrderById = async (req: Request, res: Response): Promise<any> =>
     } catch (error: any) {
         console.error("Lỗi getOrderById:", error);
         return res.status(404).json({ message: error.message || "Không tìm thấy đơn hàng." });
+    }
+};
+
+export const cancelOrderById = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const orderId = req.params.id;
+        const { userId, cancelReason } = req.body;
+
+        if (!orderId || isNaN(Number(orderId))) {
+            return res.status(400).json({ message: "Mã đơn hàng không hợp lệ." });
+        }
+        if (!userId) {
+            return res.status(401).json({ message: "Vui lòng cung cấp userId." });
+        }
+
+        const result = await cancelOrder(Number(orderId), Number(userId), cancelReason);
+
+        return res.status(200).json({
+            message: "Hủy đơn hàng thành công.",
+            data: result
+        });
+    } catch (error: any) {
+        console.error("Lỗi cancelOrderById:", error);
+        // Trả về 400 nếu lỗi do nghiệp vụ (trạng thái không hợp lệ), 500 nếu lỗi hệ thống
+        const statusCode = error.message?.includes("Không thể hủy") || error.message?.includes("không tồn tại") ? 400 : 500;
+        return res.status(statusCode).json({ message: error.message || "Lỗi hệ thống khi hủy đơn hàng." });
     }
 };

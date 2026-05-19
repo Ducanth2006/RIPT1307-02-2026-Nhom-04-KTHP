@@ -1,5 +1,6 @@
 import express from 'express';
 import type { Request, Response } from 'express';
+import cors from 'cors';
 import supabaseClient from './config/supabase';
 import swaggerUi from 'swagger-ui-express';
 import { clientSwaggerSpec, adminSwaggerSpec } from './config/swagger';
@@ -17,9 +18,28 @@ import adminInventoryRoutes from './routes/adminInventoryRoutes';
 import clientProductRoutes from './routes/clientProductRoutes';
 import clientCategoryRoutes from './routes/clientCategoryRoutes';
 import clientCartRoutes from './routes/clientCartRoutes';
+import clientAddressRoutes from './routes/clientAddressRoutes';
+import clientProfileRoutes from './routes/clientProfileRoutes';
+import clientReviewRoutes from './routes/clientReviewRoutes';
+import clientComplaintRoutes from './routes/clientComplaintRoutes';
+import clientNotificationRoutes from './routes/clientNotificationRoutes';
+import clientAuthRoutes from './routes/clientAuthRoutes';
 
 const app = express();
-const port = 5000;
+const port = 5001;
+
+// =============================================================
+// 🌐 CORS - Cho phép Frontend gọi API từ domain khác
+// =============================================================
+app.use(cors({
+    origin: [
+        'http://localhost:5173',  // Vite dev server (Frontend)
+        'http://localhost:3000',  // Fallback nếu dùng CRA
+    ],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
+}));
 
 app.use(express.json());
 
@@ -74,6 +94,12 @@ app.use('/api/products', clientProductRoutes);
 app.use('/api/categories', clientCategoryRoutes);
 app.use('/api/cart', clientCartRoutes);
 app.use('/api/orders', clientOrderRoutes);
+app.use('/api/addresses', clientAddressRoutes);
+app.use('/api/profile', clientProfileRoutes);
+app.use('/api/reviews', clientReviewRoutes);
+app.use('/api/complaints', clientComplaintRoutes);
+app.use('/api/notifications', clientNotificationRoutes);
+app.use('/api/auth', clientAuthRoutes);
 
 // =============================================================
 // ❌ XỬ LÝ LỖI TẬP TRUNG
