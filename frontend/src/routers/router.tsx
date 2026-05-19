@@ -11,13 +11,16 @@ import Categories from "../pages/Admin/Categories";
 import Orders from "../pages/Admin/Orders";
 import UsersPage from "../pages/Admin/UsersPage";
 import ReportsPage from "../pages/Admin/ReportsPage";
-
+//import Support from "../pages/Admin/Support";
 import SettingsPage from "../pages/Admin/SettingsPage";
 import AccountProfile from "../pages/Admin/AccountProfile";
 import HelpCenter from "../pages/Admin/HelpCenter";
 import AddProduct from "../pages/Admin/AddProduct";
 import ProductGrid from "../pages/products/components/ProductGrid";
+import ProductDetail from "../pages/products/components/ProductDetail";
 import Cart from "../pages/cart/Cart";
+import Profile from "../pages/profile/Profile";
+import ClientOrders from "../pages/orders/Orders";
 
 const router = createBrowserRouter([
   {
@@ -33,8 +36,20 @@ const router = createBrowserRouter([
         element: <ProductGrid />,
       },
       {
+        path: "products/:id",
+        element: <ProductDetail />,
+      },
+      {
         path: "cart",
         element: <Cart />,
+      },
+      {
+        path: "profile",
+        element: <Profile />,
+      },
+      {
+        path: "orders",
+        element: <ClientOrders />,
       },
       {
         path: "login",
@@ -86,7 +101,10 @@ const router = createBrowserRouter([
         path: "reports",
         element: <ReportsPage />,
       },
-
+      {
+        path: "support",
+        //element: <Support />,
+      },
       {
         path: "settings",
         element: <SettingsPage />,

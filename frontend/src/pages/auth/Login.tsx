@@ -13,7 +13,7 @@ const Login = () => {
     setLoading(true);
     try {
       const { data: res } = await login(values);
-      localStorage.setItem("token", res.data.access_token);
+      localStorage.setItem("accessToken", res.data.access_token);
       localStorage.setItem("user", JSON.stringify(res.data.user));
       message.success("Đăng nhập thành công!");
       navigate("/");

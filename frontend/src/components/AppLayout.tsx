@@ -1,5 +1,5 @@
 import React from "react";
-import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
+import { Outlet, Link, useLocation, useNavigate, Navigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Package2,
@@ -23,6 +23,11 @@ export default function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const currentPath = location.pathname;
+
+  const token = localStorage.getItem("accessToken");
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
 
   const handleHelp = () => {
     navigate("/admin/help");

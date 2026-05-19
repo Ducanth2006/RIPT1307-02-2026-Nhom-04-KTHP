@@ -48,11 +48,11 @@ const ProductList = ({ genderFilter }: ProductListProps) => {
         }}
       >
         <Title level={2} style={{ margin: 0 }}>
-          TRENDING NOW
+          Sản phẩm thịnh hành
         </Title>
         <Link to="/products">
           <Button type="link" style={{ fontSize: 16, fontWeight: 800, color: "#000", padding: 0 }}>
-            VIEW ALL →
+            Tất cả sản phẩm →
           </Button>
         </Link>
       </div>
