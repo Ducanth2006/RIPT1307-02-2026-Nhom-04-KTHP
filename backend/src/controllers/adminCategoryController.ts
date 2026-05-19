@@ -29,7 +29,8 @@ export const addCategory = async (req: Request, res: Response): Promise<any> => 
             name: String(name).trim(),
             description: description ? String(description).trim() : null,
             parent_id: parent_id ? Number(parent_id) : null,
-            slug: slug ? String(slug).trim() : generateSlug(name) // Tự tạo slug nếu rỗng
+            slug: slug ? String(slug).trim() : generateSlug(name), // Tự tạo slug nếu rỗng
+            status: req.body.status ? String(req.body.status).trim() : 'Active' // Hỗ trợ lưu trạng thái
         };
 
         const result = await createCategory(categoryData);
