@@ -6,36 +6,29 @@ const BASE_URL = `${ip}/cart`;
 /**
  * Lấy danh sách sản phẩm trong giỏ hàng
  */
-export function getCart() {
-  return axiosInstance.get(BASE_URL);
+export function getCart(userId: number) {
+  return axiosInstance.get(BASE_URL, { params: { userId } });
 }
 
 /**
  * Thêm sản phẩm vào giỏ hàng
  */
-export function addToCartApi(data: { product_id: number; variant_id: number; quantity: number }) {
-  return axiosInstance.post(`${BASE_URL}/add`, data);
+export function addToCartApi(data: { userId: number; variantId: number; quantity: number }) {
+  return axiosInstance.post(`${BASE_URL}/items`, data);
 }
 
 /**
  * Cập nhật số lượng sản phẩm
  */
-export function updateCartItemApi(id: number, quantity: number) {
-  return axiosInstance.put(`${BASE_URL}/update/${id}`, { quantity });
+export function updateCartItemApi(itemId: number, quantity: number) {
+  return axiosInstance.put(`${BASE_URL}/items/${itemId}`, { quantity });
 }
 
 /**
  * Xóa sản phẩm khỏi giỏ hàng
  */
-export function removeCartItemApi(id: number) {
-  return axiosInstance.delete(`${BASE_URL}/remove/${id}`);
-}
-
-/**
- * Xóa toàn bộ giỏ hàng
- */
-export function clearCartApi() {
-  return axiosInstance.delete(`${BASE_URL}/clear`);
+export function removeCartItemApi(itemId: number) {
+  return axiosInstance.delete(`${BASE_URL}/items/${itemId}`);
 }
 
 export default axiosInstance;

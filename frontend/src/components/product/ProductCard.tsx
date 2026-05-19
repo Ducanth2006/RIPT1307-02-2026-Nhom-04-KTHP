@@ -68,6 +68,11 @@ const ProductCard = ({ product }: Props) => {
             icon={liked ? <HeartFilled style={{ color: "#f50" }} /> : <HeartOutlined />}
             onClick={(e) => {
               e.stopPropagation();
+              const token = localStorage.getItem("accessToken");
+              if (!token) {
+                window.location.href = "/login";
+                return;
+              }
               setLiked(!liked);
             }}
             style={{
