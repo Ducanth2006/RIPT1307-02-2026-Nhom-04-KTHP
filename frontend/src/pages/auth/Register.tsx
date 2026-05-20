@@ -12,11 +12,16 @@ const Register = () => {
   const onFinish = async (values) => {
     setLoading(true);
     try {
-      await register(values);
+      await register({
+        email: values.email,
+        password: values.password,
+        full_name: values.full_name,
+      });
       message.success("Đăng ký thành công! Vui lòng đăng nhập.");
       navigate("/login");
     } catch (error) {
-      message.error("Đăng ký thất bại. Vui lòng thử lại sau.", error);
+      const err = error as { response?: { data?: { message?: string } } };
+      message.error(err.response?.data?.message || "Đăng ký thất bại. Vui lòng thử lại sau.");
     } finally {
       setLoading(false);
     }
@@ -55,8 +60,8 @@ const Register = () => {
             </div>
 
             <Form name="register" onFinish={onFinish} layout="vertical" size="middle" className="auth-form">
-              <Form.Item name="username" rules={[{ required: true, message: "Vui lòng nhập tên đăng nhập!" }]}>
-                <Input prefix={<UserOutlined />} placeholder="Tên đăng nhập" />
+              <Form.Item name="full_name" rules={[{ required: true, message: "Vui lòng nhập họ và tên!" }]}>
+                <Input prefix={<UserOutlined />} placeholder="Họ và tên" />
               </Form.Item>
 
               <Form.Item

@@ -1,19 +1,28 @@
 import apiClient from "../../utils/axiosConfig";
+import ip from "../../utils/ip";
 import type { Auth } from "./typing";
 
-export const login = async (data: Auth.ILoginResponse) => {
-  return apiClient.post<Auth.ILoginResponse>("/auth/login", data);
+export const login = async (data: Auth.ILoginRequest) => {
+  return apiClient.post<Auth.ILoginResponse>(`${ip}/auth/login`, data);
 };
 
-export const register = async (data: Auth.IRegisterResponse) => {
-  return apiClient.post<Auth.IRegisterResponse>("/auth/register", data);
+export const register = async (data: Auth.IRegisterRequest) => {
+  return apiClient.post<Auth.IRegisterResponse>(`${ip}/auth/register`, data);
 };
 
 export const getProfile = async () => {
-  return apiClient.get<{ data: Auth.IUser }>("/auth/profile");
+  return apiClient.get<{ data: Auth.IUser }>(`${ip}/auth/profile`);
 };
 
-export const logout = () => {
-  localStorage.removeItem("token");
-  window.location.href = "/login";
+export const logout = async () => {
+  try {
+    await apiClient.post(`${ip}/auth/logout`);
+  } catch (error) {
+    console.error("Logout API error:", error);
+  } finally {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    window.location.href = "/login";
+  }
 };
