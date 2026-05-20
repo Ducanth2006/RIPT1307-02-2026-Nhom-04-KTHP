@@ -18,9 +18,11 @@ import HelpCenter from "../pages/Admin/HelpCenter";
 import AddProduct from "../pages/Admin/AddProduct";
 import ProductGrid from "../pages/products/components/ProductGrid";
 import ProductDetail from "../pages/products/components/ProductDetail";
+import ProductReviewsPage from "../pages/products/ProductReviewsPage";
 import Cart from "../pages/cart/Cart";
 import Profile from "../pages/profile/Profile";
 import ClientOrders from "../pages/orders/Orders";
+import Notifications from "../pages/notifications/Notifications";
 
 const router = createBrowserRouter([
   {
@@ -40,6 +42,10 @@ const router = createBrowserRouter([
         element: <ProductDetail />,
       },
       {
+        path: "products/:id/reviews",
+        element: <ProductReviewsPage />,
+      },
+      {
         path: "cart",
         element: <Cart />,
       },
@@ -50,6 +56,10 @@ const router = createBrowserRouter([
       {
         path: "orders",
         element: <ClientOrders />,
+      },
+      {
+        path: "notifications",
+        element: <Notifications />,
       },
       {
         path: "login",
