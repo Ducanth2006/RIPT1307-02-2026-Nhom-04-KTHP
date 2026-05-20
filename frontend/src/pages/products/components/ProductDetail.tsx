@@ -34,12 +34,16 @@ const ProductDetail = () => {
     [product, selectedVariantId],
   );
 
+  const userStr = localStorage.getItem("user");
+  const userObj = userStr ? JSON.parse(userStr) : null;
+  const userId = userObj?.id;
+
   // API Mutation: Add to Cart
   const addToCartMutation = useMutation({
-    mutationFn: (data: { product_id: number; variant_id: number; quantity: number }) => addToCartApi(data),
+    mutationFn: (data: { userId: number; variantId: number; quantity: number }) => addToCartApi(data),
     onSuccess: () => {
       message.success("Đã thêm sản phẩm vào giỏ hàng!");
-      queryClient.invalidateQueries({ queryKey: ["cart"] }); // Cập nhật Header
+      queryClient.invalidateQueries({ queryKey: ["cart", userId] }); // Cập nhật Header
     },
     onError: () => {
       message.error("Không thể thêm vào giỏ hàng. Vui lòng thử lại!");
@@ -74,9 +78,15 @@ const ProductDetail = () => {
       message.warning("Vui lòng chọn phiên bản sản phẩm");
       return;
     }
+    const token = localStorage.getItem("accessToken");
+    if (!token || !userId) {
+      message.warning("Vui lòng đăng nhập để thêm vào giỏ hàng");
+      navigate("/login");
+      return;
+    }
     addToCartMutation.mutate({
-      product_id: product.id,
-      variant_id: selectedVariantId,
+      userId,
+      variantId: selectedVariantId,
       quantity,
     });
   };

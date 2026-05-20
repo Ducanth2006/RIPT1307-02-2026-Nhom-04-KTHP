@@ -1,5 +1,5 @@
 import React from "react";
-import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
+import { Outlet, Link, useLocation, useNavigate, Navigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Package2,
@@ -19,11 +19,17 @@ import {
 } from "lucide-react";
 import { Avatar, Dropdown, Popover, FloatButton } from "antd";
 import NotificationPanel from "./NotificationPanel";
+import { logout } from "../services/Auth/apiClient";
 
 export default function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const currentPath = location.pathname;
+
+  const token = localStorage.getItem("accessToken");
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
 
   const handleHelp = () => {
     navigate("/admin/help");
@@ -125,9 +131,12 @@ export default function AppLayout() {
                   {
                     key: "logout",
                     label: (
-                      <Link to="/login" className="flex items-center gap-2 text-red-600">
+                      <div
+                        onClick={() => logout()}
+                        className="flex items-center gap-2 text-red-600 cursor-pointer"
+                      >
                         <LogOut size={14} /> Logout
-                      </Link>
+                      </div>
                     ),
                   },
                 ],
