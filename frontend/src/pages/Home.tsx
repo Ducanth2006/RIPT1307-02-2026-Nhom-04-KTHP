@@ -58,7 +58,7 @@ const Home = () => {
                 padding: "0 56px",
                 fontSize: "18px",
                 fontWeight: 700,
-                backgroundColor: "#ff4d4f",
+                backgroundColor: "#af101a",
                 border: "none",
                 borderRadius: "8px",
                 color: "#fff",
@@ -185,7 +185,7 @@ const Home = () => {
           <Button
             size="large"
             style={{
-              backgroundColor: "#ff4d4f",
+              backgroundColor: "#af101a",
               color: "#fff",
               height: 56,
               padding: "0 48px",

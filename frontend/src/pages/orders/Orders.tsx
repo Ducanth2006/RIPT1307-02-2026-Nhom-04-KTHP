@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, Navigate } from "react-router-dom";
 import {
@@ -16,6 +16,9 @@ import {
   Descriptions,
   Steps,
   Divider,
+  Rate,
+  Row,
+  Col,
 } from "antd";
 import {
   ShoppingOutlined,
@@ -24,12 +27,14 @@ import {
   CloseCircleOutlined,
   EyeOutlined,
   CarOutlined,
+  StarOutlined,
 } from "@ant-design/icons";
 import { getOrders, cancelOrder, getOrderById } from "../../services/Order/apiClient";
+import { getMyReviewsApi, createReviewApi } from "../../services/Review/apiClient";
 import type { IOrder, IOrderItem } from "../../services/Order/typing";
 import "./Orders.less";
 
-const { Title, Text } = Typography;
+const { Title, Text, Paragraph } = Typography;
 
 const formatPrice = (p: number) => new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(p);
 
@@ -44,6 +49,11 @@ const Orders = () => {
   const [cancelOrderId, setCancelOrderId] = useState<number | null>(null);
   const [cancelForm] = Form.useForm<{ cancelReason: string }>();
 
+  // Review states
+  const [reviewingOrder, setReviewingOrder] = useState<IOrder | null>(null);
+  const [reviewInputs, setReviewInputs] = useState<Record<number, { rating: number; comment: string }>>({});
+  const [submittingProductId, setSubmittingProductId] = useState<number | null>(null);
+
   // Get personal orders
   const { data: ordersData, isLoading } = useQuery({
     queryKey: ["orders", userId],
@@ -57,6 +67,24 @@ const Orders = () => {
     queryFn: () => getOrderById(trackingOrderId!, userId!).then((res) => res.data),
     enabled: !!trackingOrderId && !!userId,
   });
+
+  // Get my reviews history
+  const { data: myReviewsData, refetch: refetchMyReviews } = useQuery({
+    queryKey: ["myReviews", userId],
+    queryFn: () => getMyReviewsApi(userId!).then((res) => res.data),
+    enabled: !!userId,
+  });
+  const myReviews = myReviewsData?.data || [];
+
+  const reviewedKeys = useMemo(() => {
+    const set = new Set<string>();
+    myReviews.forEach((r: any) => {
+      if (r.order_id && r.products?.id) {
+        set.add(`${r.order_id}_${r.products.id}`);
+      }
+    });
+    return set;
+  }, [myReviews]);
 
   const orders = ordersData?.data || [];
 
@@ -97,6 +125,46 @@ const Orders = () => {
   const handleCancelSubmit = (values: { cancelReason: string }) => {
     if (cancelOrderId) {
       cancelOrderMutation.mutate({ id: cancelOrderId, cancelReason: values.cancelReason });
+    }
+  };
+
+  const handleRatingChange = (productId: number, rating: number) => {
+    setReviewInputs((prev) => ({
+      ...prev,
+      [productId]: { ...prev[productId], rating },
+    }));
+  };
+
+  const handleCommentChange = (productId: number, comment: string) => {
+    setReviewInputs((prev) => ({
+      ...prev,
+      [productId]: { ...prev[productId], comment },
+    }));
+  };
+
+  const handleSubmitSingleReview = async (productId: number) => {
+    if (!userId || !reviewingOrder) return;
+    const input = reviewInputs[productId];
+    if (!input || !input.rating) {
+      message.warning("Vui lòng chọn số sao đánh giá!");
+      return;
+    }
+
+    try {
+      setSubmittingProductId(productId);
+      await createReviewApi({
+        userId,
+        productId,
+        orderId: reviewingOrder.id,
+        rating: input.rating,
+        comment: input.comment,
+      });
+      message.success("Đánh giá sản phẩm thành công!");
+      refetchMyReviews();
+    } catch (error: any) {
+      message.error(error.response?.data?.message || "Lỗi khi gửi đánh giá.");
+    } finally {
+      setSubmittingProductId(null);
     }
   };
 
@@ -234,6 +302,19 @@ const Orders = () => {
                       >
                         Chi tiết lộ trình
                       </Button>
+                      {order.status === "Completed" && (
+                        <Button
+                          icon={<StarOutlined />}
+                          onClick={() => {
+                            setReviewingOrder(order);
+                            setReviewInputs({});
+                          }}
+                          className="action-btn"
+                          style={{ borderColor: "#faad14", color: "#faad14" }}
+                        >
+                          Đánh giá sản phẩm
+                        </Button>
+                      )}
                       {(order.status === "Pending" || order.status === "Confirmed") && (
                         <Button
                           danger
@@ -358,6 +439,131 @@ const Orders = () => {
             </Button>
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* Modal Đánh Giá Sản Phẩm */}
+      <Modal
+        title={
+          <span>
+            <StarOutlined style={{ marginRight: 8, color: "#faad14" }} />
+            Đánh Giá Sản Phẩm (Đơn hàng #{reviewingOrder?.id})
+          </span>
+        }
+        open={reviewingOrder !== null}
+        onCancel={() => setReviewingOrder(null)}
+        footer={[
+          <Button key="close" type="primary" onClick={() => setReviewingOrder(null)}>
+            Đóng
+          </Button>,
+        ]}
+        width={700}
+        destroyOnClose
+      >
+        <div style={{ maxHeight: "60vh", overflowY: "auto", paddingRight: 8 }}>
+          {reviewingOrder?.items?.map((item: IOrderItem) => {
+            const hasReviewed = reviewedKeys.has(`${reviewingOrder.id}_${item.productId}`);
+            const inputVal = reviewInputs[item.productId] || { rating: 0, comment: "" };
+
+            return (
+              <div
+                key={item.id}
+                style={{
+                  padding: "20px 0",
+                  borderBottom: "1px solid #f0f0f0",
+                }}
+              >
+                <Row gutter={16} align="top">
+                  <Col span={4}>
+                    <img
+                      src={item.imageUrl || "/placeholder.jpg"}
+                      alt={item.productName}
+                      style={{
+                        width: "100%",
+                        height: 70,
+                        objectFit: "cover",
+                        borderRadius: 8,
+                        border: "1px solid #eee",
+                      }}
+                    />
+                  </Col>
+                  <Col span={20}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                      <div>
+                        <Text strong style={{ fontSize: 15, display: "block" }}>
+                          {item.productName}
+                        </Text>
+                        <Text type="secondary" style={{ fontSize: 12 }}>
+                          Phân loại: {item.variantSize || "N/A"} / {item.variantColor || "N/A"}
+                        </Text>
+                      </div>
+                      {hasReviewed ? (
+                        <Tag color="success" style={{ borderRadius: 4, padding: "2px 8px" }}>
+                          Đã đánh giá thành công
+                        </Tag>
+                      ) : (
+                        <Tag color="warning" style={{ borderRadius: 4, padding: "2px 8px" }}>
+                          Chưa đánh giá
+                        </Tag>
+                      )}
+                    </div>
+
+                    {hasReviewed ? (
+                      <div style={{ background: "#f9f9f9", padding: "12px 16px", borderRadius: 8, marginTop: 8 }}>
+                        {(() => {
+                          const prevReview = myReviews.find((r: any) => Number(r.order_id) === reviewingOrder.id && Number(r.products?.id) === item.productId);
+                          return (
+                            <>
+                              <Rate disabled value={prevReview?.rating || 5} style={{ fontSize: 14, color: "#faad14", marginBottom: 4 }} />
+                              <Paragraph style={{ margin: 0, color: "#555", fontSize: 13, fontStyle: "italic" }}>
+                                "{prevReview?.comment || "Sản phẩm tốt, đúng như mô tả!"}"
+                              </Paragraph>
+                            </>
+                          );
+                        })()}
+                      </div>
+                    ) : (
+                      <div style={{ marginTop: 12 }}>
+                        <div style={{ marginBottom: 12, display: "flex", alignItems: "center", gap: 12 }}>
+                          <span style={{ fontSize: 14, fontWeight: 600 }}>Điểm đánh giá:</span>
+                          <Rate
+                            value={inputVal.rating}
+                            onChange={(val) => handleRatingChange(item.productId, val)}
+                            style={{ fontSize: 20, color: "#faad14" }}
+                          />
+                        </div>
+                        <div style={{ marginBottom: 12 }}>
+                          <Input.TextArea
+                            rows={3}
+                            placeholder="Chia sẻ nhận xét của bạn về sản phẩm này (chất lượng, đóng gói, giao hàng...)"
+                            value={inputVal.comment}
+                            onChange={(e) => handleCommentChange(item.productId, e.target.value)}
+                            style={{ borderRadius: 8 }}
+                          />
+                        </div>
+                        <div style={{ textAlign: "right" }}>
+                          <Button
+                            type="primary"
+                            disabled={inputVal.rating === 0}
+                            loading={submittingProductId === item.productId}
+                            onClick={() => handleSubmitSingleReview(item.productId)}
+                            style={{
+                              backgroundColor: inputVal.rating > 0 ? "#ee4d2d" : "#ccc",
+                              borderColor: inputVal.rating > 0 ? "#ee4d2d" : "#ccc",
+                              borderRadius: 6,
+                              fontWeight: 600,
+                            }}
+                          >
+                            Gửi đánh giá
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </Col>
+                </Row>
+              </div>
+            );
+          })}
+        </div>
       </Modal>
     </div>
   );
