@@ -5,6 +5,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { getCart } from "../../services/Cart/apiClient";
 import type { Cart as CartType } from "../../services/Cart/typing";
+import { logout } from "../../services/Auth/apiClient";
 
 const { Header: AntHeader } = Layout;
 
@@ -60,25 +61,21 @@ const Header = () => {
             itemLayout="horizontal"
             dataSource={cartItems.slice(0, 5)}
             renderItem={(item) => {
-              const img =
-                item.product_images?.find((i) => i.is_main)?.image_url ||
-                item.product_images?.[0]?.image_url ||
-                "/placeholder.jpg";
-              const variant = item.product_variants?.find((v) => v.id === item.selectedVariantId);
+              const img = item.imageUrl || "/placeholder.jpg";
               return (
                 <List.Item>
                   <List.Item.Meta
                     avatar={<img src={img} style={{ width: 40, height: 40, objectFit: "cover" }} alt="" />}
-                    title={<div style={{ fontSize: 13, fontWeight: 600 }}>{item.name}</div>}
+                    title={<div style={{ fontSize: 13, fontWeight: 600 }}>{item.productName}</div>}
                     description={
                       <div style={{ fontSize: 12 }}>
-                        {variant ? `${variant.size} / ${variant.color}` : ""} x {item.quantity}
+                        {item.size || "N/A"} / {item.color || "N/A"} x {item.quantity}
                       </div>
                     }
                   />
                   <div style={{ color: "#ff4d4f", fontSize: 13, fontWeight: 600 }}>
                     {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(
-                      (variant?.price || item.base_price) * item.quantity,
+                      item.price * item.quantity,
                     )}
                   </div>
                 </List.Item>
@@ -196,10 +193,7 @@ const Header = () => {
                     label: (
                       <div
                         onClick={() => {
-                          localStorage.removeItem("accessToken");
-                          localStorage.removeItem("token");
-                          localStorage.removeItem("user");
-                          window.location.href = "/";
+                          logout();
                         }}
                       >
                         Đăng xuất

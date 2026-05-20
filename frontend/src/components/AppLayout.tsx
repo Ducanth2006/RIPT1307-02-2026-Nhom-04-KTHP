@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { Avatar, Dropdown, Popover, FloatButton } from "antd";
 import NotificationPanel from "./NotificationPanel";
+import { logout } from "../services/Auth/apiClient";
 
 export default function AppLayout() {
   const location = useLocation();
@@ -128,9 +129,12 @@ export default function AppLayout() {
                   {
                     key: "logout",
                     label: (
-                      <Link to="/login" className="flex items-center gap-2 text-red-600">
+                      <div
+                        onClick={() => logout()}
+                        className="flex items-center gap-2 text-red-600 cursor-pointer"
+                      >
                         <LogOut size={14} /> Logout
-                      </Link>
+                      </div>
                     ),
                   },
                 ],

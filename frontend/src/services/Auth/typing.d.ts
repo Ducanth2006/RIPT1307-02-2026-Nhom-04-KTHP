@@ -1,23 +1,36 @@
 export namespace Auth {
   export interface IUser {
     id: number;
-    username: string;
     email: string;
-    full_name?: string;
+    full_name: string;
+    avatar?: string;
+    role: string;
+    status?: string;
+    created_at?: string;
+    username?: string;
     avatar_url?: string;
-    role: "User" | "Admin";
+  }
+
+  export interface ILoginRequest {
+    email: string;
+    password: string;
+  }
+
+  export interface IRegisterRequest {
+    email: string;
+    password: string;
+    full_name: string;
   }
 
   export interface ILoginResponse {
     message: string;
-    data: {
-      user: IUser;
-      access_token: string;
-    };
+    data: IUser;
+    token: string;
   }
 
   export interface IRegisterResponse {
     message: string;
     data: IUser;
+    token: string;
   }
 }

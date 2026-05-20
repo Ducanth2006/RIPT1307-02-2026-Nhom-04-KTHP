@@ -139,8 +139,7 @@ const Cart = () => {
   if (!cartItems.length) return <EmptyCart />;
 
   const totalPrice = cartItems.reduce((s: number, i: CartType.ICartItem) => {
-    const v = i.product_variants?.find((v) => v.id === i.selectedVariantId);
-    return s + (v?.price || i.base_price) * i.quantity;
+    return s + i.price * i.quantity;
   }, 0);
 
   return (
@@ -159,10 +158,10 @@ const Cart = () => {
         <div className="cart-items-list">
           {cartItems.map((item) => (
             <CartItem
-              key={item.id}
+              key={item.cartItemId}
               item={item}
-              onUpdate={(qty: number) => updateQty.mutate({ id: item.id, qty })}
-              onRemove={() => removeIdx.mutate(item.id)}
+              onUpdate={(qty: number) => updateQty.mutate({ id: item.cartItemId, qty })}
+              onRemove={() => removeIdx.mutate(item.cartItemId)}
               loading={updateQty.isPending || removeIdx.isPending}
             />
           ))}
@@ -499,23 +498,19 @@ const CartItem = ({
   onRemove: () => void;
   loading: boolean;
 }) => {
-  const v = item.product_variants?.find((v) => v.id === item.selectedVariantId);
-  const img =
-    item.product_images?.find((img) => img.is_main)?.image_url ||
-    item.product_images?.[0]?.image_url ||
-    "/placeholder.jpg";
-  const price = v?.price || item.base_price;
+  const img = item.imageUrl || "/placeholder.jpg";
+  const price = item.price;
 
   return (
     <div className="cart-item-row">
       <div className="product-info">
         <img src={img} alt="" />
         <div className="details">
-          <Link to={`/products/${item.id || item.id}`} className="name">
-            {item.name}
+          <Link to={`/products/${item.productId}`} className="name">
+            {item.productName}
           </Link>
           <div className="variant">
-            Phân loại: {v?.size || "N/A"} / {v?.color || "N/A"}
+            Phân loại: {item.size || "N/A"} / {item.color || "N/A"}
           </div>
         </div>
       </div>
@@ -528,7 +523,7 @@ const CartItem = ({
           <input type="text" value={item.quantity} readOnly />
           <button
             onClick={() => onUpdate(item.quantity + 1)}
-            disabled={item.quantity >= (v?.stock_quantity || 99) || loading}
+            disabled={item.quantity >= (item.stockQuantity || 99) || loading}
           >
             <PlusOutlined />
           </button>
