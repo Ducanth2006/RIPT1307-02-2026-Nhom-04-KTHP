@@ -36,6 +36,8 @@ app.use(cors({
     origin: [
         'http://localhost:5173',  // Vite dev server (Frontend)
         'http://localhost:3000',  // Fallback nếu dùng CRA
+        'http://localhost:5000',  // Local Swagger / alternative port
+        'http://localhost:5001',  // Local Swagger (main port)
         'https://clothingstore-backend-oa20.onrender.com'// deploy render
     ],
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
