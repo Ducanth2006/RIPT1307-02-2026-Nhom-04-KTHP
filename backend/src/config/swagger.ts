@@ -14,12 +14,12 @@ const clientOptions: swaggerJSDoc.Options = {
         },
         servers: [
             {
-                url: 'http://localhost:5001/api',
-                description: 'Local Development Server',
-            },
-            {
                 url: 'https://clothingstore-backend-oa20.onrender.com/api',
                 description: 'Production Server (Render)',
+            },
+            {
+                url: 'http://localhost:5001/api',
+                description: 'Local Development Server',
             },
         ],
     },
@@ -43,12 +43,12 @@ const adminOptions: swaggerJSDoc.Options = {
         },
         servers: [
             {
-                url: 'http://localhost:5001/api',
-                description: 'Local Development Server',
-            },
-            {
                 url: 'https://clothingstore-backend-oa20.onrender.com/api',
                 description: 'Production Server (Render)',
+            },
+            {
+                url: 'http://localhost:5001/api',
+                description: 'Local Development Server',
             },
         ],
     },
