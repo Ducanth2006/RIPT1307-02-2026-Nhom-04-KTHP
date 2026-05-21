@@ -24,9 +24,10 @@ import clientReviewRoutes from './routes/clientReviewRoutes';
 import clientComplaintRoutes from './routes/clientComplaintRoutes';
 import clientNotificationRoutes from './routes/clientNotificationRoutes';
 import clientAuthRoutes from './routes/clientAuthRoutes';
+import clientVoucherRoutes from './routes/clientVoucherRoutes';
 
 const app = express();
-const port = 5001;
+const port = process.env.PORT || 5001;
 
 // =============================================================
 // 🌐 CORS - Cho phép Frontend gọi API từ domain khác
@@ -35,6 +36,7 @@ app.use(cors({
     origin: [
         'http://localhost:5173',  // Vite dev server (Frontend)
         'http://localhost:3000',  // Fallback nếu dùng CRA
+        'https://ript1307-02-2026-nhom-04-kthp.onrender.com'// deployt render
     ],
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
@@ -100,6 +102,7 @@ app.use('/api/reviews', clientReviewRoutes);
 app.use('/api/complaints', clientComplaintRoutes);
 app.use('/api/notifications', clientNotificationRoutes);
 app.use('/api/auth', clientAuthRoutes);
+app.use('/api/vouchers', clientVoucherRoutes);
 
 // =============================================================
 // ❌ XỬ LÝ LỖI TẬP TRUNG
