@@ -24,6 +24,7 @@ import clientReviewRoutes from './routes/clientReviewRoutes';
 import clientComplaintRoutes from './routes/clientComplaintRoutes';
 import clientNotificationRoutes from './routes/clientNotificationRoutes';
 import clientAuthRoutes from './routes/clientAuthRoutes';
+import clientVoucherRoutes from './routes/clientVoucherRoutes';
 
 const app = express();
 const port = 5001;
@@ -100,6 +101,7 @@ app.use('/api/reviews', clientReviewRoutes);
 app.use('/api/complaints', clientComplaintRoutes);
 app.use('/api/notifications', clientNotificationRoutes);
 app.use('/api/auth', clientAuthRoutes);
+app.use('/api/vouchers', clientVoucherRoutes);
 
 // =============================================================
 // ❌ XỬ LÝ LỖI TẬP TRUNG
