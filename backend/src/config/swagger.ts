@@ -17,6 +17,10 @@ const clientOptions: swaggerJSDoc.Options = {
                 url: 'http://localhost:5001/api',
                 description: 'Local Development Server',
             },
+            {
+                url: 'https://ript1307-02-2026-nhom-04-kthp.onrender.com/api',
+                description: 'Production Server (Render)',
+            },
         ],
     },
     // Chỉ quét các file route bắt đầu bằng chữ "client"
@@ -41,6 +45,10 @@ const adminOptions: swaggerJSDoc.Options = {
             {
                 url: 'http://localhost:5001/api',
                 description: 'Local Development Server',
+            },
+            {
+                url: 'https://ript1307-02-2026-nhom-04-kthp.onrender.com/api',
+                description: 'Production Server (Render)',
             },
         ],
     },
