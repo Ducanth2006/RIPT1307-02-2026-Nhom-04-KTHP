@@ -36,7 +36,7 @@ app.use(cors({
     origin: [
         'http://localhost:5173',  // Vite dev server (Frontend)
         'http://localhost:3000',  // Fallback nếu dùng CRA
-        'https://ript1307-02-2026-nhom-04-kthp.onrender.com'// deployt render
+        'https://clothingstore-backend-oa20.onrender.com'// deploy render
     ],
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
