@@ -1,23 +1,38 @@
-import { Typography, Row, Col, Spin, Empty } from "antd";
+import { Typography, Row, Col, Spin, Empty, Card } from "antd";
 import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import ProductCard from "../../../components/product/ProductCard";
 import { getProducts } from "../../../services/Product/apiClient";
+import { getCategories } from "../../../services/Category/apiClient";
+import type { ICategory } from "../../../services/Category/typing";
 import ProductPagination from "../../../components/layout/ProductPagination";
+import { UnorderedListOutlined } from "@ant-design/icons";
 
-const { Title } = Typography;
+const { Title, Text } = Typography;
 
 const ProductGrid = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const search = searchParams.get("search") || "";
   const currentPage = Number(searchParams.get("page")) || 1;
+  const categoryIdStr = searchParams.get("category_id");
+  const categoryId = categoryIdStr ? Number(categoryIdStr) : undefined;
   const pageSize = 12;
 
   // Lấy dữ liệu từ API dùng useQuery để clean và tối ưu cache
   const { data, isLoading } = useQuery({
-    queryKey: ["products-grid", currentPage, search],
-    queryFn: () => getProducts({ page: currentPage, limit: pageSize, search }).then((res) => res.data),
+    queryKey: ["products-grid", currentPage, search, categoryId],
+    queryFn: () =>
+      getProducts({ page: currentPage, limit: pageSize, search, category_id: categoryId }).then((res) => res.data),
   });
+
+  // Lấy danh mục sản phẩm phục vụ bộ lọc tìm kiếm
+  const { data: categoriesData } = useQuery({
+    queryKey: ["categories-filter"],
+    queryFn: () => getCategories().then((res) => res.data),
+  });
+
+  const categoriesList = categoriesData?.data || [];
+  const parentCategories = categoriesList.filter((cat) => cat.parent_id === null);
 
   const handlePageChange = (page: number) => {
     searchParams.set("page", page.toString());
@@ -25,38 +40,135 @@ const ProductGrid = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  const handleCategoryClick = (id?: number) => {
+    if (id === undefined) {
+      searchParams.delete("category_id");
+    } else {
+      searchParams.set("category_id", id.toString());
+    }
+    searchParams.set("page", "1");
+    setSearchParams(searchParams);
+  };
+
   const products = data?.data || [];
   const totalItems = data?.pagination?.total || 0;
 
+  const renderCategoryItem = (cat: ICategory, isChild = false) => {
+    const isActive = categoryId === cat.id;
+    return (
+      <div
+        key={cat.id}
+        onClick={() => handleCategoryClick(cat.id)}
+        style={{
+          padding: "8px 12px",
+          paddingLeft: isChild ? 24 : 12,
+          cursor: "pointer",
+          borderRadius: 4,
+          fontSize: isChild ? 13 : 14,
+          fontWeight: isActive ? 600 : 400,
+          color: isActive ? "#ee4d2d" : "#333",
+          backgroundColor: isActive ? "#fff5f2" : "transparent",
+          transition: "all 0.2s",
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+        }}
+      >
+        {!isChild && isActive && <span style={{ color: "#ee4d2d" }}>●</span>}
+        {cat.name}
+      </div>
+    );
+  };
+
   return (
-    <div style={{ maxWidth: 1400, margin: "0 auto", padding: "20px 10px" }}>
+    <div style={{ maxWidth: 1400, margin: "0 auto", padding: "40px 20px" }}>
       <div style={{ marginBottom: 40, borderBottom: "2px solid #000", paddingBottom: 10 }}>
         <Title level={2} style={{ textTransform: "uppercase", margin: 0, fontWeight: 800 }}>
-          {search ? `SEARCH RESULTS: "${search}"` : "ALL PRODUCTS"}
+          {search ? `Kết quả tìm kiếm: "${search}"` : "Tất cả sản phẩm"}
         </Title>
       </div>
 
-      <Spin spinning={isLoading} size="large">
-        <Row gutter={[20, 20]} style={{ minHeight: 400 }}>
-          {products.length > 0
-            ? products.map((p) => (
-                <Col xs={12} sm={8} md={6} lg={4} key={p.id} style={{ display: "flex" }}>
-                  <ProductCard product={p} />
-                </Col>
-              ))
-            : !isLoading && (
-                <div style={{ width: "100%", padding: "100px 0" }}>
-                  <Empty description="No products found" />
-                </div>
-              )}
-        </Row>
-      </Spin>
+      <Row gutter={[24, 24]}>
+        {/* Sidebar Filter */}
+        <Col xs={24} md={6}>
+          <Card
+            bordered={false}
+            style={{
+              boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+              borderRadius: 8,
+              border: "1px solid #e8e8e8",
+            }}
+            bodyStyle={{ padding: "16px 12px" }}
+          >
+            <div style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 8, padding: "0 8px" }}>
+              <UnorderedListOutlined style={{ fontSize: 16, color: "#ee4d2d" }} />
+              <Text strong style={{ fontSize: 16 }}>
+                Bộ Lọc Tìm Kiếm
+              </Text>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <div
+                onClick={() => handleCategoryClick(undefined)}
+                style={{
+                  padding: "8px 12px",
+                  cursor: "pointer",
+                  borderRadius: 4,
+                  fontSize: 14,
+                  fontWeight: categoryId === undefined ? 600 : 400,
+                  color: categoryId === undefined ? "#ee4d2d" : "#333",
+                  backgroundColor: categoryId === undefined ? "#fff5f2" : "transparent",
+                  transition: "all 0.2s",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+              >
+                {categoryId === undefined && <span style={{ color: "#ee4d2d" }}>●</span>}
+                Tất cả sản phẩm
+              </div>
+              {parentCategories.map((parent) => {
+                const children = categoriesList.filter((cat) => cat.parent_id === parent.id);
+                return (
+                  <div key={parent.id} style={{ margin: "2px 0" }}>
+                    {renderCategoryItem(parent, false)}
+                    {children.map((child) => renderCategoryItem(child, true))}
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+        </Col>
 
-      {totalItems > pageSize && (
-        <div style={{ marginTop: 40, display: "flex", justifyContent: "center" }}>
-          <ProductPagination current={currentPage} total={totalItems} pageSize={pageSize} onChange={handlePageChange} />
-        </div>
-      )}
+        {/* Products Grid */}
+        <Col xs={24} md={18}>
+          <Spin spinning={isLoading} size="large">
+            <Row gutter={[20, 20]} style={{ minHeight: 400 }}>
+              {products.length > 0
+                ? products.map((p) => (
+                    <Col xs={12} sm={12} md={8} lg={6} key={p.id} style={{ display: "flex" }}>
+                      <ProductCard product={p} />
+                    </Col>
+                  ))
+                : !isLoading && (
+                    <div style={{ width: "100%", padding: "100px 0" }}>
+                      <Empty description="Không tìm thấy sản phẩm nào" />
+                    </div>
+                  )}
+            </Row>
+          </Spin>
+
+          {totalItems > pageSize && (
+            <div style={{ marginTop: 40, display: "flex", justifyContent: "center" }}>
+              <ProductPagination
+                current={currentPage}
+                total={totalItems}
+                pageSize={pageSize}
+                onChange={handlePageChange}
+              />
+            </div>
+          )}
+        </Col>
+      </Row>
     </div>
   );
 };

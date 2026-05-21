@@ -45,11 +45,9 @@ const Home = () => {
               textTransform: "uppercase",
             }}
           >
-            CHASE THE ENERGY
+            Thời trang cao cấp
           </h1>
-          <p style={{ fontSize: "24px", marginBottom: "52px", opacity: 0.98 }}>
-            New activewear drops to push your limits.
-          </p>
+          <p style={{ fontSize: "24px", marginBottom: "52px", opacity: 0.98 }}>Dẫn đầu xu hướng, dẫn đầu phong cách</p>
 
           <div style={{ display: "flex", gap: "20px" }}>
             <Button
@@ -60,13 +58,13 @@ const Home = () => {
                 padding: "0 56px",
                 fontSize: "18px",
                 fontWeight: 700,
-                backgroundColor: "#ff4d4f",
+                backgroundColor: "#af101a",
                 border: "none",
                 borderRadius: "8px",
                 color: "#fff",
               }}
             >
-              SHOP MEN
+              Nam
             </Button>
 
             <Button
@@ -83,7 +81,7 @@ const Home = () => {
                 borderRadius: "8px",
               }}
             >
-              SHOP WOMEN
+              Nữ
             </Button>
           </div>
         </div>
@@ -169,25 +167,25 @@ const Home = () => {
         }}
       >
         <div style={{ maxWidth: 1200, margin: "0 auto", textAlign: "center" }}>
-          <Title level={2} style={{ color: "#fff", marginBottom: 16 }}>
-            BECOME AN ELITE MEMBER &amp; GET 15% OFF
+          <Title level={2} style={{ color: "#fff", marginBottom: 4 }}>
+            Đăng Ký Ngay &amp; Nhận Voucher 15%
           </Title>
           <Text
             style={{
               fontSize: 18,
               display: "block",
-              marginBottom: 40,
+              marginBottom: 4,
               maxWidth: 600,
               marginLeft: "auto",
               marginRight: "auto",
             }}
           >
-            Join the club for exclusive drops, free shipping, and early access.
+            Hãy trở thành thành viên của ELITE PERFORMANCE và nhận ngay Voucher 15%.
           </Text>
           <Button
             size="large"
             style={{
-              backgroundColor: "#ff4d4f",
+              backgroundColor: "#af101a",
               color: "#fff",
               height: 56,
               padding: "0 48px",
@@ -196,7 +194,7 @@ const Home = () => {
               border: "none",
             }}
           >
-            SIGN UP FOR FREE
+            Đăng Ký Ngay
           </Button>
         </div>
       </div>
@@ -208,39 +206,40 @@ const Home = () => {
             <Col xs={24} sm={6}>
               <h4 style={{ color: "#fff", marginBottom: 20, fontSize: 18 }}>ELITE PERFORMANCE</h4>
               <p style={{ fontSize: 14, lineHeight: 1.7 }}>
-                Engineered for the relentless.
+                Được thiết kế cho những người không ngừng nỗ lực.
                 <br />
-                Built for the elite.
+                Thời trang cao cấp
               </p>
             </Col>
-            <Col xs={24} sm={6}>
-              <h4 style={{ color: "#fff", marginBottom: 20 }}>CUSTOMER SERVICE</h4>
+            <Col xs={24} sm={4}>
+              <h4 style={{ color: "#fff", marginBottom: 20 }}>Dịch vụ:</h4>
               <p style={{ fontSize: 14, lineHeight: 2.2 }}>
-                SUPPORT
+                Hỗ trợ khách hàng
                 <br />
-                ORDERS
+                Đặt hàng
                 <br />
-                RETURNS
+                Đổi trả
               </p>
             </Col>
-            <Col xs={24} sm={6}>
-              <h4 style={{ color: "#fff", marginBottom: 20 }}>COMPANY</h4>
+            <Col xs={24} sm={8}>
+              <h4 style={{ color: "#fff", marginBottom: 20 }}>Chi nhánh:</h4>
               <p style={{ fontSize: 14, lineHeight: 2.2 }}>
-                PRIVACY
+                Cơ sở 1: 123 Nguyễn Trãi, Thanh Xuân, Hà Nội
                 <br />
-                TERMS
+                Cơ sở 2: 456 Lê Lợi, Quận 1, TP.HCM
                 <br />
-                SITEMAP
+                Cơ sở 3: 789 Phạm Văn Đồng, Thủ Đức, TP.HCM
               </p>
             </Col>
             <Col xs={24} sm={6}>
-              <h4 style={{ color: "#fff", marginBottom: 20 }}>NEWSLETTER</h4>
+              <h4 style={{ color: "#fff", marginBottom: 20 }}>Liên hệ với chúng tôi:</h4>
               <div style={{ display: "flex", gap: 8 }}>
                 <input
                   type="email"
-                  placeholder="ENTER EMAIL"
+                  placeholder="Nhập email..."
                   style={{
                     flex: 1,
+                    height: 34,
                     padding: "14px 16px",
                     border: "none",
                     borderRadius: "4px 0 0 4px",
@@ -256,7 +255,7 @@ const Home = () => {
                     fontWeight: 600,
                   }}
                 >
-                  SUBSCRIBE
+                  Đăng ký
                 </Button>
               </div>
             </Col>

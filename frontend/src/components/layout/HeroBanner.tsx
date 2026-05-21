@@ -22,8 +22,7 @@ const HeroBanner = () => {
         style={{
           position: "absolute",
           inset: 0,
-          background:
-            "linear-gradient(to right, rgba(0,0,0,0.65) 40%, rgba(0,0,0,0.3) 100%)",
+          background: "linear-gradient(to right, rgba(0,0,0,0.65) 40%, rgba(0,0,0,0.3) 100%)",
         }}
       />
 
@@ -49,19 +48,17 @@ const HeroBanner = () => {
             letterSpacing: "-2px",
           }}
         >
-          CHASE THE ENERGY
+          Thời trang cao cấp
         </Title>
 
-        <Text style={{ fontSize: 22, display: "block", marginBottom: 40 }}>
-          New activewear drops to push your limits.
-        </Text>
+        <Text style={{ fontSize: 22, display: "block", marginBottom: 40 }}>Dẫn đầu xu hướng, dẫn đầu phong cách</Text>
 
         <div style={{ display: "flex", gap: 16 }}>
           <Link to="/products">
             <Button
               size="large"
               style={{
-                background: "#ff4d4f",
+                background: "#af101a",
                 color: "#fff",
                 border: "none",
                 height: 56,
@@ -71,7 +68,7 @@ const HeroBanner = () => {
                 borderRadius: 4,
               }}
             >
-              SHOP MEN
+              Nam
             </Button>
           </Link>
 
@@ -89,7 +86,7 @@ const HeroBanner = () => {
                 borderRadius: 4,
               }}
             >
-              SHOP WOMEN
+              Nữ
             </Button>
           </Link>
         </div>

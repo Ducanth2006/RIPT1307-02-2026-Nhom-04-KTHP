@@ -9,16 +9,26 @@ const Login = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
-  const onFinish = async (values) => {
+  const onFinish = async (values: any) => {
     setLoading(true);
     try {
-      const { data: res } = await login(values);
-      localStorage.setItem("token", res.data.access_token);
-      localStorage.setItem("user", JSON.stringify(res.data.user));
+      const { data: res } = await login({
+        email: values.email,
+        password: values.password,
+      });
+      localStorage.setItem("accessToken", res.token);
+      localStorage.setItem("user", JSON.stringify(res.data));
       message.success("Đăng nhập thành công!");
-      navigate("/");
+
+      // Redirect based on role if needed, or default to Home
+      if (res.data.role === "Admin") {
+        navigate("/admin/dashboard");
+      } else {
+        navigate("/");
+      }
     } catch (error) {
-      message.error("Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.", error);
+      const err = error as { response?: { data?: { message?: string } } };
+      message.error(err.response?.data?.message || "Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.");
     } finally {
       setLoading(false);
     }
@@ -57,8 +67,14 @@ const Login = () => {
             </div>
 
             <Form name="login" onFinish={onFinish} layout="vertical" size="middle" className="auth-form">
-              <Form.Item name="username" rules={[{ required: true, message: "Vui lòng nhập tên đăng nhập!" }]}>
-                <Input prefix={<UserOutlined />} placeholder="Email/Số điện thoại/Tên đăng nhập" />
+              <Form.Item
+                name="email"
+                rules={[
+                  { required: true, message: "Vui lòng nhập email!" },
+                  { type: "email", message: "Email không hợp lệ!" },
+                ]}
+              >
+                <Input prefix={<UserOutlined />} placeholder="Email" />
               </Form.Item>
 
               <Form.Item name="password" rules={[{ required: true, message: "Vui lòng nhập mật khẩu!" }]}>

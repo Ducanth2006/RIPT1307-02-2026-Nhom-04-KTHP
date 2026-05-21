@@ -1,5 +1,5 @@
 import React from "react";
-import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
+import { Outlet, Link, useLocation, useNavigate, Navigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Package2,
@@ -15,14 +15,22 @@ import {
   User,
   LogOut,
   BarChart2,
+  Ticket,
+  Boxes
 } from "lucide-react";
 import { Avatar, Dropdown, Popover, FloatButton } from "antd";
 import NotificationPanel from "./NotificationPanel";
+import { logout } from "../services/Auth/apiClient";
 
 export default function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const currentPath = location.pathname;
+
+  const token = localStorage.getItem("accessToken");
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
 
   const handleHelp = () => {
     navigate("/admin/help");
@@ -32,10 +40,12 @@ export default function AppLayout() {
     { name: "Dashboard", path: "/admin/dashboard", icon: LayoutDashboard },
     { name: "Products", path: "/admin/products", icon: Package2 },
     { name: "Categories", path: "/admin/categories", icon: FolderTree },
+    { name: "Inventory", path:"/admin/inventory", icon: Boxes },
     { name: "Orders", path: "/admin/orders", icon: ShoppingCart },
     { name: "Users", path: "/admin/users", icon: Users },
+    { name: "Vouchers", path: "/admin/vouchers", icon: Ticket },
     { name: "Reports", path: "/admin/reports", icon: BarChart2 },
-    { name: "Support", path: "/admin/support", icon: Headset },
+    { name: "Complaints", path: "/admin/complaints", icon: Headset },
     { name: "Settings", path: "/admin/settings", icon: SettingsIcon },
   ];
 
@@ -123,9 +133,12 @@ export default function AppLayout() {
                   {
                     key: "logout",
                     label: (
-                      <Link to="/login" className="flex items-center gap-2 text-red-600">
+                      <div
+                        onClick={() => logout()}
+                        className="flex items-center gap-2 text-red-600 cursor-pointer"
+                      >
                         <LogOut size={14} /> Logout
-                      </Link>
+                      </div>
                     ),
                   },
                 ],

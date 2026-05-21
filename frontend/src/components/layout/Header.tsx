@@ -1,17 +1,51 @@
-import { Layout, Input, Badge, Button, Popover, Empty, List } from "antd";
-import { SearchOutlined, ShoppingCartOutlined, UserOutlined } from "@ant-design/icons";
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { Layout, Input, Badge, Button, Popover, Empty, List, Dropdown } from "antd";
+import { SearchOutlined, ShoppingCartOutlined, UserOutlined, BellOutlined } from "@ant-design/icons";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { getCart } from "../../services/Cart/apiClient";
 import type { Cart as CartType } from "../../services/Cart/typing";
+import { logout } from "../../services/Auth/apiClient";
+import NotificationPopover from "./NotificationPopover";
 
 const { Header: AntHeader } = Layout;
 
 const Header = () => {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const searchParamVal = searchParams.get("search") || "";
+  const [searchVal, setSearchVal] = useState(searchParamVal);
+  const [prevSearchParamVal, setPrevSearchParamVal] = useState(searchParamVal);
+
+  if (searchParamVal !== prevSearchParamVal) {
+    setSearchVal(searchParamVal);
+    setPrevSearchParamVal(searchParamVal);
+  }
+
+  const handleSearch = (value: string) => {
+    const params = new URLSearchParams(searchParams);
+    if (value.trim()) {
+      params.set("search", value.trim());
+    } else {
+      params.delete("search");
+    }
+    params.set("page", "1"); // Reset trang về 1 khi tìm kiếm mới
+    navigate({
+      pathname: "/products",
+      search: params.toString(),
+    });
+  };
+
+  const userStr = localStorage.getItem("user");
+  const userObj = userStr ? JSON.parse(userStr) : null;
+  const userId = userObj?.id;
+  const hasToken = !!userId;
+
   const { data } = useQuery({
-    queryKey: ["cart"],
-    queryFn: () => getCart().then((res) => res.data),
+    queryKey: ["cart", userId],
+    queryFn: () => getCart(userId).then((res) => res.data),
     retry: false,
+    enabled: !!userId,
   });
 
   const cartItems: CartType.ICartItem[] = data?.data || [];
@@ -28,25 +62,21 @@ const Header = () => {
             itemLayout="horizontal"
             dataSource={cartItems.slice(0, 5)}
             renderItem={(item) => {
-              const img =
-                item.product_images?.find((i) => i.is_main)?.image_url ||
-                item.product_images?.[0]?.image_url ||
-                "/placeholder.jpg";
-              const variant = item.product_variants?.find((v) => v.id === item.selectedVariantId);
+              const img = item.imageUrl || "/placeholder.jpg";
               return (
                 <List.Item>
                   <List.Item.Meta
                     avatar={<img src={img} style={{ width: 40, height: 40, objectFit: "cover" }} alt="" />}
-                    title={<div style={{ fontSize: 13, fontWeight: 600 }}>{item.name}</div>}
+                    title={<div style={{ fontSize: 13, fontWeight: 400 }}>{item.productName}</div>}
                     description={
                       <div style={{ fontSize: 12 }}>
-                        {variant ? `${variant.size} / ${variant.color}` : ""} x {item.quantity}
+                        {item.size || "N/A"} / {item.color || "N/A"} x {item.quantity}
                       </div>
                     }
                   />
-                  <div style={{ color: "#ff4d4f", fontSize: 13, fontWeight: 600 }}>
+                  <div style={{ color: "#000000ff", fontSize: 13, fontWeight: 600 }}>
                     {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(
-                      (variant?.price || item.base_price) * item.quantity,
+                      item.price * item.quantity,
                     )}
                   </div>
                 </List.Item>
@@ -55,7 +85,7 @@ const Header = () => {
           />
           <div style={{ marginTop: 15, textAlign: "right" }}>
             <Link to="/cart">
-              <Button type="primary" danger>
+              <Button type="primary">
                 Xem giỏ hàng
               </Button>
             </Link>
@@ -110,40 +140,41 @@ const Header = () => {
         </Link>
 
         <div style={{ display: "flex", gap: 32, fontWeight: 600 }}>
-          <Link to="/" style={{ color: "#ff4d4f", fontWeight: 700 }}>
-            MEN
+          <Link to="/" style={{ color: "#af101a", fontWeight: 700 }}>
+            Nam
           </Link>
           <Link to="/" style={{ color: "#111" }}>
-            WOMEN
+            Nữ
           </Link>
           <Link to="/" style={{ color: "#111" }}>
-            KIDS
+            Trẻ em
           </Link>
           <Link to="/" style={{ color: "#111" }}>
-            SPORTS
+            Thể thao
           </Link>
           <Link to="/" style={{ color: "#111" }}>
-            BRANDS
+            Thương hiệu
           </Link>
           <Link to="/" style={{ color: "#111" }}>
-            RELEASES
+            Thời trang
           </Link>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <Input
-            placeholder="Search"
-            prefix={<SearchOutlined />}
+            placeholder="Tìm kiếm sản phẩm..."
+            prefix={
+              <SearchOutlined style={{ cursor: "pointer", color: "#888" }} onClick={() => handleSearch(searchVal)} />
+            }
+            value={searchVal}
+            onChange={(e) => setSearchVal(e.target.value)}
+            onPressEnter={() => handleSearch(searchVal)}
             style={{
-              width: 280,
+              width: 300,
               borderRadius: 30,
               backgroundColor: "#f5f5f5",
             }}
           />
-
-          <Link to="/login">
-            <Button type="text" icon={<UserOutlined />} style={{ color: "#111" }} />
-          </Link>
 
           <Popover content={cartPreview} placement="bottomRight" arrow={true}>
             <Badge count={cartCount} offset={[0, 4]}>
@@ -152,6 +183,49 @@ const Header = () => {
               </Link>
             </Badge>
           </Popover>
+
+          <NotificationPopover>
+            <Button type="text" icon={<BellOutlined />} style={{ color: "#111", fontSize: 22 }} />
+          </NotificationPopover>
+
+          {hasToken ? (
+            <Dropdown
+              menu={{
+                items: [
+                  {
+                    key: "profile",
+                    label: <Link to="/profile">Tài khoản của tôi</Link>,
+                  },
+                  {
+                    key: "orders",
+                    label: <Link to="/orders">Đơn hàng của tôi</Link>,
+                  },
+                  { type: "divider" },
+                  {
+                    key: "logout",
+                    label: (
+                      <div
+                        onClick={() => {
+                          logout();
+                        }}
+                        style={{ color: "red" }}
+                      >
+                        Đăng xuất
+                      </div>
+                    ),
+                  },
+                ],
+              }}
+              placement="bottomRight"
+              trigger={["hover"]}
+            >
+              <Button type="text" icon={<UserOutlined />} style={{ color: "#111" }} />
+            </Dropdown>
+          ) : (
+            <Link to="/login">
+              <Button type="text" icon={<UserOutlined />} style={{ color: "#111" }} />
+            </Link>
+          )}
         </div>
       </AntHeader>
     </>
