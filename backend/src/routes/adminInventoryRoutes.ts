@@ -1,4 +1,5 @@
 import { Router } from 'express';
+
 import {
     layDanhSachKho,
     layLichSuKho,
@@ -29,6 +30,7 @@ const router = Router();
  *         soLuongSapHet:
  *           type: integer
  *           example: 6
+ *
  *     AdminInventoryItem:
  *       type: object
  *       properties:
@@ -66,6 +68,7 @@ const router = Router();
  *           type: string
  *           nullable: true
  *           example: "https://example.com/images/product-main.jpg"
+ *
  *     AdminInventoryImportPayload:
  *       type: object
  *       required:
@@ -82,32 +85,7 @@ const router = Router();
  *         cost_price:
  *           type: number
  *           example: 175000
- *     AdminInventoryLog:
- *       type: object
- *       properties:
- *         id:
- *           type: integer
- *           example: 101
- *         variant_id:
- *           type: integer
- *           example: 12
- *         action_type:
- *           type: string
- *           enum: [IMPORT, EXPORT_SELL, EXPORT_DELETE]
- *           example: "IMPORT"
- *         quantity:
- *           type: integer
- *           example: 50
- *         cost_price:
- *           type: number
- *           example: 175000
- *         reference_id:
- *           type: integer
- *           nullable: true
- *           example: null
- *         created_at:
- *           type: string
- *           format: date-time
+ *
  *     AdminInventoryExportPayload:
  *       type: object
  *       required:
@@ -120,6 +98,46 @@ const router = Router();
  *         quantity:
  *           type: integer
  *           example: 3
+ *
+ *     AdminInventoryLog:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *           example: 101
+ *         variant_id:
+ *           type: integer
+ *           example: 12
+ *         action_type:
+ *           type: string
+ *           enum:
+ *             - IMPORT
+ *             - EXPORT_SELL
+ *             - EXPORT_DELETE
+ *           example: "IMPORT"
+ *         quantity:
+ *           type: integer
+ *           example: 50
+ *         cost_price:
+ *           type: number
+ *           example: 175000
+ *         product_name:
+ *           type: string
+ *           example: "Áo thun thể thao"
+ *         sku:
+ *           type: string
+ *           example: "TSHIRT-BLACK-L"
+ *         size:
+ *           type: string
+ *           nullable: true
+ *           example: "L"
+ *         color:
+ *           type: string
+ *           nullable: true
+ *           example: "Đen"
+ *         created_at:
+ *           type: string
+ *           format: date-time
  */
 
 /**
@@ -131,18 +149,6 @@ const router = Router();
  *     responses:
  *       200:
  *         description: Lấy thống kê kho hàng thành công
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Lấy thống kê kho hàng thành công"
- *                 data:
- *                   $ref: '#/components/schemas/AdminInventoryStats'
- *                 errorDetails:
- *                   nullable: true
  *       500:
  *         description: Lỗi hệ thống
  */
@@ -152,25 +158,11 @@ router.get('/stats', layThongKeKho);
  * @swagger
  * /admin/inventory:
  *   get:
- *     summary: Lấy danh sách tồn kho của các biến thể sản phẩm
+ *     summary: Lấy danh sách tồn kho
  *     tags: ["[Admin] Inventory"]
  *     responses:
  *       200:
- *         description: Lấy danh sách kho hàng thành công
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Lấy danh sách kho hàng thành công"
- *                 data:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/AdminInventoryItem'
- *                 errorDetails:
- *                   nullable: true
+ *         description: Lấy danh sách kho thành công
  *       500:
  *         description: Lỗi hệ thống
  */
@@ -180,7 +172,7 @@ router.get('/', layDanhSachKho);
  * @swagger
  * /admin/inventory/import:
  *   post:
- *     summary: Nhập kho cho một biến thể sản phẩm và ghi lịch sử kho
+ *     summary: Nhập kho sản phẩm
  *     tags: ["[Admin] Inventory"]
  *     requestBody:
  *       required: true
@@ -191,24 +183,12 @@ router.get('/', layDanhSachKho);
  *     responses:
  *       200:
  *         description: Nhập kho thành công
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Nhập kho thành công"
- *                 data:
- *                   type: object
- *                 errorDetails:
- *                   nullable: true
  *       400:
- *         description: Dữ liệu nhập kho không hợp lệ
+ *         description: Dữ liệu không hợp lệ
  *       404:
- *         description: Không tìm thấy biến thể sản phẩm
+ *         description: Không tìm thấy biến thể
  *       500:
- *         description: Lỗi hệ thống hoặc lỗi rollback
+ *         description: Lỗi hệ thống
  */
 router.post('/import', nhapKho);
 
@@ -216,7 +196,7 @@ router.post('/import', nhapKho);
  * @swagger
  * /admin/inventory/export:
  *   post:
- *     summary: Xuất kho thủ công cho biến thể sản phẩm do hủy hàng hoặc hao hụt
+ *     summary: Xuất kho thủ công
  *     tags: ["[Admin] Inventory"]
  *     requestBody:
  *       required: true
@@ -227,32 +207,34 @@ router.post('/import', nhapKho);
  *     responses:
  *       200:
  *         description: Xuất kho thành công
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Xuất kho thành công"
- *                 data:
- *                   type: object
- *                 errorDetails:
- *                   nullable: true
  *       400:
- *         description: Dữ liệu xuất kho không hợp lệ hoặc số lượng xuất vượt quá tồn kho
+ *         description: Dữ liệu không hợp lệ
  *       404:
- *         description: Không tìm thấy biến thể sản phẩm
+ *         description: Không tìm thấy biến thể
  *       500:
- *         description: Lỗi hệ thống hoặc lỗi rollback
+ *         description: Lỗi hệ thống
  */
 router.post('/export', xuatKhoThuCong);
 
 /**
  * @swagger
+ * /admin/inventory/logs:
+ *   get:
+ *     summary: Lấy toàn bộ lịch sử nhập xuất kho
+ *     tags: ["[Admin] Inventory"]
+ *     responses:
+ *       200:
+ *         description: Lấy lịch sử kho thành công
+ *       500:
+ *         description: Lỗi hệ thống
+ */
+router.get('/logs', layLichSuKho);
+
+/**
+ * @swagger
  * /admin/inventory/{variantId}/logs:
  *   get:
- *     summary: Lấy lịch sử nhập xuất kho theo biến thể sản phẩm
+ *     summary: Lấy lịch sử kho theo biến thể sản phẩm
  *     tags: ["[Admin] Inventory"]
  *     parameters:
  *       - in: path
@@ -260,28 +242,14 @@ router.post('/export', xuatKhoThuCong);
  *         required: true
  *         schema:
  *           type: integer
- *         description: ID của biến thể sản phẩm
+ *         description: ID biến thể sản phẩm
  *     responses:
  *       200:
  *         description: Lấy lịch sử kho thành công
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Lấy lịch sử kho thành công"
- *                 data:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/AdminInventoryLog'
- *                 errorDetails:
- *                   nullable: true
  *       400:
- *         description: ID biến thể không hợp lệ
+ *         description: variantId không hợp lệ
  *       404:
- *         description: Không tìm thấy biến thể sản phẩm
+ *         description: Không tìm thấy biến thể
  *       500:
  *         description: Lỗi hệ thống
  */
