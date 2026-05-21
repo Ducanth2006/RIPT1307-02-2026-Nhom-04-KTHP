@@ -1,15 +1,16 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Button, Table, Tag, Input, Select, Modal, 
-  Drawer, Steps, message, Popconfirm, Divider, Space, Form 
+  Drawer, Steps, message, Popconfirm, Divider, Space, Form, Spin 
 } from 'antd';
 import { 
   Download, Search, Eye, AlertTriangle, 
   CheckCircle, FileText, X, ChevronRight, Package, Truck, Check, XCircle 
 } from 'lucide-react';
 import type { ColumnsType } from 'antd/es/table';
+import { getAdminOrders, getAdminOrderById, updateAdminOrderStatus } from '../../services/adminOrderService';
 
-type OrderStatus = 'PENDING' | 'PACKING' | 'SHIPPING' | 'SUCCESS' | 'FAILED';
+type OrderStatus = 'PENDING' | 'CONFIRMED' | 'PACKING' | 'SHIPPING' | 'SUCCESS' | 'FAILED';
 
 interface OrderItem {
   id: string;
@@ -22,7 +23,7 @@ interface OrderItem {
 
 interface OrderEvent {
   time: string;
-  status: OrderStatus | 'CREATED' | 'CANCEL_REQUESTED';
+  status: string;
   note?: string;
 }
 
@@ -52,116 +53,127 @@ interface CancelRequest {
   time: string;
 }
 
-const mockOrders: Order[] = [
-  {
-    id: 'ORD-8091',
-    customerName: 'Nguyen Van A',
-    phone: '0901234567',
-    email: 'nva@example.com',
-    address: '123 B Street, District 1, HCMC',
-    date: '2023-11-20 10:42',
-    paymentMethod: 'COD',
-    status: 'PENDING',
-    subtotal: 1250000,
-    shippingFee: 30000,
-    voucherCode: 'FREESHIP',
-    discountAmount: 30000,
-    total: 1250000,
-    items: [
-      { id: '1', name: 'TF Football Shoes', sku: 'SHOE-01', variant: 'Size 42 / Black', qty: 1, price: 1000000 },
-      { id: '2', name: 'Anti-slip Socks', sku: 'SOCK-01', variant: 'White', qty: 5, price: 50000 }
-    ],
-    timeline: [
-      { time: '2023-11-20 10:42', status: 'CREATED', note: 'Customer placed order successfully' }
-    ]
-  },
-  {
-    id: 'ORD-8090',
-    customerName: 'Tran Thi B',
-    phone: '0987654321',
-    email: 'ttb@example.com',
-    address: '456 C Street, Cau Giay, Hanoi',
-    date: '2023-11-19 09:15',
-    paymentMethod: 'Bank Transfer',
-    status: 'PACKING',
-    subtotal: 450000,
-    shippingFee: 35000,
-    discountAmount: 0,
-    total: 485000,
-    items: [
-      { id: '3', name: 'Sports Shirt', sku: 'SHIRT-02', variant: 'Size M / Blue', qty: 2, price: 225000 }
-    ],
-    timeline: [
-      { time: '2023-11-19 09:15', status: 'CREATED', note: 'Customer placed order' },
-      { time: '2023-11-19 10:00', status: 'PENDING', note: 'Payment confirmed' },
-      { time: '2023-11-19 14:00', status: 'PACKING', note: 'Packing in progress' }
-    ]
-  },
-  {
-    id: 'ORD-8088',
-    customerName: 'Le Van C',
-    phone: '0912345678',
-    email: 'lvc@example.com',
-    address: '789 D Street, Hai Chau, Da Nang',
-    date: '2023-11-18 16:30',
-    paymentMethod: 'VNPay',
-    status: 'SHIPPING',
-    subtotal: 3100000,
-    shippingFee: 50000,
-    voucherCode: 'GIAM100K',
-    discountAmount: 100000,
-    total: 3050000,
-    items: [
-      { id: '4', name: 'Pro Tennis Racquet', sku: 'RACQUET-01', variant: 'Professional', qty: 1, price: 3100000 }
-    ],
-    timeline: [
-      { time: '2023-11-18 16:30', status: 'CREATED' },
-      { time: '2023-11-18 17:00', status: 'PACKING' },
-      { time: '2023-11-19 08:00', status: 'SHIPPING', note: 'Handed over to shipping carrier (GHN)' }
-    ]
-  },
-];
-
 const mockCancelRequests: CancelRequest[] = [
-  { id: 'REQ-01', orderId: 'ORD-8091', customerName: 'Nguyen Van A', reason: 'Found a cheaper place', time: '2 hours ago' },
-  { id: 'REQ-02', orderId: 'ORD-8100', customerName: 'Pham Thi D', reason: 'Ordered wrong shoe size', time: '5 hours ago' },
+  { id: 'REQ-01', orderId: 'ORD-8091', customerName: 'Nguyen Van A', reason: 'Muốn thay đổi địa chỉ giao hàng', time: '2 giờ trước' },
+  { id: 'REQ-02', orderId: 'ORD-8100', customerName: 'Pham Thi D', reason: 'Đặt nhầm size giày đá bóng', time: '5 giờ trước' },
 ];
 
 const statusConfig: Record<OrderStatus, { label: string; color: string; icon: any }> = {
-  PENDING: { label: 'Pending', color: 'default', icon: <FileText size={14} /> },
-  PACKING: { label: 'Packing', color: 'processing', icon: <Package size={14} /> },
-  SHIPPING: { label: 'Shipping', color: 'purple', icon: <Truck size={14} /> },
-  SUCCESS: { label: 'Success', color: 'success', icon: <Check size={14} /> },
-  FAILED: { label: 'Failed', color: 'error', icon: <XCircle size={14} /> },
+  PENDING: { label: 'Chờ xử lý', color: 'default', icon: <FileText size={14} /> },
+  CONFIRMED: { label: 'Đã xác nhận', color: 'processing', icon: <Check size={14} /> },
+  PACKING: { label: 'Đang soạn hàng', color: 'warning', icon: <Package size={14} /> },
+  SHIPPING: { label: 'Đang vận chuyển', color: 'purple', icon: <Truck size={14} /> },
+  SUCCESS: { label: 'Thành công', color: 'success', icon: <CheckCircle size={14} /> },
+  FAILED: { label: 'Đã hủy / Giao lỗi', color: 'error', icon: <XCircle size={14} /> },
 };
 
 const getStatusStep = (status: OrderStatus) => {
   switch (status) {
     case 'PENDING': return 0;
-    case 'PACKING': return 1;
-    case 'SHIPPING': return 2;
-    case 'SUCCESS': return 3;
-    case 'FAILED': return 3; // or error status
+    case 'CONFIRMED': return 1;
+    case 'PACKING': return 2;
+    case 'SHIPPING': return 3;
+    case 'SUCCESS': return 4;
+    case 'FAILED': return 4;
     default: return 0;
   }
 };
 
 export default function Orders() {
-  const [orders, setOrders] = useState<Order[]>(mockOrders);
+  const [dbOrders, setDbOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
   const [cancelRequests, setCancelRequests] = useState<CancelRequest[]>(mockCancelRequests);
   const [filterTab, setFilterTab] = useState<'ALL' | OrderStatus>('ALL');
   const [searchText, setSearchText] = useState('');
   
   // Detail Drawer state
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [selectedDbOrder, setSelectedDbOrder] = useState<any | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  // Pagination state (simulated)
+  // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
+  const fetchOrdersList = async () => {
+    try {
+      setLoading(true);
+      const res = await getAdminOrders();
+      setDbOrders(res.data || res || []);
+    } catch (err: any) {
+      message.error(err.response?.data?.message || err.message || 'Lỗi khi tải danh sách đơn hàng');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrdersList();
+  }, []);
+
+  const mapDbOrderToFe = (o: any): Order => {
+    const statusMap: Record<string, OrderStatus> = {
+      'Pending': 'PENDING',
+      'Confirmed': 'CONFIRMED',
+      'Packing': 'PACKING',
+      'Shipping': 'SHIPPING',
+      'Completed': 'SUCCESS',
+      'Cancelled': 'FAILED'
+    };
+    
+    const feStatus = statusMap[o.status] || 'PENDING';
+    const cleanDate = o.created_at ? new Date(o.created_at).toLocaleString('vi-VN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    }) : 'N/A';
+
+    return {
+      id: String(o.id),
+      customerName: o.users?.name || o.nguoiNhan || 'Khách vãng lai',
+      phone: o.soDienThoaiNhan || o.users?.phone || 'N/A',
+      email: o.users?.email || 'N/A',
+      address: o.diaChiGiaoHang || 'N/A',
+      date: cleanDate,
+      paymentMethod: o.thanhToan?.method || 'N/A',
+      status: feStatus,
+      subtotal: Number(o.total_amount || 0),
+      shippingFee: 0,
+      discountAmount: Number(o.discount_amount || 0),
+      total: Number(o.final_amount || 0),
+      items: (o.order_items || []).map((it: any) => ({
+        id: String(it.id),
+        name: it.product?.name || 'Sản phẩm',
+        sku: it.product?.sku || 'SKU-N/A',
+        variant: `${it.product?.size || ''} / ${it.product?.color || ''}`.trim().replace(/^\/|\/$/g, '').trim() || 'N/A',
+        qty: Number(it.quantity || 0),
+        price: Number(it.unit_price || 0)
+      })),
+      timeline: [
+        { 
+          time: cleanDate, 
+          status: 'Tạo đơn hàng', 
+          note: 'Khách hàng đặt mua thành công từ Website' 
+        },
+        ...(o.status !== 'Pending' ? [
+          { 
+            time: o.updated_at ? new Date(o.updated_at).toLocaleString('vi-VN') : cleanDate, 
+            status: statusConfig[feStatus]?.label || o.status, 
+            note: o.cancel_reason ? `Lý do hủy: ${o.cancel_reason}` : 'Đã được cập nhật bởi hệ thống' 
+          }
+        ] : [])
+      ]
+    };
+  };
+
+  const formattedOrders = useMemo(() => {
+    return dbOrders.map(mapDbOrderToFe);
+  }, [dbOrders]);
+
   const filteredOrders = useMemo(() => {
-    let result = orders;
+    let result = formattedOrders;
     if (filterTab !== 'ALL') {
       result = result.filter(o => o.status === filterTab);
     }
@@ -169,16 +181,17 @@ export default function Orders() {
       const lowerSearch = searchText.toLowerCase();
       result = result.filter(o => 
         o.id.toLowerCase().includes(lowerSearch) || 
-        o.customerName.toLowerCase().includes(lowerSearch)
+        o.customerName.toLowerCase().includes(lowerSearch) ||
+        o.phone.toLowerCase().includes(lowerSearch)
       );
     }
     return result;
-  }, [orders, filterTab, searchText]);
+  }, [formattedOrders, filterTab, searchText]);
 
   const handleExport = () => {
     try {
       const BOM = '\uFEFF';
-      const headers = ['Order ID', 'Customer Name', 'Phone', 'Payment Method', 'Total', 'Status', 'Order Date'].join(',');
+      const headers = ['Mã Đơn Hàng', 'Tên Khách Hàng', 'Số Điện Thoại', 'Phương Thức Thanh Toán', 'Tổng Tiền', 'Trạng Thái', 'Ngày Đặt'].join(',');
       const rows = filteredOrders.map(o => 
         `"${o.id}","${o.customerName}","${o.phone}","${o.paymentMethod}",${o.total},"${statusConfig[o.status].label}","${o.date}"`
       ).join('\n');
@@ -187,132 +200,134 @@ export default function Orders() {
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
-      link.download = `Orders_List.csv`;
+      link.download = `Danh_Sach_Don_Hang.csv`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      message.success('File exported successfully!');
+      message.success('Xuất file thành công!');
     } catch (error) {
-      message.error('Error occurred while exporting file');
+      message.error('Lỗi khi xuất file');
     }
   };
 
-  const handleUpdateStatus = (newStatus: OrderStatus) => {
+  const handleUpdateStatus = async (newStatus: OrderStatus, cancelReason?: string) => {
     if (!selectedOrder) return;
 
-    // Simulate DB transaction & constraint
-    setOrders(prev => prev.map(o => {
-      if (o.id === selectedOrder.id) {
-        return {
-          ...o,
-          status: newStatus,
-          timeline: [
-            ...o.timeline,
-            { time: new Date().toISOString().replace('T', ' ').substring(0, 16), status: newStatus, note: 'Admin updated status' }
-          ]
-        };
-      }
-      return o;
-    }));
-
-    // Update the drawer view immediately
-    setSelectedOrder(prev => prev ? ({
-      ...prev,
-      status: newStatus,
-      timeline: [
-        ...prev.timeline,
-        { time: new Date().toISOString().replace('T', ' ').substring(0, 16), status: newStatus, note: 'Admin updated status' }
-      ]
-    }) : null);
-
-    message.success(`Status updated to: ${statusConfig[newStatus].label}`);
-    message.info('Automated notification sent to customer via Email/SMS');
+    try {
+      const backendStatusMap: Record<OrderStatus, string> = {
+        PENDING: 'Pending',
+        CONFIRMED: 'Confirmed',
+        PACKING: 'Packing',
+        SHIPPING: 'Shipping',
+        SUCCESS: 'Completed',
+        FAILED: 'Cancelled'
+      };
+      const statusToSend = backendStatusMap[newStatus];
+      
+      await updateAdminOrderStatus(selectedOrder.id, statusToSend);
+      message.success(`Cập nhật trạng thái thành công: ${statusConfig[newStatus].label}`);
+      
+      // Reload orders list
+      await fetchOrdersList();
+      
+      // Reload drawer details
+      const detailRes = await getAdminOrderById(selectedOrder.id);
+      const dbOrder = detailRes.data || detailRes;
+      const feOrder = mapDbOrderToFe(dbOrder);
+      setSelectedOrder(feOrder);
+    } catch (err: any) {
+      message.error(err.response?.data?.message || err.message || 'Lỗi khi cập nhật trạng thái đơn hàng');
+    }
   };
 
   const handleApproveCancel = (reqId: string, orderId: string, reasonDetails: string) => {
     if (!reasonDetails) {
-      message.error('Please enter reason for approval/rejection');
+      message.error('Vui lòng nhập lý do duyệt hủy!');
       return;
     }
     
-    // Attempt to find order and set to FAILED if not shipping yet
-    setOrders(prev => prev.map(o => {
-      if (o.id === orderId) {
-        if (o.status === 'SHIPPING' || o.status === 'SUCCESS' || o.status === 'FAILED') {
-          message.warning(`Cannot cancel order ${orderId} because it has been handed over to shipping.`);
-          return o;
-        }
-        return { ...o, status: 'FAILED' as OrderStatus };
-      }
-      return o;
-    }));
-    
-    setCancelRequests(prev => prev.filter(r => r.id !== reqId));
-    message.success(`Approved cancellation for order ${orderId}. Refunds (if any) will be processed.`);
+    // Call updates to cancel order
+    updateAdminOrderStatus(orderId, 'Cancelled')
+      .then(() => {
+        message.success(`Đã đồng ý hủy đơn hàng #${orderId}`);
+        setCancelRequests(prev => prev.filter(r => r.id !== reqId));
+        fetchOrdersList();
+      })
+      .catch((err) => {
+        message.error(err.response?.data?.message || err.message || 'Lỗi khi hủy đơn hàng');
+      });
   };
 
   const handleRejectCancel = (reqId: string, reasonDetails: string) => {
     if (!reasonDetails) {
-      message.error('Please enter reason for approval/rejection');
+      message.error('Vui lòng nhập lý do từ chối!');
       return;
     }
     setCancelRequests(prev => prev.filter(r => r.id !== reqId));
-    message.success('Cancellation request rejected. Order will continue processing.');
+    message.success('Đã từ chối yêu cầu hủy. Đơn hàng tiếp tục xử lý.');
   };
 
   const columns: ColumnsType<Order> = [
     { 
-      title: 'Order ID', 
+      title: 'Mã Đơn', 
       dataIndex: 'id', 
       className: 'font-mono font-medium text-[#191c1e]',
-      width: 120,
+      width: 100,
     },
     { 
-      title: 'Customer', 
+      title: 'Khách Hàng', 
       dataIndex: 'customerName',
       render: (text, record) => (
         <div>
-          <div className="font-medium">{text}</div>
+          <div className="font-semibold text-sm">{text}</div>
           <div className="text-xs text-gray-500">{record.phone}</div>
         </div>
       )
     },
     { 
-      title: 'Order Date', 
+      title: 'Ngày Đặt', 
       dataIndex: 'date',
-      className: 'text-[#5b403d]'
+      className: 'text-[#5b403d] text-sm'
     },
     { 
-      title: 'Total Amount', 
+      title: 'Tổng Giá Trị', 
       dataIndex: 'total', 
-      align: 'right',
-      render: (val: number) => <span className="font-medium">{val.toLocaleString('vi-VN')} ₫</span>
+      align: 'right' as const,
+      render: (val: number) => <span className="font-bold text-[#af101a]">{val.toLocaleString('vi-VN')} ₫</span>
     },
     { 
-      title: 'Payment', 
+      title: 'Thanh Toán', 
       dataIndex: 'paymentMethod',
+      className: 'text-sm'
     },
     { 
-      title: 'Status', 
+      title: 'Trạng Thái', 
       dataIndex: 'status', 
-      align: 'center',
+      align: 'center' as const,
       render: (val: OrderStatus) => (
-        <Tag color={statusConfig[val].color} icon={statusConfig[val].icon}>
+        <Tag color={statusConfig[val].color} icon={statusConfig[val].icon} className="px-2 py-0.5 rounded font-medium">
           {statusConfig[val].label}
         </Tag>
       ) 
     },
     {
-      title: 'Actions',
+      title: 'Xem',
       key: 'action',
-      align: 'center',
+      align: 'center' as const,
       render: (_, record) => (
         <Button 
           type="text" 
           icon={<Eye size={16} />} 
-          onClick={() => {
-            setSelectedOrder(record);
-            setIsDrawerOpen(true);
+          onClick={async () => {
+            try {
+              const detailRes = await getAdminOrderById(record.id);
+              const dbOrder = detailRes.data || detailRes;
+              setSelectedDbOrder(dbOrder);
+              setSelectedOrder(mapDbOrderToFe(dbOrder));
+              setIsDrawerOpen(true);
+            } catch (err: any) {
+              message.error('Không thể tải chi tiết đơn hàng');
+            }
           }}
           className="text-[#00799c] hover:bg-[#e0f2fe]"
         />
@@ -324,81 +339,83 @@ export default function Orders() {
     <div className="p-4 md:p-6 space-y-6 max-w-[1600px] mx-auto">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl md:text-3xl font-bold text-[#191c1e] tracking-tight">Order Management</h2>
-          <p className="text-[#5b403d] text-sm mt-1">Monitor, update, and manage transactions</p>
+          <h2 className="text-2xl md:text-3xl font-bold text-[#191c1e] tracking-tight">Quản Lý Đơn Hàng</h2>
+          <p className="text-[#5b403d] text-sm mt-1">Theo dõi, duyệt đơn, cập nhật lộ trình vận chuyển và hoàn kho</p>
         </div>
-        <Button icon={<Download size={16} />} className="text-sm font-medium" onClick={handleExport}>
-          Export Excel/CSV
+        <Button icon={<Download size={16} />} className="text-sm font-semibold border-[#e4beba] text-[#af101a] hover:text-[#af101a] hover:border-[#af101a] hover:bg-[#fff2f0]" onClick={handleExport}>
+          Xuất File Excel/CSV
         </Button>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
         <div className="xl:col-span-8 space-y-4">
           
-          <div className="bg-white border border-[#d8dadc] rounded-xl shadow-sm p-4 flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="bg-white border border-[#e4beba] rounded-xl shadow-sm p-4 flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex-1 w-full flex overflow-x-auto pb-1 md:pb-0 gap-2 hide-scrollbar">
-              {(['ALL', 'PENDING', 'PACKING', 'SHIPPING', 'SUCCESS', 'FAILED'] as const).map(tab => (
+              {(['ALL', 'PENDING', 'CONFIRMED', 'PACKING', 'SHIPPING', 'SUCCESS', 'FAILED'] as const).map(tab => (
                 <button 
                   key={tab}
                   onClick={() => setFilterTab(tab)}
-                  className={`px-4 py-1.5 text-sm font-medium rounded-full whitespace-nowrap transition-colors ${
-                    filterTab === tab ? 'bg-[#d32f2f] text-white' : 'bg-[#eceef0] text-[#5b403d] hover:bg-gray-200'
+                  className={`px-4 py-1.5 text-xs font-semibold rounded-full whitespace-nowrap transition-all ${
+                    filterTab === tab ? 'bg-[#af101a] text-white' : 'bg-[#eceef0] text-[#5b403d] hover:bg-[#e0e3e5]'
                   }`}
                 >
-                  {tab === 'ALL' ? 'All' : statusConfig[tab].label}
+                  {tab === 'ALL' ? 'Tất cả' : statusConfig[tab].label}
                 </button>
               ))}
             </div>
             <Input 
-              placeholder="Search by Order ID, Customer Name..." 
-              prefix={<Search size={16} className="text-gray-400" />}
+              placeholder="Tìm theo Mã đơn, Tên KH, SĐT..." 
+              prefix={<Search size={16} className="text-[#5b403d]" />}
               value={searchText}
               onChange={e => setSearchText(e.target.value)}
-              className="md:w-64 rounded-lg"
+              className="md:w-64 rounded-lg border-[#e4beba]"
               allowClear
             />
           </div>
 
-          <div className="bg-white border border-[#d8dadc] rounded-xl shadow-sm overflow-hidden">
-            <Table 
-              columns={columns} 
-              dataSource={filteredOrders} 
-              rowKey="id"
-              pagination={{
-                current: currentPage,
-                pageSize: itemsPerPage,
-                onChange: (page) => setCurrentPage(page),
-                showSizeChanger: false,
-              }}
-              rowClassName="hover:bg-[#f7f9fb]"
-              className="custom-table"
-              scroll={{ x: 'max-content' }}
-            />
+          <div className="bg-white border border-[#e4beba] rounded-xl shadow-sm overflow-hidden">
+            <Spin spinning={loading} tip="Đang tải dữ liệu...">
+              <Table 
+                columns={columns} 
+                dataSource={filteredOrders} 
+                rowKey="id"
+                pagination={{
+                  current: currentPage,
+                  pageSize: itemsPerPage,
+                  onChange: (page) => setCurrentPage(page),
+                  showSizeChanger: false,
+                }}
+                rowClassName="hover:bg-[#fbfcfd]"
+                className="custom-table"
+                scroll={{ x: 'max-content' }}
+              />
+            </Spin>
           </div>
         </div>
 
         <div className="xl:col-span-4 flex flex-col gap-6">
-          <div className="bg-white border border-[#d8dadc] rounded-xl shadow-sm flex flex-col min-h-[400px]">
-            <div className="p-4 border-b border-[#d8dadc] flex items-center justify-between">
+          <div className="bg-white border border-[#e4beba] rounded-xl shadow-sm flex flex-col min-h-[400px]">
+            <div className="p-4 border-b border-[#eceef0] flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-semibold flex items-center gap-2 text-[#191c1e]">
+                <h3 className="text-base font-bold flex items-center gap-2 text-[#ba1a1a]">
                   <AlertTriangle className="text-[#ba1a1a]" size={20} />
-                  Cancellation Requests
+                  Yêu Cầu Hủy Đơn Hàng
                 </h3>
-                <p className="text-xs text-[#5b403d] mt-1">Needs review from store</p>
+                <p className="text-xs text-[#5b403d] mt-1">Khách hàng gửi yêu cầu chờ duyệt hủy</p>
               </div>
               {cancelRequests.length > 0 && (
-                <span className="bg-[#ba1a1a] text-white text-xs font-bold px-2 py-1 rounded-full">
-                  {cancelRequests.length}
+                <span className="bg-[#ba1a1a] text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                  {cancelRequests.length} đơn
                 </span>
               )}
             </div>
             
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#f7f9fb]">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#fbfcfd]">
               {cancelRequests.length === 0 ? (
                 <div className="text-center text-gray-400 mt-10">
-                  <CheckCircle size={32} className="mx-auto mb-2 opacity-50" />
-                  <p>No pending cancellation requests</p>
+                  <CheckCircle size={32} className="mx-auto mb-2 opacity-50 text-green-500" />
+                  <p className="text-sm font-medium">Không có yêu cầu hủy nào</p>
                 </div>
               ) : (
                 cancelRequests.map(req => (
@@ -416,81 +433,95 @@ export default function Orders() {
       </div>
 
       <Drawer
-        title={<span className="font-bold text-lg">Order Details: {selectedOrder?.id}</span>}
+        title={<span className="font-bold text-[#af101a] text-lg">Chi Tiết Đơn Hàng: #{selectedOrder?.id}</span>}
         placement="right"
         width={600}
         onClose={() => setIsDrawerOpen(false)}
         open={isDrawerOpen}
         extra={
-          selectedOrder && <Tag color={statusConfig[selectedOrder.status].color}>{statusConfig[selectedOrder.status].label}</Tag>
+          selectedOrder && <Tag color={statusConfig[selectedOrder.status].color} className="px-2 py-0.5 rounded font-medium">{statusConfig[selectedOrder.status].label}</Tag>
         }
       >
         {selectedOrder && (
           <div className="space-y-6">
             
             {/* Status Workflow */}
-            <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-              <h4 className="font-semibold mb-4 flex items-center gap-2"><Truck size={16} /> Update Status</h4>
+            <div className="bg-white rounded-xl border border-[#e4beba] p-5 shadow-sm">
+              <h4 className="font-bold mb-4 flex items-center gap-2 text-[#af101a]"><Truck size={16} /> Cập Nhật Trạng Thái</h4>
               <Steps
                 current={getStatusStep(selectedOrder.status)}
                 status={selectedOrder.status === 'FAILED' ? 'error' : 'process'}
                 size="small"
+                className="mb-6"
                 items={[
-                  { title: 'Pending' },
-                  { title: 'Packing' },
-                  { title: 'Shipping' },
-                  { title: selectedOrder.status === 'FAILED' ? 'Failed' : 'Success' },
+                  { title: 'Chờ duyệt' },
+                  { title: 'Đã xác nhận' },
+                  { title: 'Đóng gói' },
+                  { title: 'Giao hàng' },
+                  { title: selectedOrder.status === 'FAILED' ? 'Đã hủy' : 'Thành công' },
                 ]}
               />
               
-              <Divider className="my-4" />
-              <div className="flex gap-2">
+              <Divider className="my-4 border-[#eceef0]" />
+              <div className="flex flex-wrap gap-2 justify-center">
                 {selectedOrder.status === 'PENDING' && (
-                  <Button type="primary" onClick={() => handleUpdateStatus('PACKING')}>Move to Packing</Button>
+                  <>
+                    <Button type="primary" className="bg-[#af101a] hover:bg-[#8d0c13]" onClick={() => handleUpdateStatus('CONFIRMED')}>Duyệt đơn hàng</Button>
+                    <Button danger onClick={() => handleUpdateStatus('FAILED')}>Hủy đơn</Button>
+                  </>
+                )}
+                {selectedOrder.status === 'CONFIRMED' && (
+                  <>
+                    <Button type="primary" className="bg-[#00799c] hover:bg-[#005f7b]" onClick={() => handleUpdateStatus('PACKING')}>Bắt đầu soạn hàng</Button>
+                    <Button danger onClick={() => handleUpdateStatus('FAILED')}>Hủy đơn</Button>
+                  </>
                 )}
                 {selectedOrder.status === 'PACKING' && (
-                  <Button type="primary" onClick={() => handleUpdateStatus('SHIPPING')}>Move to Shipping</Button>
+                  <>
+                    <Button type="primary" className="bg-[#8f6f6c] hover:bg-[#5b403d]" onClick={() => handleUpdateStatus('SHIPPING')}>Bắt đầu vận chuyển</Button>
+                    <Button danger onClick={() => handleUpdateStatus('FAILED')}>Hủy đơn</Button>
+                  </>
                 )}
                 {selectedOrder.status === 'SHIPPING' && (
                   <>
-                    <Button type="primary" success onClick={() => handleUpdateStatus('SUCCESS')} className="bg-green-600 hover:bg-green-700">Confirm Successful Delivery</Button>
-                    <Button danger onClick={() => handleUpdateStatus('FAILED')}>Delivery Failed</Button>
+                    <Button type="primary" onClick={() => handleUpdateStatus('SUCCESS')} className="bg-green-600 hover:bg-green-700 border-green-600">Giao thành công</Button>
+                    <Button danger onClick={() => handleUpdateStatus('FAILED')}>Giao hàng thất bại (Hoàn kho)</Button>
                   </>
                 )}
                 {(selectedOrder.status === 'SUCCESS' || selectedOrder.status === 'FAILED') && (
-                  <span className="text-gray-500 text-sm italic">Order has reached end of status workflow.</span>
+                  <span className="text-[#5b403d] text-sm italic font-medium">Đơn hàng này đã hoàn thành quy trình xử lý.</span>
                 )}
               </div>
             </div>
 
             {/* Customer Info */}
-            <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-              <h4 className="font-semibold mb-4 text-[#191c1e]">Customer Info</h4>
+            <div className="bg-white rounded-xl border border-[#e4beba] p-5 shadow-sm">
+              <h4 className="font-bold mb-4 text-[#191c1e] border-b pb-2 border-[#eceef0]">Thông Tin Khách Nhận</h4>
               <div className="grid grid-cols-2 gap-y-3 text-sm">
-                <div className="text-gray-500">Name:</div>
-                <div className="font-medium text-right">{selectedOrder.customerName}</div>
-                <div className="text-gray-500">Phone:</div>
-                <div className="font-medium text-right">{selectedOrder.phone}</div>
-                <div className="text-gray-500">Email:</div>
-                <div className="font-medium text-right">{selectedOrder.email}</div>
-                <div className="text-gray-500">Shipping Address:</div>
-                <div className="font-medium text-right col-span-2 mt-1 p-2 bg-gray-50 rounded text-left">{selectedOrder.address}</div>
+                <div className="text-gray-500 font-medium">Người nhận:</div>
+                <div className="font-semibold text-right">{selectedOrder.customerName}</div>
+                <div className="text-gray-500 font-medium">Số điện thoại:</div>
+                <div className="font-semibold text-right">{selectedOrder.phone}</div>
+                <div className="text-gray-500 font-medium">Email:</div>
+                <div className="font-semibold text-right text-gray-700">{selectedOrder.email}</div>
+                <div className="text-gray-500 font-medium col-span-2">Địa chỉ giao hàng:</div>
+                <div className="font-medium text-left col-span-2 mt-1 p-2.5 bg-[#f7f9fb] border border-[#e4beba] rounded text-[#191c1e]">{selectedOrder.address}</div>
               </div>
             </div>
 
             {/* Order Items */}
-            <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-              <h4 className="font-semibold mb-3 text-[#191c1e]">Products ({selectedOrder.items.length})</h4>
+            <div className="bg-white rounded-xl border border-[#e4beba] p-5 shadow-sm">
+              <h4 className="font-bold mb-3 text-[#191c1e] border-b pb-2 border-[#eceef0]">Danh Sách Sản Phẩm ({selectedOrder.items.length})</h4>
               <div className="space-y-3">
                 {selectedOrder.items.map(item => (
-                  <div key={item.id} className="flex items-start justify-between py-2 border-b border-gray-100 last:border-0">
+                  <div key={item.id} className="flex items-start justify-between py-2 border-b border-dashed border-[#eceef0] last:border-0">
                     <div>
-                      <p className="font-medium">{item.name}</p>
-                      <p className="text-xs text-gray-500">SKU: {item.sku} | {item.variant}</p>
+                      <p className="font-semibold text-sm text-[#191c1e]">{item.name}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">Mã SKU: {item.sku} | Phân loại: {item.variant}</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-medium">{item.price.toLocaleString('vi-VN')} ₫</p>
-                      <p className="text-xs text-gray-500">x {item.qty}</p>
+                      <p className="font-bold text-[#af101a]">{item.price.toLocaleString('vi-VN')} ₫</p>
+                      <p className="text-xs text-gray-500 font-medium">Số lượng: x {item.qty}</p>
                     </div>
                   </div>
                 ))}
@@ -498,52 +529,54 @@ export default function Orders() {
             </div>
 
             {/* Finance & Total */}
-            <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-              <h4 className="font-semibold mb-3 text-[#191c1e]">Finance & Payment</h4>
+            <div className="bg-white rounded-xl border border-[#e4beba] p-5 shadow-sm">
+              <h4 className="font-bold mb-3 text-[#191c1e] border-b pb-2 border-[#eceef0]">Chi Tiết Thanh Toán</h4>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Subtotal:</span>
-                  <span>{selectedOrder.subtotal.toLocaleString('vi-VN')} ₫</span>
+                  <span className="text-gray-500 font-medium">Tạm tính:</span>
+                  <span className="font-semibold">{selectedOrder.subtotal.toLocaleString('vi-VN')} ₫</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Shipping Fee:</span>
-                  <span>{selectedOrder.shippingFee.toLocaleString('vi-VN')} ₫</span>
+                  <span className="text-gray-500 font-medium">Phí vận chuyển:</span>
+                  <span className="font-semibold">Miễn phí (0 ₫)</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">
-                    Applied Voucher: 
-                    {selectedOrder.voucherCode && <Tag color="blue" className="ml-2">{selectedOrder.voucherCode}</Tag>}
-                  </span>
-                  <span className="text-red-500">-{selectedOrder.discountAmount.toLocaleString('vi-VN')} ₫</span>
-                </div>
-                <Divider className="my-2" />
+                {selectedOrder.discountAmount > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500 font-medium flex items-center gap-1">
+                      Giảm giá Voucher: 
+                      {selectedOrder.voucherCode && <Tag color="green" className="ml-1">{selectedOrder.voucherCode}</Tag>}
+                    </span>
+                    <span className="text-red-500 font-bold">-{selectedOrder.discountAmount.toLocaleString('vi-VN')} ₫</span>
+                  </div>
+                )}
+                <Divider className="my-2 border-[#eceef0]" />
                 <div className="flex justify-between font-bold text-base">
-                  <span>Total Payment:</span>
-                  <span className="text-[#d32f2f]">{selectedOrder.total.toLocaleString('vi-VN')} ₫</span>
+                  <span className="text-[#191c1e]">Tổng cộng thanh toán:</span>
+                  <span className="text-[#af101a] text-lg">{selectedOrder.total.toLocaleString('vi-VN')} ₫</span>
                 </div>
-                <div className="flex justify-between mt-2">
-                  <span className="text-gray-600">Payment Method:</span>
-                  <span className="font-medium">{selectedOrder.paymentMethod}</span>
+                <div className="flex justify-between mt-2 pt-2 border-t border-[#eceef0]">
+                  <span className="text-gray-500 font-medium">Hình thức thanh toán:</span>
+                  <span className="font-bold text-gray-700">{selectedOrder.paymentMethod}</span>
                 </div>
               </div>
             </div>
 
             {/* Timeline */}
-            <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-              <h4 className="font-semibold mb-4 text-[#191c1e]">Timeline & History</h4>
+            <div className="bg-white rounded-xl border border-[#e4beba] p-5 shadow-sm">
+              <h4 className="font-bold mb-4 text-[#191c1e] border-b pb-2 border-[#eceef0]">Lịch Sử Lộ Trình</h4>
               <div className="space-y-4">
                 {selectedOrder.timeline.map((event, idx) => (
                   <div key={idx} className="flex gap-4 relative">
                     {idx !== selectedOrder.timeline.length - 1 && (
-                      <div className="absolute top-6 left-[11px] bottom-[-20px] w-px bg-gray-200" />
+                      <div className="absolute top-6 left-[11px] bottom-[-20px] w-px bg-[#e4beba]" />
                     )}
-                    <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center shrink-0 z-10 border-2 border-white">
-                      <div className="w-2 h-2 rounded-full bg-gray-400" />
+                    <div className="w-6 h-6 rounded-full bg-[#ffdad6] flex items-center justify-center shrink-0 z-10 border-2 border-white">
+                      <div className="w-2 h-2 rounded-full bg-[#af101a]" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium">{event.status}</p>
-                      <p className="text-xs text-gray-500">{event.time}</p>
-                      {event.note && <p className="text-sm mt-1 text-gray-700 bg-gray-50 p-2 rounded">{event.note}</p>}
+                      <p className="text-sm font-bold text-[#191c1e]">{event.status}</p>
+                      <p className="text-xs text-gray-500 font-medium mt-0.5">{event.time}</p>
+                      {event.note && <p className="text-xs mt-1 text-[#5b403d] bg-[#f7f9fb] p-2 rounded border border-[#eceef0]">{event.note}</p>}
                     </div>
                   </div>
                 ))}
@@ -562,7 +595,6 @@ function CancelRequestCard({
   onApprove, 
   onReject 
 }: { 
-  key?: React.Key, // Add key to props to fix ts error
   request: CancelRequest, 
   onApprove: (reason: string) => void, 
   onReject: (reason: string) => void 
@@ -573,43 +605,43 @@ function CancelRequestCard({
     <div className="bg-white border-2 border-[#ffdad6] rounded-xl p-4 relative shadow-sm hover:shadow-md transition-shadow">
       <div className="absolute top-0 right-0 w-2 h-full bg-[#ba1a1a]/10 rounded-r-xl"></div>
       <div className="flex justify-between items-start mb-2">
-        <span className="font-mono text-sm font-bold text-[#ba1a1a]">{request.orderId}</span>
-        <span className="text-xs text-[#5b403d] bg-[#eceef0] px-2 py-1 rounded-full">{request.time}</span>
+        <span className="font-mono text-xs font-bold text-[#ba1a1a] bg-[#ffdad6] px-2 py-0.5 rounded">Mã: #{request.orderId}</span>
+        <span className="text-[11px] text-[#5b403d] font-semibold">{request.time}</span>
       </div>
-      <p className="text-sm text-gray-800 mb-1">
-        <strong className="text-gray-900">Reason:</strong> "{request.reason}"
+      <p className="text-xs text-gray-800 mb-1 leading-relaxed">
+        <strong className="text-gray-900">Lý do:</strong> "{request.reason}"
       </p>
-      <p className="text-xs text-[#5b403d] mb-4">Customer: <strong>{request.customerName}</strong></p>
+      <p className="text-[11px] text-[#5b403d] mb-4">Khách hàng: <strong>{request.customerName}</strong></p>
       
-      <div className="pt-3 border-t border-dashed border-gray-200">
-        <label className="block text-xs font-semibold mb-1 text-gray-600">Store Feedback (Required)</label>
+      <div className="pt-3 border-t border-dashed border-[#eceef0]">
+        <label className="block text-[11px] font-bold mb-1 text-[#5b403d]">Phản hồi của shop (Bắt buộc)</label>
         <Input.TextArea 
-          className="w-full text-sm mb-3 rounded-lg" 
+          className="w-full text-xs mb-3 rounded-lg border-[#e4beba]" 
           rows={2} 
-          placeholder="Enter approval/rejection reason..."
+          placeholder="Nhập lý do duyệt hủy hoặc lý do từ chối..."
           value={reason}
           onChange={e => setReason(e.target.value)}
         />
         <div className="flex gap-2">
           <Popconfirm
-            title="Reject cancellation"
-            description="Order will continue to be delivered. Are you sure?"
+            title="Từ chối yêu cầu hủy"
+            description="Đơn hàng sẽ tiếp tục giao đi. Bạn chắc chắn chứ?"
             onConfirm={() => onReject(reason)}
-            okText="Reject cancel"
-            cancelText="Go back"
+            okText="Từ chối hủy"
+            cancelText="Quay lại"
           >
-            <Button className="flex-1 rounded-lg">Reject Req</Button>
+            <Button size="small" className="flex-1 rounded-lg text-xs font-medium">Từ chối</Button>
           </Popconfirm>
           <Popconfirm
-            title="Approve order cancellation"
-            description="Order will be marked as cancelled and refunded (if any). Are you sure?"
+            title="Đồng ý hủy đơn hàng này"
+            description="Đơn sẽ được chuyển sang đã hủy và hoàn kho. Bạn chắc chắn?"
             onConfirm={() => onApprove(reason)}
-            okText="Approve cancel"
-            cancelText="Go back"
+            okText="Đồng ý hủy"
+            cancelText="Quay lại"
             okButtonProps={{ danger: true }}
           >
-            <Button type="primary" danger className="flex-1 flex items-center justify-center gap-1 rounded-lg">
-              <CheckCircle size={16} /> Approve
+            <Button size="small" type="primary" danger className="flex-1 flex items-center justify-center gap-1 rounded-lg text-xs font-semibold">
+              <CheckCircle size={14} /> Đồng ý hủy
             </Button>
           </Popconfirm>
         </div>

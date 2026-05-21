@@ -6,7 +6,13 @@ export const createOrder = async (req: Request, res: Response): Promise<any> => 
     const startTime = performance.now();
 
     try {
-        const { userId, shippingAddress, paymentMethod, voucherCode } = req.body;
+        const {
+            userId,
+            shippingAddress,
+            paymentMethod,
+            voucherCode,
+            cartItemIds
+        } = req.body;
 
         // 1. Validate đầu vào cơ bản
         if (!userId) {
@@ -24,7 +30,8 @@ export const createOrder = async (req: Request, res: Response): Promise<any> => 
             userId: Number(userId),
             shippingAddress,
             paymentMethod,
-            voucherCode
+            voucherCode,
+            cartItemIds
         });
 
         // Kết thúc đếm thời gian
