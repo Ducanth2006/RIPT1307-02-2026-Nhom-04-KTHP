@@ -16,6 +16,7 @@ import {
   LogOut,
   BarChart2,
   Ticket,
+  Boxes
 } from "lucide-react";
 import { Avatar, Dropdown, Popover, FloatButton } from "antd";
 import NotificationPanel from "./NotificationPanel";
@@ -39,6 +40,7 @@ export default function AppLayout() {
     { name: "Dashboard", path: "/admin/dashboard", icon: LayoutDashboard },
     { name: "Products", path: "/admin/products", icon: Package2 },
     { name: "Categories", path: "/admin/categories", icon: FolderTree },
+    { name: "Inventory", path:"/admin/inventory", icon: Boxes },
     { name: "Orders", path: "/admin/orders", icon: ShoppingCart },
     { name: "Users", path: "/admin/users", icon: Users },
     { name: "Vouchers", path: "/admin/vouchers", icon: Ticket },

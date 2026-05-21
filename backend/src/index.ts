@@ -27,8 +27,6 @@ import clientAuthRoutes from './routes/clientAuthRoutes';
 
 const app = express();
 const port = 5001;
-<<<<<<< HEAD
-=======
 
 // =============================================================
 // 🌐 CORS - Cho phép Frontend gọi API từ domain khác
@@ -42,7 +40,6 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true
 }));
->>>>>>> origin/dev
 
 app.use(express.json());
 
