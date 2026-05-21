@@ -18,7 +18,7 @@ const clientOptions: swaggerJSDoc.Options = {
                 description: 'Local Development Server',
             },
             {
-                url: 'https://ript1307-02-2026-nhom-04-kthp.onrender.com/api',
+                url: 'https://clothingstore-backend-oa20.onrender.com/api',
                 description: 'Production Server (Render)',
             },
         ],
@@ -47,7 +47,7 @@ const adminOptions: swaggerJSDoc.Options = {
                 description: 'Local Development Server',
             },
             {
-                url: 'https://ript1307-02-2026-nhom-04-kthp.onrender.com/api',
+                url: 'https://clothingstore-backend-oa20.onrender.com/api',
                 description: 'Production Server (Render)',
             },
         ],
