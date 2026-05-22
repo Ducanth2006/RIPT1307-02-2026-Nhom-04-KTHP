@@ -300,7 +300,7 @@ const Orders = () => {
                         onClick={() => setTrackingOrderId(order.id)}
                         className="action-btn"
                       >
-                        Chi tiết lộ trình
+                        Chi tiết đơn hàng
                       </Button>
                       {order.status === "Completed" && (
                         <Button
@@ -338,7 +338,7 @@ const Orders = () => {
       <Modal
         title={
           <span>
-            <CarOutlined style={{ marginRight: 8, color: "#1890ff" }} /> Chi Tiết Lộ Trình & Trạng Thái Đơn Hàng #
+            <CarOutlined style={{ marginRight: 8, color: "#1890ff" }} /> Chi tiết đơn hàng #
             {trackingOrderId}
           </span>
         }

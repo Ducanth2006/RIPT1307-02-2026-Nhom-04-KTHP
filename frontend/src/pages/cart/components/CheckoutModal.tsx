@@ -1,5 +1,8 @@
-import { Modal, Form, Input, Radio, Divider, Tag, Button, Typography } from "antd";
-import { ShoppingCartOutlined, EnvironmentOutlined, DollarCircleOutlined } from "@ant-design/icons";
+import { Modal, Form, Input, Radio, Divider, Tag, Button, Typography, Popover, List, Spin } from "antd";
+import { ShoppingCartOutlined, EnvironmentOutlined, DollarCircleOutlined, TagsOutlined } from "@ant-design/icons";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { getVouchers } from "../../../services/Voucher/apiClient";
 import type { IAddress } from "../../../services/Address/typing";
 
 const { Text } = Typography;
@@ -34,6 +37,88 @@ const CheckoutModal = ({
   onSubmit,
 }: CheckoutModalProps) => {
   const [form] = Form.useForm<CheckoutFormValues>();
+  const [isVoucherOpen, setIsVoucherOpen] = useState(false);
+
+  const { data: voucherData, isLoading: isLoadingVouchers } = useQuery({
+    queryKey: ["vouchers"],
+    queryFn: () => getVouchers().then((res) => res.data),
+    enabled: open, // Only fetch when modal is open
+  });
+  const vouchers = voucherData?.data || [];
+
+  const currentVoucherCode = Form.useWatch("voucherCode", form);
+
+  let discountAmount = 0;
+  let finalPrice = totalPrice;
+  const activeVoucher = vouchers.find(v => v.code === currentVoucherCode?.toUpperCase());
+
+  if (activeVoucher && totalPrice >= activeVoucher.min_order_value) {
+    if (activeVoucher.discount_type === "Percentage") {
+      discountAmount = (totalPrice * activeVoucher.discount_value) / 100;
+    } else {
+      discountAmount = activeVoucher.discount_value;
+    }
+    if (discountAmount > activeVoucher.max_discount) {
+      discountAmount = activeVoucher.max_discount;
+    }
+    finalPrice = Math.max(0, totalPrice - discountAmount);
+  }
+
+  const voucherContent = (
+    <div style={{ width: 350, maxHeight: 400, overflowY: "auto" }}>
+      {isLoadingVouchers ? (
+        <div style={{ textAlign: "center", padding: "20px" }}><Spin /></div>
+      ) : vouchers.length > 0 ? (
+        <List
+          dataSource={vouchers}
+          renderItem={(item) => {
+            const isEligible = totalPrice >= item.min_order_value;
+            return (
+              <List.Item
+                style={{ cursor: isEligible ? "pointer" : "not-allowed", padding: "8px 0", borderBottom: "none" }}
+                onClick={() => {
+                  if (isEligible) {
+                    form.setFieldsValue({ voucherCode: item.code });
+                    setIsVoucherOpen(false);
+                  }
+                }}
+              >
+                <div style={{ display: "flex", width: "100%", borderRadius: "4px", border: "1px solid #e8e8e8", overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.05)", opacity: isEligible ? 1 : 0.5 }}>
+                  <div style={{ backgroundColor: "#ee4d2d", color: "#fff", width: "100px", padding: "12px 8px", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", borderRight: "2px dashed #fff" }}>
+                    <Text style={{ color: "#fff", fontSize: 16, fontWeight: 800, textAlign: "center", lineHeight: 1.2 }}>
+                      {item.discount_type === "Percentage" ? `${item.discount_value}%` : `-${(item.discount_value / 1000)}k`}
+                    </Text>
+                    <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: 11, marginTop: 4, fontWeight: 500 }}>GIẢM</Text>
+                  </div>
+                  <div style={{ flex: 1, padding: "12px", backgroundColor: "#fff", display: "flex", flexDirection: "column", justifyContent: "space-between", position: "relative" }}>
+                    <div>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                        <Tag color="volcano" style={{ margin: 0, fontWeight: "bold" }}>{item.code}</Tag>
+                        <Text type="secondary" style={{ fontSize: 11 }}>SL: {item.quantity}</Text>
+                      </div>
+                      <Text type="secondary" style={{ fontSize: 12, display: "block", marginTop: 8, lineHeight: 1.4 }}>
+                        Đơn tối thiểu {formatPrice(item.min_order_value)} <br /> Giảm tối đa {formatPrice(item.max_discount)}
+                      </Text>
+                    </div>
+                    <Text type="secondary" style={{ fontSize: 11, marginTop: 8 }}>
+                      HSD: {new Date(item.end_date).toLocaleDateString("vi-VN")}
+                    </Text>
+                    {!isEligible && (
+                      <div style={{ position: "absolute", bottom: 12, right: 12 }}>
+                        <Text type="danger" style={{ fontSize: 11 }}>Chưa đủ điều kiện</Text>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </List.Item>
+            );
+          }}
+        />
+      ) : (
+        <div style={{ textAlign: "center", padding: "20px" }}><Text type="secondary">Không có mã giảm giá khả dụng</Text></div>
+      )}
+    </div>
+  );
 
   return (
     <Modal
@@ -50,6 +135,7 @@ const CheckoutModal = ({
       footer={null}
       destroyOnClose
       width={1000}
+      style={{ paddingBottom: 16 }}
     >
       <div style={{ margin: "16px 0" }}>
         <Text type="secondary">
@@ -153,8 +239,22 @@ const CheckoutModal = ({
 
         <Divider />
 
-        <Form.Item label="Mã giảm giá / Voucher (nếu có)" name="voucherCode">
-          <Input placeholder="Ví dụ: SUMMER20, WELCOME50" style={{ textTransform: "uppercase" }} />
+        <Form.Item label="Mã giảm giá / Voucher (nếu có)" style={{ marginBottom: 0 }}>
+          <div style={{ display: "flex", gap: "8px" }}>
+            <Form.Item name="voucherCode" style={{ flex: 1, marginBottom: 0 }}>
+              <Input placeholder="Ví dụ: SUMMER20, WELCOME50" style={{ textTransform: "uppercase" }} />
+            </Form.Item>
+            <Popover
+              content={voucherContent}
+              title={<span style={{ fontWeight: "bold" }}><TagsOutlined style={{ color: "#ee4d2d", marginRight: 6 }} /> Chọn mã giảm giá</span>}
+              trigger="click"
+              placement="bottomRight"
+              open={isVoucherOpen}
+              onOpenChange={setIsVoucherOpen}
+            >
+              <Button type="primary" ghost style={{ borderColor: "#ee4d2d", color: "#ee4d2d" }}>Chọn Voucher</Button>
+            </Popover>
+          </div>
         </Form.Item>
 
         <div
@@ -169,9 +269,23 @@ const CheckoutModal = ({
           }}
         >
           <div>
-            <Text type="secondary">Tổng số tiền cần thanh toán ({selectedItemsCount} sản phẩm):</Text>
+            <Text type="secondary">Tổng tiền hàng ({selectedItemsCount} sản phẩm):</Text>
             <br />
-            <Text style={{ fontSize: 22, fontWeight: 600, color: "#ee4d2d" }}>{formatPrice(totalPrice)}</Text>
+            <Text style={{ fontSize: 14, textDecoration: discountAmount > 0 ? "line-through" : "none", color: discountAmount > 0 ? "#999" : "#333" }}>
+              {formatPrice(totalPrice)}
+            </Text>
+            {discountAmount > 0 && (
+              <>
+                <br />
+                <Text type="secondary">Voucher giảm giá:</Text>
+                <br />
+                <Text style={{ fontSize: 14, color: "#52c41a" }}>- {formatPrice(discountAmount)}</Text>
+              </>
+            )}
+            <br />
+            <Text type="secondary">Tổng thanh toán:</Text>
+            <br />
+            <Text style={{ fontSize: 24, fontWeight: 700, color: "#ee4d2d" }}>{formatPrice(finalPrice)}</Text>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <Button onClick={() => {
