@@ -47,9 +47,22 @@ export const fetchClientProducts = async (filters: GetProductsFilters) => {
         query = query.eq('brand', filters.brand);
     }
 
-    // 3. Filter theo category_id
+    // 3. Filter theo category_id (bao gồm cả danh mục con)
     if (filters.category_id) {
-        query = query.eq('category_id', filters.category_id);
+        // Lấy danh sách danh mục con của category_id này (nếu là danh mục cha)
+        const { data: childCategories } = await supabaseClient
+            .from('categories')
+            .select('id')
+            .eq('parent_id', filters.category_id);
+
+        // Tạo mảng bao gồm cả danh mục cha + các danh mục con
+        const categoryIds = [filters.category_id];
+        if (childCategories && childCategories.length > 0) {
+            childCategories.forEach(c => categoryIds.push(c.id));
+        }
+
+        // Dùng .in() để lọc theo toàn bộ danh sách (cha + con)
+        query = query.in('category_id', categoryIds);
     }
 
     // 4. Filter theo price (dựa trên base_price)
