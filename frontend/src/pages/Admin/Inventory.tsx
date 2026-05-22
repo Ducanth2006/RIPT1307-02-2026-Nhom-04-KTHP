@@ -22,7 +22,10 @@ import {
   Empty,
   Select,
   Space,
-  Alert
+  Alert,
+  DatePicker,
+  Row,
+  Col
 } from 'antd';
 
 import type { ColumnsType } from 'antd/es/table';
@@ -38,6 +41,8 @@ import {
 
 import axiosInstance from '../../utils/axiosConfig';
 import ip from '../../utils/ip';
+
+const { RangePicker } = DatePicker;
 
 interface AnhSanPham {
   is_main: boolean;
@@ -108,6 +113,30 @@ export default function Inventory() {
 
   const [tuKhoaTimKiem, setTuKhoaTimKiem] =
     useState('');
+
+  // =========================
+  // FILTER LỊCH SỬ
+  // =========================
+
+  const [
+    loaiGiaoDichFilter,
+    setLoaiGiaoDichFilter
+  ] = useState<string>('ALL');
+
+  const [
+    khoangThoiGian,
+    setKhoangThoiGian
+  ] = useState<
+    [
+      dayjs.Dayjs | null,
+      dayjs.Dayjs | null
+    ] | null
+  >(null);
+
+  const [
+    tuKhoaTimKiemLichSu,
+    setTuKhoaTimKiemLichSu
+  ] = useState('');
 
   const [dangMoModal, setDangMoModal] =
     useState(false);
@@ -318,16 +347,19 @@ export default function Inventory() {
                   0
               ),
 
-              sku: item.sku || '',
+              sku:
+                item.sku || '',
 
               productName:
                 item.product_name ||
                 item.productName ||
                 '',
 
-              size: item.size || '',
+              size:
+                item.size || '',
 
-              color: item.color || ''
+              color:
+                item.color || ''
             });
           });
         }
@@ -359,6 +391,7 @@ export default function Inventory() {
 
   const taiTatCaDuLieu = async () => {
     await taiDuLieuKho();
+
     await Promise.all([
       taiThongKeKho(),
       taiLichSuKho()
@@ -366,7 +399,7 @@ export default function Inventory() {
   };
 
   // =========================
-  // FILTER
+  // FILTER TỒN KHO
   // =========================
 
   const danhSachLocDuoc = useMemo(() => {
@@ -398,6 +431,91 @@ export default function Inventory() {
     danhSachKho,
     tuKhoaTimKiem
   ]);
+
+  // =========================
+  // FILTER LỊCH SỬ
+  // =========================
+
+  const danhSachLichSuLocDuoc =
+    useMemo(() => {
+      return danhSachLichSu.filter(
+        (log) => {
+          // KEYWORD
+
+          const keyword =
+            tuKhoaTimKiemLichSu
+              .trim()
+              .toLowerCase();
+
+          const matchKeyword =
+            !keyword
+              ? true
+              : (
+                  log.sku
+                    ?.toLowerCase()
+                    .includes(
+                      keyword
+                    ) ||
+                  log.productName
+                    ?.toLowerCase()
+                    .includes(
+                      keyword
+                    )
+                );
+
+          // TYPE
+
+          const matchType =
+            loaiGiaoDichFilter ===
+            'ALL'
+              ? true
+              : log.type ===
+                loaiGiaoDichFilter;
+
+          // DATE
+
+          let matchDate = true;
+
+          if (
+            khoangThoiGian &&
+            khoangThoiGian[0] &&
+            khoangThoiGian[1]
+          ) {
+            const startOfDay =
+              khoangThoiGian[0]
+                .startOf('day')
+                .toDate();
+
+            const endOfDay =
+              khoangThoiGian[1]
+                .endOf('day')
+                .toDate();
+
+            const logDate =
+              new Date(
+                log.timestamp
+              );
+
+            matchDate =
+              logDate >=
+                startOfDay &&
+              logDate <=
+                endOfDay;
+          }
+
+          return (
+            matchKeyword &&
+            matchType &&
+            matchDate
+          );
+        }
+      );
+    }, [
+      danhSachLichSu,
+      tuKhoaTimKiemLichSu,
+      loaiGiaoDichFilter,
+      khoangThoiGian
+    ]);
 
   // =========================
   // MODAL
@@ -793,7 +911,7 @@ export default function Inventory() {
       {contextHolder}
 
       <Card
-        className="shadow-sm"
+        className="shadow-sm border-2 border-gray-300"
         title={
           <div>
             <h1 className="text-2xl font-bold">
@@ -939,25 +1057,129 @@ export default function Inventory() {
                 'Lịch Sử Giao Dịch',
 
               children: (
-                <Table<NhatKyBienDong>
-                  rowKey="id"
-                  columns={
-                    cotLichSu
-                  }
-                  dataSource={
-                    danhSachLichSu
-                  }
-                  loading={
-                    loadingLichSu
-                  }
-                  bordered
-                  scroll={{
-                    x: 1200
-                  }}
-                  pagination={{
-                    pageSize: 10
-                  }}
-                />
+                <div className="space-y-4">
+                  <div className="bg-white border rounded-xl p-4">
+                    <Row gutter={[16, 16]}>
+                      <Col xs={24} md={8}>
+                        <Input
+                          allowClear
+                          prefix={
+                            <Search size={16} />
+                          }
+                          placeholder="Tìm SKU / tên sản phẩm..."
+                          value={
+                            tuKhoaTimKiemLichSu
+                          }
+                          onChange={(
+                            e
+                          ) =>
+                            setTuKhoaTimKiemLichSu(
+                              e.target
+                                .value
+                            )
+                          }
+                        />
+                      </Col>
+
+                      <Col xs={24} md={6}>
+                        <Select
+                          value={
+                            loaiGiaoDichFilter
+                          }
+                          onChange={
+                            setLoaiGiaoDichFilter
+                          }
+                          style={{
+                            width:
+                              '100%'
+                          }}
+                          options={[
+                            {
+                              label:
+                                'Tất cả giao dịch',
+                              value:
+                                'ALL'
+                            },
+
+                            {
+                              label:
+                                'Nhập kho',
+                              value:
+                                'IMPORT'
+                            },
+
+                            {
+                              label:
+                                'Xuất bán',
+                              value:
+                                'EXPORT_SELL'
+                            },
+
+                            {
+                              label:
+                                'Xuất hủy',
+                              value:
+                                'EXPORT_DELETE'
+                            }
+                          ]}
+                        />
+                      </Col>
+
+                      <Col xs={24} md={10}>
+                        <RangePicker
+                          style={{
+                            width:
+                              '100%'
+                          }}
+                          value={
+                            khoangThoiGian
+                          }
+                          onChange={(
+                            dates
+                          ) => {
+                            if (
+                              !dates
+                            ) {
+                              setKhoangThoiGian(
+                                null
+                              );
+
+                              return;
+                            }
+
+                            setKhoangThoiGian(
+                              [
+                                dates[0],
+                                dates[1]
+                              ]
+                            );
+                          }}
+                          format="DD/MM/YYYY"
+                        />
+                      </Col>
+                    </Row>
+                  </div>
+
+                  <Table<NhatKyBienDong>
+                    rowKey="id"
+                    columns={
+                      cotLichSu
+                    }
+                    dataSource={
+                      danhSachLichSuLocDuoc
+                    }
+                    loading={
+                      loadingLichSu
+                    }
+                    bordered
+                    scroll={{
+                      x: 1200
+                    }}
+                    pagination={{
+                      pageSize: 10
+                    }}
+                  />
+                </div>
               )
             }
           ]}
