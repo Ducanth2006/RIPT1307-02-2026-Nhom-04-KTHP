@@ -125,9 +125,21 @@ const Header = () => {
           zIndex: 1000,
           boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
         }}
+        className="app-header"
       >
+        <style>{`
+          @media (max-width: 1100px) {
+            .desktop-categories { display: none !important; }
+          }
+          @media (max-width: 768px) {
+            .header-search { width: 160px !important; }
+            .app-header { padding: 0 16px !important; }
+            .header-logo { font-size: 18px !important; }
+          }
+        `}</style>
         <Link to="/" style={{ textDecoration: "none" }}>
           <div
+            className="header-logo"
             style={{
               fontSize: 24,
               fontWeight: 900,
@@ -139,7 +151,7 @@ const Header = () => {
           </div>
         </Link>
 
-        <div style={{ display: "flex", gap: 32, fontWeight: 600 }}>
+        <div className="desktop-categories" style={{ display: "flex", gap: 32, fontWeight: 600 }}>
           <Link to="/" style={{ color: "#af101a", fontWeight: 700 }}>
             Nam
           </Link>
@@ -162,7 +174,8 @@ const Header = () => {
 
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <Input
-            placeholder="Tìm kiếm sản phẩm..."
+            className="header-search"
+            placeholder="Tìm kiếm..."
             prefix={
               <SearchOutlined style={{ cursor: "pointer", color: "#888" }} onClick={() => handleSearch(searchVal)} />
             }

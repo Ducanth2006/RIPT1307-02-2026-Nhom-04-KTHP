@@ -65,6 +65,10 @@ const ProductDetail = () => {
   });
 
   useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [id]);
+
+  useEffect(() => {
     if (!id) return;
     (async () => {
       try {

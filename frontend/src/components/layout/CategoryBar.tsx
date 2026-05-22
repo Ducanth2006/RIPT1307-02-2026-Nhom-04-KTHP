@@ -1,6 +1,8 @@
-import { Button, Space, Spin } from "antd";
+import { useState, useRef, useEffect } from "react";
+import { Button, Spin } from "antd";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { LeftOutlined, RightOutlined } from "@ant-design/icons";
 import { getCategories } from "../../services/Category/apiClient";
 
 const CategoryBar = () => {
@@ -8,14 +10,39 @@ const CategoryBar = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const categoryIdStr = searchParams.get("category_id");
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
   const { data, isLoading } = useQuery({
     queryKey: ["categories"],
     queryFn: () => getCategories().then((res) => res.data),
   });
 
   const categories = data?.data || [];
-  // Lọc chỉ lấy các danh mục cha (parent_id === null) để hiển thị trên thanh CategoryBar cho gọn và đẹp mắt
   const parentCategories = categories.filter((cat) => cat.parent_id === null);
+
+  const checkScroll = () => {
+    if (scrollRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+      setCanScrollLeft(scrollLeft > 0);
+      setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 1);
+    }
+  };
+
+  useEffect(() => {
+    checkScroll();
+    window.addEventListener("resize", checkScroll);
+    return () => window.removeEventListener("resize", checkScroll);
+  }, [categories]);
+
+  const scroll = (direction: "left" | "right") => {
+    if (scrollRef.current) {
+      const scrollAmount = 300;
+      scrollRef.current.scrollBy({ left: direction === "left" ? -scrollAmount : scrollAmount, behavior: "smooth" });
+      setTimeout(checkScroll, 350);
+    }
+  };
 
   const handleClick = (id?: number) => {
     if (id === undefined) {
@@ -23,7 +50,7 @@ const CategoryBar = () => {
     } else {
       searchParams.set("category_id", id.toString());
     }
-    searchParams.set("page", "1"); // Reset về trang 1 khi chuyển danh mục
+    searchParams.set("page", "1");
     navigate({
       pathname: "/products",
       search: searchParams.toString(),
@@ -47,9 +74,42 @@ const CategoryBar = () => {
         borderBottom: "2px solid #111",
         padding: "12px 40px",
         boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+        position: "relative",
       }}
     >
-      <Space size="large" wrap>
+      {canScrollLeft && (
+        <Button
+          shape="circle"
+          icon={<LeftOutlined />}
+          onClick={() => scroll("left")}
+          style={{
+            position: "absolute",
+            left: 16,
+            top: "50%",
+            transform: "translateY(-50%)",
+            zIndex: 10,
+            boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+            border: "none",
+            backgroundColor: "rgba(255,255,255,0.9)"
+          }}
+        />
+      )}
+
+      <div
+        ref={scrollRef}
+        onScroll={checkScroll}
+        style={{
+          display: "flex",
+          overflowX: "auto",
+          scrollbarWidth: "none",
+          msOverflowStyle: "none",
+          gap: 24,
+          padding: "0 8px",
+          whiteSpace: "nowrap"
+        }}
+        className="category-scroll-container"
+      >
+        <style>{`.category-scroll-container::-webkit-scrollbar { display: none; }`}</style>
         <Button
           type="text"
           onClick={() => handleClick(undefined)}
@@ -61,6 +121,7 @@ const CategoryBar = () => {
             borderRadius: 0,
             paddingBottom: 8,
             textTransform: "uppercase",
+            flexShrink: 0
           }}
         >
           Tất cả
@@ -78,12 +139,31 @@ const CategoryBar = () => {
               borderRadius: 0,
               paddingBottom: 8,
               textTransform: "uppercase",
+              flexShrink: 0
             }}
           >
             {cat.name}
           </Button>
         ))}
-      </Space>
+      </div>
+
+      {canScrollRight && (
+        <Button
+          shape="circle"
+          icon={<RightOutlined />}
+          onClick={() => scroll("right")}
+          style={{
+            position: "absolute",
+            right: 16,
+            top: "50%",
+            transform: "translateY(-50%)",
+            zIndex: 10,
+            boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+            border: "none",
+            backgroundColor: "rgba(255,255,255,0.9)"
+          }}
+        />
+      )}
     </div>
   );
 };
