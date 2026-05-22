@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getClientProducts, getClientProductById } from '../controllers/clientProductController';
+import { getClientProducts, getClientProductById, getNewArrivals, getHomepageCollections, getLowStockProducts } from '../controllers/clientProductController';
 
 const router = Router();
 
@@ -67,6 +67,51 @@ const router = Router();
  *         description: Lỗi hệ thống
  */
 router.get('/', getClientProducts);
+
+/**
+ * @swagger
+ * /products/new-arrivals:
+ *   get:
+ *     summary: Lấy danh sách sản phẩm mới lên kệ (Public)
+ *     description: Trả về danh sách 10 sản phẩm mới nhất đang hoạt động (status = 'Active'), được sắp xếp theo thời gian tạo giảm dần. Mỗi sản phẩm được gắn tag status = 'NEW' để hiển thị nhãn New ở Client.
+ *     tags: [Client Products]
+ *     responses:
+ *       200:
+ *         description: Lấy danh sách sản phẩm mới lên kệ thành công
+ *       500:
+ *         description: Lỗi hệ thống
+ */
+router.get('/new-arrivals', getNewArrivals);
+
+/**
+ * @swagger
+ * /products/homepage-collections:
+ *   get:
+ *     summary: Lấy danh sách các bộ sưu tập nổi bật trang chủ (Public)
+ *     description: Trả về danh sách sản phẩm được gom nhóm theo 3 bộ sưu tập (Năng động mỗi ngày, Góc Thu - Đông, Đồ mặc thường nhật) để phục vụ hiển thị ở trang chủ.
+ *     tags: [Client Products]
+ *     responses:
+ *       200:
+ *         description: Lấy danh sách bộ sưu tập thành công
+ *       500:
+ *         description: Lỗi hệ thống
+ */
+router.get('/homepage-collections', getHomepageCollections);
+
+/**
+ * @swagger
+ * /products/low-stock:
+ *   get:
+ *     summary: Lấy danh sách sản phẩm sắp hết hàng (Public / FOMO)
+ *     description: Trả về danh sách tối đa 10 sản phẩm có các biến thể có số lượng tồn kho thấp (0 < stock_quantity < 10) để kích thích tâm lý mua hàng (FOMO).
+ *     tags: [Client Products]
+ *     responses:
+ *       200:
+ *         description: Lấy danh sách sản phẩm sắp hết hàng thành công
+ *       500:
+ *         description: Lỗi hệ thống
+ */
+router.get('/low-stock', getLowStockProducts);
 
 /**
  * @swagger

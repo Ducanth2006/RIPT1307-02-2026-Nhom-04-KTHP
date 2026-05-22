@@ -20,4 +20,12 @@ export function getProductById(id: string | number) {
   return axiosInstance.get(`${ip}/products/${id}`);
 }
 
+export function getNewArrivals() {
+  return axiosInstance.get<{ message: string; data: Products.IRecord[] }>(`${ip}/products/new-arrivals`);
+}
+
+export function getHomepageCollections() {
+  return axiosInstance.get<{ message: string; data: Products.IHomepageCollections }>(`${ip}/products/homepage-collections`);
+}
+
 export default axiosInstance;
