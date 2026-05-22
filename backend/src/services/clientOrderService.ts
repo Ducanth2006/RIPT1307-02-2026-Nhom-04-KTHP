@@ -399,7 +399,7 @@ export const cancelOrder = async (orderId: number, userId: number, cancelReason?
 
     // 4a. Hoàn lại tồn kho cho từng sản phẩm (đọc stock hiện tại → cộng thêm)
     // CHỈ hoàn kho khi đơn hàng đã từng được admin Confirmed (trừ kho)
-    if (order.status === 'Confirmed') {
+    if (['Confirmed', 'Packing', 'Shipping'].includes(order.status)) {
         for (const item of (order.order_items as any[])) {
             const restoreStock = async () => {
                 const { data: variant } = await supabaseClient

@@ -1,4 +1,5 @@
-import { Typography, Row, Col, Spin, Empty, Card } from "antd";
+import { Typography, Row, Col, Spin, Empty, Card, Collapse } from "antd";
+import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import ProductCard from "../../../components/product/ProductCard";
@@ -34,6 +35,29 @@ const ProductGrid = () => {
   const categoriesList = categoriesData?.data || [];
   const parentCategories = categoriesList.filter((cat) => cat.parent_id === null);
 
+  const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (categoriesList.length > 0) {
+      if (categoryId !== undefined) {
+        const selectedCat = categoriesList.find(c => c.id === categoryId);
+        if (selectedCat) {
+          const parentIdToExpand = selectedCat.parent_id === null ? selectedCat.id : selectedCat.parent_id;
+          if (parentIdToExpand) {
+            setExpandedKeys([parentIdToExpand.toString()]);
+          }
+        }
+      } else {
+        setExpandedKeys([]);
+      }
+    }
+  }, [categoryId, categoriesList]);
+
+  // Always scroll to top when filters or page change, or on initial load
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [categoryId, currentPage, search]);
+
   const handlePageChange = (page: number) => {
     searchParams.set("page", page.toString());
     setSearchParams(searchParams);
@@ -48,6 +72,7 @@ const ProductGrid = () => {
     }
     searchParams.set("page", "1");
     setSearchParams(searchParams);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const products = data?.data || [];
@@ -103,7 +128,7 @@ const ProductGrid = () => {
             <div style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 8, padding: "0 8px" }}>
               <UnorderedListOutlined style={{ fontSize: 16, color: "#ee4d2d" }} />
               <Text strong style={{ fontSize: 16 }}>
-                Bộ Lọc Tìm Kiếm
+                Bộ lọc tìm kiếm
               </Text>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -126,15 +151,48 @@ const ProductGrid = () => {
                 {categoryId === undefined && <span style={{ color: "#ee4d2d" }}>●</span>}
                 Tất cả sản phẩm
               </div>
-              {parentCategories.map((parent) => {
-                const children = categoriesList.filter((cat) => cat.parent_id === parent.id);
-                return (
-                  <div key={parent.id} style={{ margin: "2px 0" }}>
-                    {renderCategoryItem(parent, false)}
-                    {children.map((child) => renderCategoryItem(child, true))}
-                  </div>
-                );
-              })}
+              <Collapse
+                ghost
+                expandIconPosition="end"
+                activeKey={expandedKeys}
+                onChange={(keys) => setExpandedKeys(keys as string[])}
+                style={{ marginLeft: -12 }}
+              >
+                {parentCategories.map((parent) => {
+                  const children = categoriesList.filter((cat) => cat.parent_id === parent.id);
+                  const isActive = categoryId === parent.id;
+                  return (
+                    <Collapse.Panel
+                      key={parent.id.toString()}
+                      header={
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCategoryClick(parent.id);
+                          }}
+                          style={{
+                            fontSize: 14,
+                            fontWeight: isActive ? 600 : 500,
+                            color: isActive ? "#ee4d2d" : "#333",
+                            display: "flex",
+                            alignItems: "center"
+                          }}
+                        >
+                          {isActive && <span style={{ color: "#ee4d2d", marginRight: 6 }}>●</span>}
+                          {parent.name}
+                        </div>
+                      }
+                      showArrow={children.length > 0}
+                    >
+                      {children.length > 0 && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4, paddingLeft: 12 }}>
+                          {children.map((child) => renderCategoryItem(child, true))}
+                        </div>
+                      )}
+                    </Collapse.Panel>
+                  );
+                })}
+              </Collapse>
             </div>
           </Card>
         </Col>
@@ -145,15 +203,15 @@ const ProductGrid = () => {
             <Row gutter={[20, 20]} style={{ minHeight: 400 }}>
               {products.length > 0
                 ? products.map((p) => (
-                    <Col xs={12} sm={12} md={8} lg={6} key={p.id} style={{ display: "flex" }}>
-                      <ProductCard product={p} />
-                    </Col>
-                  ))
+                  <Col xs={12} sm={12} md={8} lg={6} key={p.id} style={{ display: "flex" }}>
+                    <ProductCard product={p} />
+                  </Col>
+                ))
                 : !isLoading && (
-                    <div style={{ width: "100%", padding: "100px 0" }}>
-                      <Empty description="Không tìm thấy sản phẩm nào" />
-                    </div>
-                  )}
+                  <div style={{ width: "100%", padding: "100px 0" }}>
+                    <Empty description="Không tìm thấy sản phẩm nào" />
+                  </div>
+                )}
             </Row>
           </Spin>
 
