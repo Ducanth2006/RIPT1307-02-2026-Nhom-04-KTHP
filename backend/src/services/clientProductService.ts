@@ -141,3 +141,42 @@ export const fetchClientProductById = async (id: string) => {
 
     return data;
 };
+
+export const fetchNewArrivals = async () => {
+    const { data, error } = await supabaseClient
+        .from('products')
+        .select(`
+            id,
+            name,
+            description,
+            base_price,
+            status,
+            brand,
+            created_at,
+            categories (
+                id,
+                name,
+                slug
+            ),
+            product_images (
+                id,
+                image_url,
+                is_main
+            )
+        `)
+        .is('deleted_at', null)
+        .eq('status', 'Active')
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+    if (error) throw error;
+
+    // Map status thành 'NEW' để hiển thị badge 'NEW' ở Frontend (ProductCard.tsx)
+    const formattedProducts = data?.map(product => ({
+        ...product,
+        status: 'NEW'
+    })) || [];
+
+    return formattedProducts;
+};
+
