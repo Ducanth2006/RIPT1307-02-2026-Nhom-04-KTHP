@@ -15,13 +15,18 @@ import {
   Input,
   Drawer,
   message,
-  Divider,
-  Spin,
   Empty,
   Card,
   Row,
   Col,
-  Select
+  Select,
+  Steps,
+  Space,
+  Spin,
+  Divider,
+  Modal,
+  Avatar,
+  Image
 } from 'antd';
 
 import {
@@ -38,7 +43,12 @@ import {
   DollarSign,
   TrendingUp,
   Clock3,
-  Ban
+  Ban,
+  User,
+  MapPin,
+  Phone,
+  Mail,
+  CreditCard
 } from 'lucide-react';
 
 import {
@@ -76,6 +86,31 @@ type OrderStatus =
   | 'SUCCESS'
   | 'FAILED';
 
+interface BackendOrderItem {
+  id: string;
+
+  quantity: number;
+
+  price: number;
+
+  sanPhamChiTiet?: {
+    sku?: string;
+
+    mauSac?: {
+      tenMau?: string;
+    };
+
+    kichThuoc?: {
+      tenKichThuoc?: string;
+    };
+
+    sanPham?: {
+      tenSanPham?: string;
+      hinhAnh?: string;
+    };
+  };
+}
+
 interface BackendOrder {
   id: string;
 
@@ -101,6 +136,26 @@ interface BackendOrder {
   thanhToan?: {
     method?: string | null;
   } | null;
+
+  chiTietDonHang?: BackendOrderItem[];
+}
+
+interface OrderItem {
+  id: string;
+
+  name: string;
+
+  image: string;
+
+  sku: string;
+
+  color: string;
+
+  size: string;
+
+  quantity: number;
+
+  price: number;
 }
 
 interface Order {
@@ -121,6 +176,8 @@ interface Order {
   status: OrderStatus;
 
   total: number;
+
+  items: OrderItem[];
 }
 
 interface DashboardStats {
@@ -168,6 +225,33 @@ const mapBackendStatusToFrontend = (
   }
 };
 
+const mapFrontendStatusToBackend = (
+  status: OrderStatus
+): BackendOrderStatus => {
+  switch (status) {
+    case 'PENDING':
+      return 'Pending';
+
+    case 'CONFIRMED':
+      return 'Confirmed';
+
+    case 'PACKING':
+      return 'Packing';
+
+    case 'SHIPPING':
+      return 'Shipping';
+
+    case 'SUCCESS':
+      return 'Completed';
+
+    case 'FAILED':
+      return 'Cancelled';
+
+    default:
+      return 'Pending';
+  }
+};
+
 // =========================
 // STATUS CONFIG
 // =========================
@@ -187,19 +271,19 @@ const statusConfig: Record<
   },
 
   CONFIRMED: {
-    label: 'Đã duyệt',
+    label: 'Đã xác nhận',
     color: 'blue',
     icon: <CheckCircle size={14} />
   },
 
   PACKING: {
-    label: 'Đóng gói',
+    label: 'Đang đóng gói',
     color: 'processing',
     icon: <Package size={14} />
   },
 
   SHIPPING: {
-    label: 'Đang giao',
+    label: 'Đang vận chuyển',
     color: 'purple',
     icon: <Truck size={14} />
   },
@@ -230,6 +314,9 @@ export default function Orders() {
   >([]);
 
   const [loading, setLoading] =
+    useState(false);
+
+  const [actionLoading, setActionLoading] =
     useState(false);
 
   const [stats, setStats] =
@@ -361,7 +448,54 @@ export default function Orders() {
               total: Number(
                 order.final_amount ||
                   0
-              )
+              ),
+
+              items:
+                order.chiTietDonHang?.map(
+                  (item) => ({
+                    id: item.id,
+
+                    name:
+                      item
+                        .sanPhamChiTiet
+                        ?.sanPham
+                        ?.tenSanPham ||
+                      'Sản phẩm',
+
+                    image:
+                      item
+                        .sanPhamChiTiet
+                        ?.sanPham
+                        ?.hinhAnh ||
+                      '',
+
+                    sku:
+                      item
+                        .sanPhamChiTiet
+                        ?.sku ||
+                      '---',
+
+                    color:
+                      item
+                        .sanPhamChiTiet
+                        ?.mauSac
+                        ?.tenMau ||
+                      '---',
+
+                    size:
+                      item
+                        .sanPhamChiTiet
+                        ?.kichThuoc
+                        ?.tenKichThuoc ||
+                      '---',
+
+                    quantity:
+                      item.quantity,
+
+                    price:
+                      item.price
+                  })
+                ) || []
             })
           );
 
@@ -374,6 +508,52 @@ export default function Orders() {
         );
       } finally {
         setLoading(false);
+      }
+    };
+
+  // =========================
+  // UPDATE STATUS
+  // =========================
+
+  const capNhatTrangThaiDonHang =
+    async (
+      orderId: string,
+      newStatus: OrderStatus
+    ) => {
+      try {
+        setActionLoading(true);
+
+        await axiosInstance.patch(
+          `${ip}/admin/orders/${orderId}/status`,
+          {
+            status:
+              mapFrontendStatusToBackend(
+                newStatus
+              )
+          }
+        );
+
+        messageApi.success(
+          'Cập nhật trạng thái thành công'
+        );
+
+        await taiDanhSachDonHang();
+        await taiThongKe();
+
+        if (selectedOrder) {
+          setSelectedOrder({
+            ...selectedOrder,
+            status: newStatus
+          });
+        }
+      } catch (error) {
+        console.log(error);
+
+        messageApi.error(
+          'Không thể cập nhật trạng thái'
+        );
+      } finally {
+        setActionLoading(false);
       }
     };
 
@@ -426,6 +606,210 @@ export default function Orders() {
       filterStatus,
       searchText
     ]);
+
+  // =========================
+  // STEP
+  // =========================
+
+  const getStepCurrent = (
+    status: OrderStatus
+  ) => {
+    switch (status) {
+      case 'PENDING':
+        return 0;
+
+      case 'CONFIRMED':
+        return 1;
+
+      case 'PACKING':
+        return 2;
+
+      case 'SHIPPING':
+        return 3;
+
+      case 'SUCCESS':
+        return 4;
+
+      case 'FAILED':
+        return 4;
+
+      default:
+        return 0;
+    }
+  };
+
+  // =========================
+  // ACTION BUTTONS
+  // =========================
+
+  const renderActionButtons = () => {
+    if (!selectedOrder) return null;
+
+    switch (selectedOrder.status) {
+      case 'PENDING':
+        return (
+          <Space wrap>
+            <Button
+              type="primary"
+              size="large"
+              loading={actionLoading}
+              className="rounded-xl bg-green-600"
+              onClick={() =>
+                capNhatTrangThaiDonHang(
+                  selectedOrder.id,
+                  'CONFIRMED'
+                )
+              }
+            >
+              Duyệt đơn hàng
+            </Button>
+
+            <Button
+              danger
+              size="large"
+              loading={actionLoading}
+              className="rounded-xl"
+              onClick={() =>
+                capNhatTrangThaiDonHang(
+                  selectedOrder.id,
+                  'FAILED'
+                )
+              }
+            >
+              Huỷ đơn
+            </Button>
+          </Space>
+        );
+
+      case 'CONFIRMED':
+        return (
+          <Space wrap>
+            <Button
+              type="primary"
+              size="large"
+              loading={actionLoading}
+              className="rounded-xl"
+              onClick={() =>
+                capNhatTrangThaiDonHang(
+                  selectedOrder.id,
+                  'PACKING'
+                )
+              }
+            >
+              Bắt đầu soạn hàng
+            </Button>
+
+            <Button
+              danger
+              size="large"
+              loading={actionLoading}
+              className="rounded-xl"
+              onClick={() =>
+                capNhatTrangThaiDonHang(
+                  selectedOrder.id,
+                  'FAILED'
+                )
+              }
+            >
+              Huỷ đơn
+            </Button>
+          </Space>
+        );
+
+      case 'PACKING':
+        return (
+          <Space wrap>
+            <Button
+              type="primary"
+              size="large"
+              loading={actionLoading}
+              className="rounded-xl bg-purple-600"
+              onClick={() =>
+                capNhatTrangThaiDonHang(
+                  selectedOrder.id,
+                  'SHIPPING'
+                )
+              }
+            >
+              Bắt đầu vận chuyển
+            </Button>
+
+            <Button
+              danger
+              size="large"
+              loading={actionLoading}
+              className="rounded-xl"
+              onClick={() =>
+                capNhatTrangThaiDonHang(
+                  selectedOrder.id,
+                  'FAILED'
+                )
+              }
+            >
+              Huỷ đơn
+            </Button>
+          </Space>
+        );
+
+      case 'SHIPPING':
+        return (
+          <Space wrap>
+            <Button
+              type="primary"
+              size="large"
+              loading={actionLoading}
+              className="rounded-xl bg-green-600"
+              onClick={() =>
+                capNhatTrangThaiDonHang(
+                  selectedOrder.id,
+                  'SUCCESS'
+                )
+              }
+            >
+              Giao hàng thành công
+            </Button>
+
+            <Button
+              danger
+              size="large"
+              loading={actionLoading}
+              className="rounded-xl"
+              onClick={() =>
+                capNhatTrangThaiDonHang(
+                  selectedOrder.id,
+                  'FAILED'
+                )
+              }
+            >
+              Giao hàng thất bại
+            </Button>
+          </Space>
+        );
+
+      case 'SUCCESS':
+        return (
+          <Tag
+            color="success"
+            className="px-5 py-2 rounded-full"
+          >
+            Đơn hàng đã hoàn thành
+          </Tag>
+        );
+
+      case 'FAILED':
+        return (
+          <Tag
+            color="error"
+            className="px-5 py-2 rounded-full"
+          >
+            Đơn hàng đã bị huỷ
+          </Tag>
+        );
+
+      default:
+        return null;
+    }
+  };
 
   // =========================
   // TABLE
@@ -525,8 +909,7 @@ export default function Orders() {
 
         render: (_, record) => (
           <Button
-            type="default"
-            className="rounded-xl border-gray-300"
+            className="rounded-xl"
             icon={
               <Eye size={16} />
             }
@@ -540,14 +923,14 @@ export default function Orders() {
               );
             }}
           >
-            Xem
+            Xem chi tiết
           </Button>
         )
       }
     ];
 
   // =========================
-  // CHART DATA
+  // CHART
   // =========================
 
   const revenueData = [
@@ -555,26 +938,32 @@ export default function Orders() {
       day: '15/05',
       revenue: 350000
     },
+
     {
       day: '16/05',
       revenue: 420000
     },
+
     {
       day: '17/05',
       revenue: 280000
     },
+
     {
       day: '18/05',
       revenue: 650000
     },
+
     {
       day: '19/05',
       revenue: 720000
     },
+
     {
       day: '20/05',
       revenue: 900000
     },
+
     {
       day: '21/05',
       revenue: 100000
@@ -646,8 +1035,8 @@ export default function Orders() {
             </h1>
 
             <p className="text-gray-500 mt-3 text-lg">
-              Theo dõi trạng thái đơn hàng,
-              doanh thu và vận chuyển
+              Quản lý vòng đời đơn hàng,
+              kiểm duyệt và vận chuyển
             </p>
           </div>
 
@@ -655,7 +1044,7 @@ export default function Orders() {
             type="primary"
             danger
             size="large"
-            className="h-[54px] px-7 rounded-2xl font-semibold shadow-md"
+            className="h-[54px] px-7 rounded-2xl font-semibold"
             icon={
               <RefreshCw size={18} />
             }
@@ -671,173 +1060,133 @@ export default function Orders() {
 
       {/* DASHBOARD */}
       <Row gutter={[24, 24]}>
-        {/* LEFT */}
         <Col xs={24} xl={9}>
           <div className="grid grid-cols-2 gap-5">
-            {/* DOANH THU */}
-            <Card
-              bordered={false}
-              className="rounded-[28px] shadow-sm col-span-2 border border-gray-100"
-            >
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="text-gray-500 text-base">
-                    Tổng doanh thu
-                  </p>
+            {[
+              {
+                title:
+                  'Tổng doanh thu',
+                value:
+                  dinhDangTien(
+                    stats.tongDoanhThu
+                  ),
+                icon: (
+                  <DollarSign
+                    size={30}
+                  />
+                ),
+                color:
+                  'text-green-600',
+                bg: 'bg-green-100'
+              },
 
-                  <h2 className="text-4xl font-black text-green-600 mt-2">
-                    {dinhDangTien(
-                      stats.tongDoanhThu
-                    )}
-                  </h2>
+              {
+                title:
+                  'Tổng đơn',
+                value:
+                  stats.tongSoDon,
+                icon: (
+                  <ShoppingCart
+                    size={30}
+                  />
+                ),
+                color:
+                  'text-blue-600',
+                bg: 'bg-blue-100'
+              },
 
-                  <div className="flex items-center gap-2 mt-4 text-green-500 font-semibold">
-                    <TrendingUp size={16} />
-                    +12.5% tháng này
+              {
+                title:
+                  'Chờ duyệt',
+                value:
+                  stats.donChoDuyet,
+                icon: (
+                  <Clock3
+                    size={30}
+                  />
+                ),
+                color:
+                  'text-orange-500',
+                bg: 'bg-orange-100'
+              },
+
+              {
+                title:
+                  'Đóng gói',
+                value:
+                  stats.donDangDongGoi,
+                icon: (
+                  <Package
+                    size={30}
+                  />
+                ),
+                color:
+                  'text-purple-500',
+                bg: 'bg-purple-100'
+              },
+
+              {
+                title:
+                  'Đang giao',
+                value:
+                  stats.donDangGiao,
+                icon: (
+                  <Truck
+                    size={30}
+                  />
+                ),
+                color:
+                  'text-cyan-500',
+                bg: 'bg-cyan-100'
+              },
+
+              {
+                title:
+                  'Đã huỷ',
+                value:
+                  stats.donDaHuy,
+                icon: (
+                  <Ban
+                    size={30}
+                  />
+                ),
+                color:
+                  'text-red-500',
+                bg: 'bg-red-100'
+              }
+            ].map((item, index) => (
+              <Card
+                key={index}
+                bordered={false}
+                className="rounded-[28px] shadow-sm border border-gray-100"
+              >
+                <div className="flex flex-col gap-4">
+                  <div
+                    className={`w-14 h-14 rounded-2xl flex items-center justify-center ${item.bg}`}
+                  >
+                    <div
+                      className={
+                        item.color
+                      }
+                    >
+                      {item.icon}
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-gray-500">
+                      {item.title}
+                    </p>
+
+                    <h2
+                      className={`text-3xl font-black mt-2 ${item.color}`}
+                    >
+                      {item.value}
+                    </h2>
                   </div>
                 </div>
-
-                <div className="w-20 h-20 rounded-3xl bg-green-100 flex items-center justify-center">
-                  <DollarSign
-                    size={40}
-                    className="text-green-600"
-                  />
-                </div>
-              </div>
-            </Card>
-
-            {/* TOTAL */}
-            <Card
-              bordered={false}
-              className="rounded-[28px] shadow-sm border border-gray-100"
-            >
-              <div className="flex flex-col gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-blue-100 flex items-center justify-center">
-                  <ShoppingCart
-                    size={28}
-                    className="text-blue-600"
-                  />
-                </div>
-
-                <div>
-                  <p className="text-gray-500">
-                    Tổng đơn
-                  </p>
-
-                  <h2 className="text-4xl font-black text-blue-600 mt-2">
-                    {stats.tongSoDon}
-                  </h2>
-                </div>
-              </div>
-            </Card>
-
-            {/* PENDING */}
-            <Card
-              bordered={false}
-              className="rounded-[28px] shadow-sm border border-gray-100"
-            >
-              <div className="flex flex-col gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-orange-100 flex items-center justify-center">
-                  <Clock3
-                    size={28}
-                    className="text-orange-500"
-                  />
-                </div>
-
-                <div>
-                  <p className="text-gray-500">
-                    Chờ duyệt
-                  </p>
-
-                  <h2 className="text-4xl font-black text-orange-500 mt-2">
-                    {
-                      stats.donChoDuyet
-                    }
-                  </h2>
-                </div>
-              </div>
-            </Card>
-
-            {/* PACKING */}
-            <Card
-              bordered={false}
-              className="rounded-[28px] shadow-sm border border-gray-100"
-            >
-              <div className="flex flex-col gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-purple-100 flex items-center justify-center">
-                  <Package
-                    size={28}
-                    className="text-purple-500"
-                  />
-                </div>
-
-                <div>
-                  <p className="text-gray-500">
-                    Đóng gói
-                  </p>
-
-                  <h2 className="text-4xl font-black text-purple-500 mt-2">
-                    {
-                      stats.donDangDongGoi
-                    }
-                  </h2>
-                </div>
-              </div>
-            </Card>
-
-            {/* SHIPPING */}
-            <Card
-              bordered={false}
-              className="rounded-[28px] shadow-sm border border-gray-100"
-            >
-              <div className="flex flex-col gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-cyan-100 flex items-center justify-center">
-                  <Truck
-                    size={28}
-                    className="text-cyan-500"
-                  />
-                </div>
-
-                <div>
-                  <p className="text-gray-500">
-                    Đang giao
-                  </p>
-
-                  <h2 className="text-4xl font-black text-cyan-500 mt-2">
-                    {
-                      stats.donDangGiao
-                    }
-                  </h2>
-                </div>
-              </div>
-            </Card>
-
-            {/* CANCEL */}
-            <Card
-              bordered={false}
-              className="rounded-[28px] shadow-sm border border-gray-100"
-            >
-              <div className="flex flex-col gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-red-100 flex items-center justify-center">
-                  <Ban
-                    size={28}
-                    className="text-red-500"
-                  />
-                </div>
-
-                <div>
-                  <p className="text-gray-500">
-                    Đã huỷ
-                  </p>
-
-                  <h2 className="text-4xl font-black text-red-500 mt-2">
-                    {
-                      stats.donDaHuy
-                    }
-                  </h2>
-                </div>
-              </div>
-            </Card>
+              </Card>
+            ))}
           </div>
         </Col>
 
@@ -856,10 +1205,6 @@ export default function Orders() {
                 <h2 className="text-4xl font-black mt-2 text-[#111827]">
                   Biểu đồ doanh thu
                 </h2>
-
-                <p className="text-gray-400 mt-2">
-                  Thống kê doanh thu 7 ngày gần nhất
-                </p>
               </div>
 
               <div className="bg-red-50 text-red-500 px-5 py-3 rounded-2xl font-bold text-lg">
@@ -954,8 +1299,7 @@ export default function Orders() {
             size="large"
             value={filterStatus}
             style={{
-              width: 240,
-              height: 54
+              width: 240
             }}
             onChange={(value) =>
               setFilterStatus(
@@ -978,7 +1322,7 @@ export default function Orders() {
 
               {
                 label:
-                  'Đã duyệt',
+                  'Đã xác nhận',
                 value:
                   'CONFIRMED'
               },
@@ -1051,11 +1395,11 @@ export default function Orders() {
 
       {/* DRAWER */}
       <Drawer
-        title={`Chi tiết đơn ${
+        title={`Chi tiết đơn hàng #${
           selectedOrder?.id || ''
         }`}
         open={isDrawerOpen}
-        width={500}
+        width={750}
         onClose={() =>
           setIsDrawerOpen(false)
         }
@@ -1063,70 +1407,195 @@ export default function Orders() {
         {!selectedOrder ? (
           <Spin />
         ) : (
-          <div className="space-y-5">
-            <div>
-              <strong>
-                Khách hàng:
-              </strong>{' '}
-              {
-                selectedOrder.customerName
-              }
-            </div>
+          <div className="space-y-7">
+            {/* CUSTOMER */}
+            <Card className="rounded-2xl">
+              <div className="flex items-start gap-4">
+                <Avatar
+                  size={64}
+                  className="bg-blue-500"
+                  icon={<User size={28} />}
+                />
 
-            <div>
-              <strong>
-                SĐT:
-              </strong>{' '}
-              {
-                selectedOrder.phone
-              }
-            </div>
+                <div className="flex-1">
+                  <h2 className="text-2xl font-bold">
+                    {
+                      selectedOrder.customerName
+                    }
+                  </h2>
 
-            <div>
-              <strong>
-                Email:
-              </strong>{' '}
-              {
-                selectedOrder.email
-              }
-            </div>
+                  <div className="mt-4 space-y-3">
+                    <div className="flex items-center gap-3 text-gray-600">
+                      <Phone size={16} />
 
-            <div>
-              <strong>
-                Địa chỉ:
-              </strong>{' '}
-              {
-                selectedOrder.address
-              }
-            </div>
+                      {
+                        selectedOrder.phone
+                      }
+                    </div>
 
-            <div>
-              <strong>
-                Tổng tiền:
-              </strong>{' '}
-              {dinhDangTien(
-                selectedOrder.total
-              )}
-            </div>
+                    <div className="flex items-center gap-3 text-gray-600">
+                      <Mail size={16} />
 
-            <Divider />
+                      {
+                        selectedOrder.email
+                      }
+                    </div>
 
-            <Tag
-              color={
-                statusConfig[
-                  selectedOrder
-                    .status
-                ].color
-              }
-              className="px-4 py-1 rounded-full"
-            >
-              {
-                statusConfig[
-                  selectedOrder
-                    .status
-                ].label
-              }
-            </Tag>
+                    <div className="flex items-center gap-3 text-gray-600">
+                      <MapPin size={16} />
+
+                      {
+                        selectedOrder.address
+                      }
+                    </div>
+
+                    <div className="flex items-center gap-3 text-gray-600">
+                      <CreditCard size={16} />
+
+                      {
+                        selectedOrder.paymentMethod
+                      }
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            {/* PRODUCTS */}
+            <Card className="rounded-2xl">
+              <div className="flex justify-between items-center mb-5">
+                <h2 className="text-xl font-bold">
+                  Danh sách sản phẩm
+                </h2>
+
+                <div className="text-2xl font-black text-green-600">
+                  {dinhDangTien(
+                    selectedOrder.total
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                {selectedOrder.items
+                  .length === 0 && (
+                  <Empty description="Không có sản phẩm" />
+                )}
+
+                {selectedOrder.items.map(
+                  (item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center gap-4 border border-gray-100 rounded-2xl p-4"
+                    >
+                      <Image
+                        width={90}
+                        height={90}
+                        className="rounded-xl object-cover"
+                        src={item.image}
+                        fallback="https://placehold.co/100x100"
+                      />
+
+                      <div className="flex-1">
+                        <h3 className="font-bold text-lg">
+                          {item.name}
+                        </h3>
+
+                        <div className="grid grid-cols-2 gap-3 mt-3 text-sm text-gray-500">
+                          <div>
+                            SKU:
+                            {' '}
+                            {item.sku}
+                          </div>
+
+                          <div>
+                            Màu:
+                            {' '}
+                            {item.color}
+                          </div>
+
+                          <div>
+                            Size:
+                            {' '}
+                            {item.size}
+                          </div>
+
+                          <div>
+                            SL:
+                            {' '}
+                            {item.quantity}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="text-right">
+                        <div className="text-xl font-bold text-green-600">
+                          {dinhDangTien(
+                            item.price
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                )}
+              </div>
+            </Card>
+
+            {/* STEPS */}
+            <Card className="rounded-2xl">
+              <h2 className="text-xl font-bold mb-6">
+                Tiến trình đơn hàng
+              </h2>
+
+              <Steps
+                current={getStepCurrent(
+                  selectedOrder.status
+                )}
+                status={
+                  selectedOrder.status ===
+                  'FAILED'
+                    ? 'error'
+                    : 'process'
+                }
+                items={[
+                  {
+                    title:
+                      'Chờ duyệt'
+                  },
+
+                  {
+                    title:
+                      'Xác nhận'
+                  },
+
+                  {
+                    title:
+                      'Đóng gói'
+                  },
+
+                  {
+                    title:
+                      'Vận chuyển'
+                  },
+
+                  {
+                    title:
+                      selectedOrder.status ===
+                      'FAILED'
+                        ? 'Thất bại'
+                        : 'Hoàn thành'
+                  }
+                ]}
+              />
+            </Card>
+
+            {/* ACTIONS */}
+            <Card className="rounded-2xl">
+              <h2 className="text-xl font-bold mb-5">
+                Điều hướng nghiệp vụ
+              </h2>
+
+              {renderActionButtons()}
+            </Card>
           </div>
         )}
       </Drawer>
