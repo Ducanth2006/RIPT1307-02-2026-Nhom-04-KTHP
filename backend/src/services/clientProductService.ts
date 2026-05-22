@@ -180,3 +180,157 @@ export const fetchNewArrivals = async () => {
     return formattedProducts;
 };
 
+export const fetchHomepageCollections = async () => {
+    // 1. Năng động mỗi ngày (Daily Active): Áo thun tập gym (5) & Áo Polo (6)
+    const activeQuery = supabaseClient
+        .from('products')
+        .select(`
+            id,
+            name,
+            description,
+            base_price,
+            status,
+            brand,
+            created_at,
+            categories (
+                id,
+                name,
+                slug
+            ),
+            product_images (
+                id,
+                image_url,
+                is_main
+            )
+        `)
+        .is('deleted_at', null)
+        .eq('status', 'Active')
+        .in('category_id', [5, 6])
+        .order('created_at', { ascending: false })
+        .limit(8);
+
+    // 2. Góc Thu - Đông (Cold Weather): Áo khoác gió (7) & Áo giữ nhiệt (9)
+    const coldQuery = supabaseClient
+        .from('products')
+        .select(`
+            id,
+            name,
+            description,
+            base_price,
+            status,
+            brand,
+            created_at,
+            categories (
+                id,
+                name,
+                slug
+            ),
+            product_images (
+                id,
+                image_url,
+                is_main
+            )
+        `)
+        .is('deleted_at', null)
+        .eq('status', 'Active')
+        .in('category_id', [7, 9])
+        .order('created_at', { ascending: false })
+        .limit(8);
+
+    // 3. Đồ mặc thường nhật (Daily Wear): Quần short (10) & Quần jogger (11)
+    const dailyWearQuery = supabaseClient
+        .from('products')
+        .select(`
+            id,
+            name,
+            description,
+            base_price,
+            status,
+            brand,
+            created_at,
+            categories (
+                id,
+                name,
+                slug
+            ),
+            product_images (
+                id,
+                image_url,
+                is_main
+            )
+        `)
+        .is('deleted_at', null)
+        .eq('status', 'Active')
+        .in('category_id', [10, 11])
+        .order('created_at', { ascending: false })
+        .limit(8);
+
+    const [activeRes, coldRes, dailyWearRes] = await Promise.all([
+        activeQuery,
+        coldQuery,
+        dailyWearQuery
+    ]);
+
+    if (activeRes.error) throw activeRes.error;
+    if (coldRes.error) throw coldRes.error;
+    if (dailyWearRes.error) throw dailyWearRes.error;
+
+    return {
+        dailyActive: {
+            title: "Năng động mỗi ngày",
+            subtitle: "Áo Polo & Áo thun thể thao thoáng mát, hoạt động cả ngày dài",
+            products: activeRes.data || []
+        },
+        coldWeather: {
+            title: "Góc Thu - Đông",
+            subtitle: "Áo khoác gió & Áo giữ nhiệt ấm áp, bảo vệ bạn mọi lúc",
+            products: coldRes.data || []
+        },
+        dailyWear: {
+            title: "Đồ mặc thường nhật (Basic Wear)",
+            subtitle: "Quần short & Quần jogger dễ phối đồ, nâng tầm phong cách",
+            products: dailyWearRes.data || []
+        }
+    };
+};
+
+export const fetchLowStockProducts = async () => {
+    const { data, error } = await supabaseClient
+        .from('products')
+        .select(`
+            id,
+            name,
+            description,
+            base_price,
+            status,
+            brand,
+            created_at,
+            categories (
+                id,
+                name,
+                slug
+            ),
+            product_images (
+                id,
+                image_url,
+                is_main
+            ),
+            product_variants!inner (
+                id,
+                sku,
+                size,
+                color,
+                price,
+                stock_quantity
+            )
+        `)
+        .is('deleted_at', null)
+        .eq('status', 'Active')
+        .lt('product_variants.stock_quantity', 10)
+        .gt('product_variants.stock_quantity', 0)
+        .limit(10);
+
+    if (error) throw error;
+    return data;
+};
+

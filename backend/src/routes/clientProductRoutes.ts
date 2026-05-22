@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getClientProducts, getClientProductById, getNewArrivals } from '../controllers/clientProductController';
+import { getClientProducts, getClientProductById, getNewArrivals, getHomepageCollections } from '../controllers/clientProductController';
 
 const router = Router();
 
@@ -82,6 +82,21 @@ router.get('/', getClientProducts);
  *         description: Lỗi hệ thống
  */
 router.get('/new-arrivals', getNewArrivals);
+
+/**
+ * @swagger
+ * /products/homepage-collections:
+ *   get:
+ *     summary: Lấy danh sách các bộ sưu tập nổi bật trang chủ (Public)
+ *     description: Trả về danh sách sản phẩm được gom nhóm theo 3 bộ sưu tập (Năng động mỗi ngày, Góc Thu - Đông, Đồ mặc thường nhật) để phục vụ hiển thị ở trang chủ.
+ *     tags: [Client Products]
+ *     responses:
+ *       200:
+ *         description: Lấy danh sách bộ sưu tập thành công
+ *       500:
+ *         description: Lỗi hệ thống
+ */
+router.get('/homepage-collections', getHomepageCollections);
 
 /**
  * @swagger
