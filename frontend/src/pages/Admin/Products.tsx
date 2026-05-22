@@ -1,44 +1,220 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, {
+  useEffect,
+  useMemo,
+  useState
+} from 'react';
+
 import { useNavigate } from 'react-router-dom';
-import { Button, Table, Input, Select, Space, message, Popconfirm, Dropdown, MenuProps, Switch, Modal, Form, InputNumber } from 'antd';
-import { Plus, Search, SlidersHorizontal, Edit2, Trash2, Image as ImageIcon, Box, Activity, AlertTriangle, CheckCircle } from 'lucide-react';
-import { getAdminProducts, getAdminProductStats, deleteAdminProduct, updateAdminProduct } from '../../services/adminProductService';
+
+import {
+  Table,
+  Input,
+  Button,
+  Modal,
+  Form,
+  InputNumber,
+  message,
+  Tag,
+  Image,
+  Card,
+  Statistic,
+  Empty,
+  Select,
+  Space,
+  Alert,
+  Switch,
+  Popconfirm,
+  Dropdown
+} from 'antd';
+
+import type {
+  ColumnsType
+} from 'antd/es/table';
+
+import type {
+  MenuProps
+} from 'antd';
+
+import {
+  AlertTriangle,
+  Search,
+  RefreshCw,
+  Package2,
+  Plus,
+  Box,
+  Activity,
+  CheckCircle,
+  Edit2,
+  Trash2,
+  Image as ImageIcon
+} from 'lucide-react';
+
+import {
+  getAdminProducts,
+  getAdminProductStats,
+  deleteAdminProduct,
+  updateAdminProduct
+} from '../../services/adminProductService';
+
 import axiosInstance from '../../utils/axiosConfig';
 import ip from '../../utils/ip';
-import type { ColumnsType } from 'antd/es/table';
+
+interface ProductImage {
+  is_main?: boolean;
+  url: string;
+}
+
+interface ProductItem {
+  id: string;
+  name: string;
+  brand: string;
+  base_price: number;
+  total_stock: number;
+  status: string;
+  category_id: number;
+  main_image?: string;
+  categories?: {
+    id: number;
+    name: string;
+  };
+
+  product_images?: ProductImage[];
+}
 
 export default function Products() {
   const navigate = useNavigate();
 
-  const [data, setData] = useState<any[]>([]);
-  const [stats, setStats] = useState<any>({ totalProducts: 0, activeProducts: 0, totalStock: 0, lowStockAlerts: 0 });
-  const [loading, setLoading] = useState(false);
-  const [searchText, setSearchText] = useState('');
-  const [selectedParent, setSelectedParent] = useState<string | number>('Tất cả');
-  const [selectedChild, setSelectedChild] = useState<string | number>('Tất cả');
-  const [priceRange, setPriceRange] = useState('Tất cả mức giá');
-  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
-  const [allCategories, setAllCategories] = useState<any[]>([]);
+  const [messageApi, contextHolder] =
+    message.useMessage();
 
-  // Update Modal State
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<any | null>(null);
+  // =========================
+  // STATE
+  // =========================
+
+  const [data, setData] = useState<
+    ProductItem[]
+  >([]);
+
+  const [stats, setStats] = useState({
+    totalProducts: 0,
+    activeProducts: 0,
+    totalStock: 0,
+    lowStockAlerts: 0
+  });
+
+  const [loading, setLoading] =
+    useState(false);
+
+  const [searchText, setSearchText] =
+    useState('');
+
+  const [selectedParent, setSelectedParent] =
+    useState<string | number>(
+      'Tất cả'
+    );
+
+  const [selectedChild, setSelectedChild] =
+    useState<string | number>(
+      'Tất cả'
+    );
+
+  const [priceRange, setPriceRange] =
+    useState('Tất cả mức giá');
+
+  const [selectedRowKeys, setSelectedRowKeys] =
+    useState<React.Key[]>([]);
+
+  const [allCategories, setAllCategories] =
+    useState<any[]>([]);
+
+  const [isModalVisible, setIsModalVisible] =
+    useState(false);
+
+  const [editingProduct, setEditingProduct] =
+    useState<ProductItem | null>(null);
+
   const [form] = Form.useForm();
 
+  // =========================
+  // FORMAT
+  // =========================
+
+  const dinhDangTien = (
+    soTien?: number | null
+  ) => {
+    return new Intl.NumberFormat(
+      'vi-VN',
+      {
+        style: 'currency',
+        currency: 'VND'
+      }
+    ).format(Number(soTien || 0));
+  };
+
+  const layAnh = (
+    record: ProductItem
+  ) => {
+    if (record.main_image) {
+      return record.main_image;
+    }
+
+    if (
+      record.product_images?.length
+    ) {
+      const main =
+        record.product_images.find(
+          (item) => item.is_main
+        );
+
+      return (
+        main?.url ||
+        record.product_images?.[0]?.url
+      );
+    }
+
+    return '';
+  };
+
+  // =========================
+  // API
+  // =========================
+
   const fetchData = async () => {
-    setLoading(true);
     try {
-      const [statsRes, productsRes, categoriesRes] = await Promise.all([
+      setLoading(true);
+
+      const [
+        statsRes,
+        productsRes,
+        categoriesRes
+      ] = await Promise.all([
         getAdminProductStats(),
         getAdminProducts(),
-        axiosInstance.get(`${ip}/admin/categories`)
+        axiosInstance.get(
+          `${ip}/admin/categories`
+        )
       ]);
-      setStats(statsRes.data || { totalProducts: 0, activeProducts: 0, totalStock: 0, lowStockAlerts: 0 });
-      setData(productsRes.data || []);
-      setAllCategories(categoriesRes.data?.data || []);
+
+      setStats(
+        statsRes.data || {
+          totalProducts: 0,
+          activeProducts: 0,
+          totalStock: 0,
+          lowStockAlerts: 0
+        }
+      );
+
+      setData(
+        productsRes.data || []
+      );
+
+      setAllCategories(
+        categoriesRes.data?.data || []
+      );
     } catch (error) {
-      message.error('Lỗi khi tải dữ liệu sản phẩm!');
-      console.error(error);
+      messageApi.error(
+        'Lỗi khi tải dữ liệu sản phẩm!'
+      );
     } finally {
       setLoading(false);
     }
@@ -48,388 +224,914 @@ export default function Products() {
     fetchData();
   }, []);
 
-  const handleDelete = async (id: string | number) => {
+  // =========================
+  // ACTION
+  // =========================
+
+  const handleDelete = async (
+    id: string
+  ) => {
     try {
       await deleteAdminProduct(id);
-      message.success('Đã xóa sản phẩm thành công');
-      fetchData(); // Tải lại danh sách
-    } catch (error) {
-      message.error('Xóa sản phẩm thất bại');
-    }
-  };
 
-  const handleToggleStatus = async (record: any, checked: boolean) => {
-    const newStatus = checked ? 'Active' : 'Draft';
-    try {
-      await updateAdminProduct(record.id, { status: newStatus });
-      message.success(`Đã cập nhật trạng thái thành ${newStatus}`);
+      messageApi.success(
+        'Đã xóa sản phẩm'
+      );
+
       fetchData();
     } catch (error) {
-      message.error('Cập nhật trạng thái thất bại');
+      messageApi.error(
+        'Xóa sản phẩm thất bại'
+      );
     }
   };
 
-  const openEditModal = (product: any) => {
+  const handleToggleStatus =
+    async (
+      record: ProductItem,
+      checked: boolean
+    ) => {
+      const newStatus = checked
+        ? 'Active'
+        : 'Draft';
+
+      try {
+        await updateAdminProduct(
+          record.id,
+          {
+            status: newStatus
+          }
+        );
+
+        messageApi.success(
+          'Đã cập nhật trạng thái'
+        );
+
+        fetchData();
+      } catch (error) {
+        messageApi.error(
+          'Cập nhật trạng thái thất bại'
+        );
+      }
+    };
+
+  const openEditModal = (
+    product: ProductItem
+  ) => {
     setEditingProduct(product);
+
     form.setFieldsValue({
       name: product.name,
       brand: product.brand,
-      base_price: product.base_price,
-      status: product.status === 'Active'
+      base_price:
+        product.base_price,
+      status:
+        product.status ===
+        'Active'
     });
+
     setIsModalVisible(true);
   };
 
-  const onEditModalOk = () => {
-    form.validateFields().then(async values => {
-      message.loading({ content: 'Đang lưu...', key: 'saveProd' });
-      const payload = {
-        name: values.name,
-        brand: values.brand,
-        base_price: values.base_price,
-        status: values.status ? 'Active' : 'Draft'
-      };
-
+  const onEditModalOk =
+    async () => {
       try {
-        await updateAdminProduct(editingProduct.id, payload);
-        message.success({ content: 'Cập nhật sản phẩm thành công.', key: 'saveProd' });
+        const values =
+          await form.validateFields();
+
+        await updateAdminProduct(
+          editingProduct?.id || '',
+          {
+            name: values.name,
+            brand: values.brand,
+            base_price:
+              values.base_price,
+            status: values.status
+              ? 'Active'
+              : 'Draft'
+          }
+        );
+
+        messageApi.success(
+          'Cập nhật thành công'
+        );
+
         setIsModalVisible(false);
+
         fetchData();
-      } catch (error: any) {
-        message.error({ content: 'Lưu thất bại', key: 'saveProd' });
+      } catch (error) {
+        messageApi.error(
+          'Cập nhật thất bại'
+        );
       }
-    });
-  };
+    };
 
-  const handleBulkAction: MenuProps['onClick'] = async (e) => {
-    if (selectedRowKeys.length === 0) {
-      message.warning('Vui lòng chọn sản phẩm trước');
-      return;
-    }
-    
-    message.loading({ content: 'Đang xử lý...', key: 'bulk' });
-    try {
-      if (e.key === 'delete') {
-        await Promise.all(selectedRowKeys.map(id => deleteAdminProduct(id as string)));
-        message.success({ content: `Đã xóa ${selectedRowKeys.length} sản phẩm`, key: 'bulk' });
-      } else if (e.key === 'hide') {
-        await Promise.all(selectedRowKeys.map(id => updateAdminProduct(id as string, { status: 'Draft' })));
-        message.success({ content: `Đã ẩn ${selectedRowKeys.length} sản phẩm`, key: 'bulk' });
-      } else if (e.key === 'activate') {
-        await Promise.all(selectedRowKeys.map(id => updateAdminProduct(id as string, { status: 'Active' })));
-        message.success({ content: `Đã bật bán ${selectedRowKeys.length} sản phẩm`, key: 'bulk' });
-      }
-      setSelectedRowKeys([]);
-      fetchData();
-    } catch (error) {
-      message.error({ content: 'Lỗi khi xử lý hàng loạt', key: 'bulk' });
-    }
-  };
-
-  const bulkMenuItems: MenuProps['items'] = [
-    { key: 'activate', label: 'Bật trạng thái (Active)' },
-    { key: 'hide', label: 'Tắt trạng thái (Draft)' },
-    { type: 'divider' },
-    { key: 'delete', label: 'Xóa đã chọn', danger: true },
-  ];
-
-  const columns: ColumnsType<any> = [
-    { 
-      title: 'Hình ảnh', 
-      dataIndex: 'main_image', 
-      width: 80,
-      render: (img: string) => (
-        <div className="w-12 h-12 rounded-lg border border-[#d8dadc] flex items-center justify-center bg-[#e0e3e5] text-[#8f6f6c] overflow-hidden shadow-sm">
-          {img ? <img src={img} className="w-full h-full object-cover" alt="product" /> : <ImageIcon size={20} />}
-        </div>
-      ) 
-    },
-    { 
-      title: 'Tên Sản Phẩm', 
-      dataIndex: 'name', 
-      render: (text: string, record: any) => (
-        <div>
-          <div className="font-bold text-[15px] text-[#191c1e]">{text}</div>
-          <div className="text-[13px] text-[#5b403d] mt-0.5">ID: PRD-{record.id} | {record.brand || 'No Brand'}</div>
-        </div>
-      )
-    },
-    { 
-      title: 'Danh mục', 
-      render: (_: any, record: any) => <span className="text-[#5b403d] font-medium text-[15px]">{record.categories?.name || '---'}</span> 
-    },
-    { 
-      title: 'Giá bán', 
-      dataIndex: 'base_price', 
-      align: 'right' as const, 
-      className: 'font-mono text-[15px] font-bold text-[#af101a]', 
-      render: (val: number) => `${Number(val).toLocaleString('vi-VN')} đ` 
-    },
-    { 
-      title: 'Tồn kho', 
-      dataIndex: 'total_stock', 
-      align: 'right' as const, 
-      render: (val: number) => (
-        <span className="flex items-center justify-end gap-2 text-[15px] font-medium text-[#191c1e]">
-          <span className={`w-2.5 h-2.5 rounded-full ${val === 0 ? 'bg-red-500' : val < 20 ? 'bg-amber-500' : 'bg-green-500'}`}></span>
-          {val}
-        </span>
-      )
-    },
-    { 
-      title: 'Trạng thái', 
-      dataIndex: 'status', 
-      align: 'center' as const,
-      width: 140,
-      render: (status: string, record: any) => (
-        <Space>
-          <Switch 
-            checked={status === 'Active'} 
-            onChange={(checked) => handleToggleStatus(record, checked)} 
-            size="small" 
-          />
-          <span className={`px-3 py-1 rounded-full text-[13px] font-bold tracking-wide ${
-            status === 'Active' ? 'bg-[#d5fcde] text-[#2a7a40]' : 'bg-[#eceef0] text-[#5b403d]'
-          }`}>
-            {status}
-          </span>
-        </Space>
-      ) 
-    },
-    { 
-      title: 'Hành động', 
-      key: 'action', 
-      align: 'right' as const, 
-      width: 120,
-      render: (_: any, record: any) => (
-        <Space size="middle">
-          <Button type="text" icon={<Edit2 size={16} />} onClick={() => openEditModal(record)} className="text-[#00799c] hover:bg-[#e0f2fe]" title="Sửa" />
-          <Popconfirm
-            title="Xóa sản phẩm"
-            description={`Bạn có chắc muốn xóa "${record.name}"?`}
-            onConfirm={() => handleDelete(record.id)}
-            okText="Xóa"
-            cancelText="Hủy"
-            placement="topRight"
-            okButtonProps={{ danger: true }}
-          >
-            <Button type="text" danger icon={<Trash2 size={16} />} title="Xóa" />
-          </Popconfirm>
-        </Space>
-      ) 
-    },
-  ];
+  // =========================
+  // FILTER
+  // =========================
 
   const filteredData = useMemo(() => {
-    return data.filter(item => {
-      // Search filter
-      const searchLower = searchText.toLowerCase();
-      if (searchText && 
-          !item.name?.toLowerCase().includes(searchLower) && 
-          !String(item.id).includes(searchLower)) {
+    return data.filter((item) => {
+      const keyword =
+        searchText
+          .toLowerCase()
+          .trim();
+
+      if (
+        keyword &&
+        !item.name
+          ?.toLowerCase()
+          .includes(keyword) &&
+        !String(item.id).includes(
+          keyword
+        )
+      ) {
         return false;
       }
-      
-      // Lọc theo danh mục con trước (ưu tiên cao hơn vì chi tiết hơn)
-      if (selectedChild !== 'Tất cả') {
-        if (item.category_id !== Number(selectedChild)) return false;
-      } 
-      // Nếu không chọn danh mục con cụ thể, lọc theo danh mục cha
-      else if (selectedParent !== 'Tất cả') {
-        const parentId = Number(selectedParent);
-        const childIds = allCategories
-          .filter(c => c.parent_id === parentId)
-          .map(c => c.id);
-        
-        if (item.category_id !== parentId && !childIds.includes(item.category_id)) {
+
+      if (
+        selectedChild !==
+        'Tất cả'
+      ) {
+        if (
+          item.category_id !==
+          Number(selectedChild)
+        ) {
+          return false;
+        }
+      } else if (
+        selectedParent !==
+        'Tất cả'
+      ) {
+        const parentId =
+          Number(selectedParent);
+
+        const childIds =
+          allCategories
+            .filter(
+              (c) =>
+                c.parent_id ===
+                parentId
+            )
+            .map((c) => c.id);
+
+        if (
+          item.category_id !==
+            parentId &&
+          !childIds.includes(
+            item.category_id
+          )
+        ) {
           return false;
         }
       }
 
-      // Price filter
-      const price = Number(item.base_price || 0);
-      if (priceRange === 'Dưới 500k' && price >= 500000) return false;
-      if (priceRange === '500k - 1 Triệu' && (price < 500000 || price > 1000000)) return false;
-      if (priceRange === 'Trên 1 Triệu' && price <= 1000000) return false;
+      const price = Number(
+        item.base_price || 0
+      );
+
+      if (
+        priceRange ===
+          'Dưới 500k' &&
+        price >= 500000
+      ) {
+        return false;
+      }
+
+      if (
+        priceRange ===
+          '500k - 1 Triệu' &&
+        (price < 500000 ||
+          price > 1000000)
+      ) {
+        return false;
+      }
+
+      if (
+        priceRange ===
+          'Trên 1 Triệu' &&
+        price <= 1000000
+      ) {
+        return false;
+      }
 
       return true;
     });
-  }, [data, searchText, selectedParent, selectedChild, priceRange, allCategories]);
+  }, [
+    data,
+    searchText,
+    selectedParent,
+    selectedChild,
+    priceRange,
+    allCategories
+  ]);
 
-  const parentCategoryOptions = useMemo(() => {
-    const parents = allCategories.filter(c => !c.parent_id);
-    return [
-      { value: 'Tất cả', label: 'Tất cả danh mục hàng' },
-      ...parents.map(p => ({ value: p.id, label: p.name }))
-    ];
-  }, [allCategories]);
+  // =========================
+  // SELECT OPTION
+  // =========================
 
-  const childCategoryOptions = useMemo(() => {
-    let children = allCategories.filter(c => c.parent_id);
-    if (selectedParent !== 'Tất cả') {
-      children = children.filter(c => c.parent_id === Number(selectedParent));
+  const parentCategoryOptions =
+    useMemo(() => {
+      const parents =
+        allCategories.filter(
+          (c) => !c.parent_id
+        );
+
+      return [
+        {
+          value: 'Tất cả',
+          label:
+            'Tất cả danh mục'
+        },
+
+        ...parents.map((p) => ({
+          value: p.id,
+          label: p.name
+        }))
+      ];
+    }, [allCategories]);
+
+  const childCategoryOptions =
+    useMemo(() => {
+      let children =
+        allCategories.filter(
+          (c) => c.parent_id
+        );
+
+      if (
+        selectedParent !==
+        'Tất cả'
+      ) {
+        children =
+          children.filter(
+            (c) =>
+              c.parent_id ===
+              Number(
+                selectedParent
+              )
+          );
+      }
+
+      return [
+        {
+          value: 'Tất cả',
+          label:
+            'Tất cả sản phẩm'
+        },
+
+        ...children.map((c) => ({
+          value: c.id,
+          label: c.name
+        }))
+      ];
+    }, [
+      allCategories,
+      selectedParent
+    ]);
+
+  // =========================
+  // BULK ACTION
+  // =========================
+
+  const handleBulkAction:
+    MenuProps['onClick'] =
+    async (e) => {
+      if (
+        selectedRowKeys.length ===
+        0
+      ) {
+        return messageApi.warning(
+          'Vui lòng chọn sản phẩm'
+        );
+      }
+
+      try {
+        if (e.key === 'delete') {
+          await Promise.all(
+            selectedRowKeys.map(
+              (id) =>
+                deleteAdminProduct(
+                  String(id)
+                )
+            )
+          );
+
+          messageApi.success(
+            'Đã xóa sản phẩm'
+          );
+        }
+
+        if (e.key === 'hide') {
+          await Promise.all(
+            selectedRowKeys.map(
+              (id) =>
+                updateAdminProduct(
+                  String(id),
+                  {
+                    status:
+                      'Draft'
+                  }
+                )
+            )
+          );
+
+          messageApi.success(
+            'Đã ẩn sản phẩm'
+          );
+        }
+
+        if (
+          e.key ===
+          'activate'
+        ) {
+          await Promise.all(
+            selectedRowKeys.map(
+              (id) =>
+                updateAdminProduct(
+                  String(id),
+                  {
+                    status:
+                      'Active'
+                  }
+                )
+            )
+          );
+
+          messageApi.success(
+            'Đã bật sản phẩm'
+          );
+        }
+
+        setSelectedRowKeys([]);
+
+        fetchData();
+      } catch (error) {
+        messageApi.error(
+          'Lỗi thao tác hàng loạt'
+        );
+      }
+    };
+
+  const bulkMenuItems:
+    MenuProps['items'] = [
+    {
+      key: 'activate',
+      label:
+        'Bật trạng thái'
+    },
+
+    {
+      key: 'hide',
+      label:
+        'Ẩn sản phẩm'
+    },
+
+    {
+      type: 'divider'
+    },
+
+    {
+      key: 'delete',
+      label: 'Xóa đã chọn',
+      danger: true
     }
-    return [
-      { value: 'Tất cả', label: 'Tất cả danh mục sản phẩm' },
-      ...children.map(c => ({ value: c.id, label: c.name }))
-    ];
-  }, [allCategories, selectedParent]);
+  ];
 
-  const handleParentChange = (val: string | number) => {
-    setSelectedParent(val);
-    setSelectedChild('Tất cả');
-  };
+  // =========================
+  // TABLE
+  // =========================
 
-  return (
-    <div className="p-4 md:p-6 max-w-[1440px] mx-auto space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-[#191c1e] tracking-tight">Quản lý Sản Phẩm</h1>
-          <p className="text-[15px] text-[#5b403d] mt-2 font-medium">Theo dõi kho hàng, giá bán và trạng thái sản phẩm.</p>
-        </div>
-        <Button 
-          type="primary" 
-          icon={<Plus size={20} />} 
-          className="bg-[#d32f2f] hover:bg-[#ba1a20] h-10 text-[15px] font-bold px-6 rounded-xl shadow-sm"
-          onClick={() => navigate('/admin/products/new')}
-        >
-          Tạo Sản Phẩm Mới
-        </Button>
-      </div>
+  const columns: ColumnsType<ProductItem> =
+    [
+      {
+        title: 'Ảnh',
+        key: 'image',
+        width: 90,
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {[
-          { label: 'Tổng số Sản Phẩm', value: stats.totalProducts.toLocaleString('vi-VN'), icon: Box, color: 'text-blue-600', bg: 'bg-blue-50' },
-          { label: 'Sản phẩm Hoạt động', value: stats.activeProducts.toLocaleString('vi-VN'), icon: CheckCircle, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-          { label: 'Tổng Tồn Kho', value: stats.totalStock.toLocaleString('vi-VN'), icon: Activity, color: 'text-green-600', bg: 'bg-green-50' },
-          { label: 'Cảnh báo Hết Hàng', value: stats.lowStockAlerts.toLocaleString('vi-VN'), icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-50' },
-        ].map((stat, i) => (
-          <div key={i} className="bg-white p-5 rounded-2xl border border-[#d8dadc] shadow-sm flex items-center gap-5 hover:shadow-md transition-shadow">
-            <div className={`w-14 h-14 flex items-center justify-center rounded-xl ${stat.bg}`}>
-              <stat.icon className={stat.color} size={28} />
+        render: (
+          _: any,
+          record
+        ) => {
+          const anh =
+            layAnh(record);
+
+          if (!anh) {
+            return (
+              <div className="w-[50px] h-[50px] rounded bg-gray-100 flex items-center justify-center">
+                <Package2 size={18} />
+              </div>
+            );
+          }
+
+          return (
+            <Image
+              src={anh}
+              width={50}
+              height={50}
+              className="rounded object-cover"
+              preview={false}
+            />
+          );
+        }
+      },
+
+      {
+        title:
+          'Tên Sản Phẩm',
+
+        key: 'product',
+
+        render: (
+          _: any,
+          record
+        ) => (
+          <div>
+            <div className="font-semibold text-[15px]">
+              {record.name}
             </div>
-            <div>
-              <p className="text-2xl md:text-3xl font-extrabold text-[#191c1e]">{stat.value}</p>
-              <p className="text-[14px] text-[#5b403d] font-bold mt-1">{stat.label}</p>
+
+            <div className="text-gray-500 text-sm">
+              ID: PRD-
+              {record.id}
+              {' | '}
+              {record.brand ||
+                'No Brand'}
             </div>
           </div>
-        ))}
-      </div>
+        )
+      },
 
-      <div className="bg-white border border-[#d8dadc] rounded-xl shadow-sm">
-        <div className="p-4 border-b border-[#d8dadc] flex flex-col md:flex-row gap-4 justify-between items-center bg-[#f7f9fb] rounded-t-xl">
-          <div className="flex-1 w-full flex flex-col md:flex-row gap-3">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#5b403d]" size={18} />
-              <Input 
-                placeholder="Tìm theo ID hoặc tên sản phẩm..." 
+      {
+        title: 'Danh mục',
+        key: 'category',
+
+        render: (
+          _: any,
+          record
+        ) =>
+          record.categories
+            ?.name || '-'
+      },
+
+      {
+        title: 'Giá bán',
+        dataIndex: 'base_price',
+        key: 'base_price',
+
+        render: (v) => (
+          <span className="font-semibold text-red-500">
+            {dinhDangTien(v)}
+          </span>
+        )
+      },
+
+      {
+        title: 'Tồn kho',
+        dataIndex: 'total_stock',
+        key: 'total_stock',
+
+        render: (
+          stock: number
+        ) => {
+          if (stock <= 0) {
+            return (
+              <Tag color="red">
+                Hết hàng
+              </Tag>
+            );
+          }
+
+          if (stock <= 10) {
+            return (
+              <Tag color="orange">
+                Sắp hết (
+                {stock})
+              </Tag>
+            );
+          }
+
+          return (
+            <Tag color="green">
+              Còn hàng (
+              {stock})
+            </Tag>
+          );
+        }
+      },
+
+      {
+        title:
+          'Trạng thái',
+
+        dataIndex: 'status',
+        key: 'status',
+
+        render: (
+          status,
+          record
+        ) => (
+          <Space>
+            <Switch
+              checked={
+                status ===
+                'Active'
+              }
+              onChange={(
+                checked
+              ) =>
+                handleToggleStatus(
+                  record,
+                  checked
+                )
+              }
+            />
+
+            <Tag
+              color={
+                status ===
+                'Active'
+                  ? 'green'
+                  : 'default'
+              }
+            >
+              {status}
+            </Tag>
+          </Space>
+        )
+      },
+
+      {
+        title:
+          'Hành động',
+
+        key: 'action',
+        width: 130,
+
+        render: (
+          _: any,
+          record
+        ) => (
+          <Space>
+            <Button
+              type="text"
+              icon={
+                <Edit2 size={16} />
+              }
+              onClick={() =>
+                openEditModal(
+                  record
+                )
+              }
+            />
+
+            <Popconfirm
+              title="Xóa sản phẩm?"
+              onConfirm={() =>
+                handleDelete(
+                  record.id
+                )
+              }
+              okText="Xóa"
+              cancelText="Hủy"
+            >
+              <Button
+                type="text"
+                danger
+                icon={
+                  <Trash2 size={16} />
+                }
+              />
+            </Popconfirm>
+          </Space>
+        )
+      }
+    ];
+
+  // =========================
+  // RENDER
+  // =========================
+
+  return (
+    <div className="p-6">
+      {contextHolder}
+
+      <Card
+        className="shadow-sm border-2 border-gray-300"
+        title={
+          <div>
+            <h1 className="text-2xl font-bold">
+              Quản Lý Sản Phẩm
+            </h1>
+
+            <p className="text-gray-500 text-sm mt-1">
+              Theo dõi kho hàng,
+              giá bán và trạng thái
+              sản phẩm
+            </p>
+          </div>
+        }
+        extra={
+          <Space>
+            <Button
+              onClick={fetchData}
+              icon={
+                <RefreshCw size={16} />
+              }
+            >
+              Làm mới
+            </Button>
+
+            <Button
+              type="primary"
+              size="large"
+              icon={<Plus size={18} />}
+              onClick={() =>
+                navigate(
+                  '/admin/products/new'
+                )
+              }
+            >
+              Tạo Sản Phẩm
+            </Button>
+          </Space>
+        }
+      >
+        <div className="space-y-5">
+          {/* STATS */}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card bordered>
+              <Statistic
+                title="Tổng sản phẩm"
+                value={
+                  stats.totalProducts
+                }
+                prefix={
+                  <Box size={18} />
+                }
+              />
+            </Card>
+
+            <Card bordered>
+              <Statistic
+                title="Sản phẩm hoạt động"
+                value={
+                  stats.activeProducts
+                }
+                prefix={
+                  <CheckCircle size={18} />
+                }
+                valueStyle={{
+                  color: '#16a34a'
+                }}
+              />
+            </Card>
+
+            <Card bordered>
+              <Statistic
+                title="Tổng tồn kho"
+                value={
+                  stats.totalStock
+                }
+                prefix={
+                  <Activity size={18} />
+                }
+              />
+            </Card>
+
+            <Card bordered>
+              <Statistic
+                title="Sắp hết hàng"
+                value={
+                  stats.lowStockAlerts
+                }
+                prefix={
+                  <AlertTriangle size={18} />
+                }
+                valueStyle={{
+                  color: '#ef4444'
+                }}
+              />
+            </Card>
+          </div>
+
+          {/* FILTER */}
+
+          <div className="bg-white rounded-xl border p-5">
+            <div className="flex flex-wrap gap-3 mb-4">
+              <Input
+                placeholder="Tìm ID hoặc tên sản phẩm..."
+                prefix={
+                  <Search size={16} />
+                }
                 value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
-                className="w-full pl-10 h-10 text-[15px] font-medium rounded-xl"
+                onChange={(e) =>
+                  setSearchText(
+                    e.target.value
+                  )
+                }
                 allowClear
+                className="max-w-md"
               />
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Select 
-                value={selectedParent}
-                onChange={handleParentChange}
-                style={{ width: 220 }} 
-                className="h-10 text-[15px] font-medium"
-                options={parentCategoryOptions} 
+
+              <Select
+                value={
+                  selectedParent
+                }
+                onChange={(val) => {
+                  setSelectedParent(
+                    val
+                  );
+
+                  setSelectedChild(
+                    'Tất cả'
+                  );
+                }}
+                style={{
+                  width: 220
+                }}
+                options={
+                  parentCategoryOptions
+                }
               />
-              <Select 
-                value={selectedChild}
-                onChange={setSelectedChild}
-                style={{ width: 220 }} 
-                className="h-10 text-[15px] font-medium"
-                options={childCategoryOptions} 
+
+              <Select
+                value={
+                  selectedChild
+                }
+                onChange={
+                  setSelectedChild
+                }
+                style={{
+                  width: 220
+                }}
+                options={
+                  childCategoryOptions
+                }
               />
-              <Select 
+
+              <Select
                 value={priceRange}
-                onChange={setPriceRange}
-                style={{ width: 160 }} 
-                className="h-10 text-[15px] font-medium" 
+                onChange={
+                  setPriceRange
+                }
+                style={{
+                  width: 180
+                }}
                 options={[
-                  { value: 'Tất cả mức giá' }, 
-                  { value: 'Dưới 500k' },
-                  { value: '500k - 1 Triệu' },
-                  { value: 'Trên 1 Triệu' }
-                ]} 
+                  {
+                    value:
+                      'Tất cả mức giá'
+                  },
+
+                  {
+                    value:
+                      'Dưới 500k'
+                  },
+
+                  {
+                    value:
+                      '500k - 1 Triệu'
+                  },
+
+                  {
+                    value:
+                      'Trên 1 Triệu'
+                  }
+                ]}
               />
-              {selectedRowKeys.length > 0 && (
-                <Dropdown menu={{ items: bulkMenuItems, onClick: handleBulkAction }} trigger={['click']}>
-                  <Button type="primary" className="bg-[#00799c] h-10 rounded-xl font-bold">
-                    Thao tác ({selectedRowKeys.length})
+
+              {selectedRowKeys.length >
+                0 && (
+                <Dropdown
+                  menu={{
+                    items:
+                      bulkMenuItems,
+                    onClick:
+                      handleBulkAction
+                  }}
+                >
+                  <Button type="primary">
+                    Thao tác (
+                    {
+                      selectedRowKeys.length
+                    }
+                    )
                   </Button>
                 </Dropdown>
               )}
             </div>
+
+            {/* TABLE */}
+
+            <Table<ProductItem>
+              rowKey="id"
+              columns={columns}
+              dataSource={
+                filteredData
+              }
+              loading={loading}
+              bordered
+              rowSelection={{
+                selectedRowKeys,
+                onChange: (
+                  keys
+                ) =>
+                  setSelectedRowKeys(
+                    keys
+                  )
+              }}
+              scroll={{
+                x: 1300
+              }}
+              pagination={{
+                pageSize: 10
+              }}
+              locale={{
+                emptyText: (
+                  <Empty description="Không có dữ liệu sản phẩm" />
+                )
+              }}
+            />
           </div>
         </div>
+      </Card>
 
-        <Table 
-          columns={columns} 
-          dataSource={filteredData} 
-          rowKey="id"
-          rowSelection={{
-            selectedRowKeys,
-            onChange: (keys) => setSelectedRowKeys(keys),
-          }}
-          loading={loading}
-          scroll={{ x: 'max-content', y: 600 }}
-          pagination={{
-            showSizeChanger: true,
-            showTotal: (total, range) => `${range[0]}-${range[1]} trong ${total} sản phẩm`,
-            defaultPageSize: 20
-          }}
-          className="custom-table"
-        />
-      </div>
+      {/* MODAL */}
 
-      {/* Cập Nhật Sản Phẩm Nổi (Edit Modal) */}
       <Modal
-        title={<span className="text-xl font-extrabold text-[#191c1e]">Cập nhật Thông tin Cơ bản</span>}
         open={isModalVisible}
+        title="Cập nhật sản phẩm"
+        onCancel={() =>
+          setIsModalVisible(false)
+        }
         onOk={onEditModalOk}
-        onCancel={() => setIsModalVisible(false)}
-        width={600}
-        okText="Lưu Thay Đổi"
+        okText="Lưu thay đổi"
         cancelText="Hủy"
-        okButtonProps={{ className: "bg-[#d32f2f] hover:bg-[#ba1a20] h-10 font-bold px-6 rounded-lg text-[15px]" }}
-        cancelButtonProps={{ className: "h-10 font-bold px-6 rounded-lg text-[15px]" }}
+        width={650}
       >
-        <Form 
-          form={form} 
-          layout="vertical" 
-          className="mt-6 text-[#191c1e] text-[15px] font-medium"
+        <Form
+          form={form}
+          layout="vertical"
         >
-          <Form.Item 
-            name="name" 
-            label="Tên sản phẩm" 
-            rules={[{ required: true, message: 'Vui lòng nhập tên!' }]}
+          <Form.Item
+            name="name"
+            label="Tên sản phẩm"
+            rules={[
+              {
+                required: true,
+                message:
+                  'Nhập tên sản phẩm'
+              }
+            ]}
           >
-            <Input size="large" />
+            <Input />
           </Form.Item>
 
           <div className="grid grid-cols-2 gap-4">
-            <Form.Item 
-              name="base_price" 
-              label="Giá bán cơ bản (VNĐ)" 
-              rules={[{ required: true, message: 'Vui lòng nhập giá!' }]}
+            <Form.Item
+              name="base_price"
+              label="Giá bán"
+              rules={[
+                {
+                  required: true,
+                  message:
+                    'Nhập giá bán'
+                }
+              ]}
             >
-              <InputNumber size="large" className="w-full" min={0} />
+              <InputNumber
+                min={0}
+                style={{
+                  width: '100%'
+                }}
+              />
             </Form.Item>
 
-            <Form.Item name="brand" label="Thương hiệu">
-              <Input size="large" />
+            <Form.Item
+              name="brand"
+              label="Thương hiệu"
+            >
+              <Input />
             </Form.Item>
           </div>
 
-          <Form.Item name="status" label="Trạng thái hiển thị" valuePropName="checked">
-             <Switch checkedChildren="Đang Bán" unCheckedChildren="Tạm Ẩn" />
+          <Form.Item
+            name="status"
+            label="Trạng thái"
+            valuePropName="checked"
+          >
+            <Switch
+              checkedChildren="Active"
+              unCheckedChildren="Draft"
+            />
           </Form.Item>
-          
-          <p className="text-xs text-gray-500 mt-2 italic">* Để chỉnh sửa sâu về Hình ảnh và Phân loại (Size/Màu), sếp vui lòng xóa và tạo mới sản phẩm để tránh sai lệch kho hàng.</p>
+
+          <Alert
+            type="info"
+            showIcon
+            message="Muốn chỉnh sửa ảnh hoặc biến thể nên vào trang chi tiết sản phẩm."
+          />
         </Form>
       </Modal>
     </div>
