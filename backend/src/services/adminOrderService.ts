@@ -90,9 +90,15 @@ const dinhDangDonHangChoAdmin = (order: any) => {
         order?.payments
     );
 
+    const mappedUser = order?.users ? {
+        ...order.users,
+        name: order.users.full_name || null
+    } : null;
+
     return {
         ...order,
-        khachHang: order?.users ?? null,
+        users: mappedUser,
+        khachHang: mappedUser,
         nguoiNhan:
             thongTinGiaoHang.nguoiNhan,
         soDienThoaiNhan:
@@ -205,7 +211,7 @@ export const danhSachDonHang = async () => {
         .select(`
             *,
             users (
-                name,
+                full_name,
                 email
             ),
             payments (
@@ -238,7 +244,7 @@ export const chiTietDonHang = async (
         .select(`
             *,
             users (
-                name,
+                full_name,
                 email
             ),
             payments (
