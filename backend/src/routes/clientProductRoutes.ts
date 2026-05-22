@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getClientProducts, getClientProductById } from '../controllers/clientProductController';
+import { getClientProducts, getClientProductById, getNewArrivals } from '../controllers/clientProductController';
 
 const router = Router();
 
@@ -67,6 +67,21 @@ const router = Router();
  *         description: Lỗi hệ thống
  */
 router.get('/', getClientProducts);
+
+/**
+ * @swagger
+ * /products/new-arrivals:
+ *   get:
+ *     summary: Lấy danh sách sản phẩm mới lên kệ (Public)
+ *     description: Trả về danh sách 10 sản phẩm mới nhất đang hoạt động (status = 'Active'), được sắp xếp theo thời gian tạo giảm dần. Mỗi sản phẩm được gắn tag status = 'NEW' để hiển thị nhãn New ở Client.
+ *     tags: [Client Products]
+ *     responses:
+ *       200:
+ *         description: Lấy danh sách sản phẩm mới lên kệ thành công
+ *       500:
+ *         description: Lỗi hệ thống
+ */
+router.get('/new-arrivals', getNewArrivals);
 
 /**
  * @swagger
