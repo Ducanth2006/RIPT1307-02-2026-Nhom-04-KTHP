@@ -44,4 +44,10 @@ export namespace Products {
     message: string;
     data: IRecord;
   }
+
+  export interface IHomepageCollections {
+    newArrivals?: IRecord[];
+    bestSellers?: IRecord[];
+    topRated?: IRecord[];
+  }
 }
