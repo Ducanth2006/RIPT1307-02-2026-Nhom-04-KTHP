@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getClientProducts, getClientProductById, getNewArrivals, getHomepageCollections } from '../controllers/clientProductController';
+import { getClientProducts, getClientProductById, getNewArrivals, getHomepageCollections, getLowStockProducts } from '../controllers/clientProductController';
 
 const router = Router();
 
@@ -97,6 +97,21 @@ router.get('/new-arrivals', getNewArrivals);
  *         description: Lỗi hệ thống
  */
 router.get('/homepage-collections', getHomepageCollections);
+
+/**
+ * @swagger
+ * /products/low-stock:
+ *   get:
+ *     summary: Lấy danh sách sản phẩm sắp hết hàng (Public / FOMO)
+ *     description: Trả về danh sách tối đa 10 sản phẩm có các biến thể có số lượng tồn kho thấp (0 < stock_quantity < 10) để kích thích tâm lý mua hàng (FOMO).
+ *     tags: [Client Products]
+ *     responses:
+ *       200:
+ *         description: Lấy danh sách sản phẩm sắp hết hàng thành công
+ *       500:
+ *         description: Lỗi hệ thống
+ */
+router.get('/low-stock', getLowStockProducts);
 
 /**
  * @swagger
