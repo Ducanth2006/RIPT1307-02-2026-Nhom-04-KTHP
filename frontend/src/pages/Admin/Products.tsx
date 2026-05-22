@@ -110,13 +110,13 @@ export default function Products() {
     message.loading({ content: 'Đang xử lý...', key: 'bulk' });
     try {
       if (e.key === 'delete') {
-        await Promise.all(selectedRowKeys.map(id => deleteAdminProduct(id)));
+        await Promise.all(selectedRowKeys.map(id => deleteAdminProduct(id as string)));
         message.success({ content: `Đã xóa ${selectedRowKeys.length} sản phẩm`, key: 'bulk' });
       } else if (e.key === 'hide') {
-        await Promise.all(selectedRowKeys.map(id => updateAdminProduct(id, { status: 'Draft' })));
+        await Promise.all(selectedRowKeys.map(id => updateAdminProduct(id as string, { status: 'Draft' })));
         message.success({ content: `Đã ẩn ${selectedRowKeys.length} sản phẩm`, key: 'bulk' });
       } else if (e.key === 'activate') {
-        await Promise.all(selectedRowKeys.map(id => updateAdminProduct(id, { status: 'Active' })));
+        await Promise.all(selectedRowKeys.map(id => updateAdminProduct(id as string, { status: 'Active' })));
         message.success({ content: `Đã bật bán ${selectedRowKeys.length} sản phẩm`, key: 'bulk' });
       }
       setSelectedRowKeys([]);

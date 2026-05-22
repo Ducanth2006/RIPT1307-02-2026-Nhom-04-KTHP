@@ -149,7 +149,7 @@ export default function Dashboard() {
           pagination={false}
           className="w-full"
           columns={[
-            { title: 'PRODUCT ID', dataKey: 'id', render: (_, r) => <span className="font-mono text-sm text-[#5b403d]">{r.id}</span> },
+            { title: 'PRODUCT ID', dataIndex: 'id', render: (_, r) => <span className="font-mono text-sm text-[#5b403d]">{r.id}</span> },
             { title: 'PRODUCT NAME', dataIndex: 'name', className: 'font-medium' },
             { title: 'VOLUME', dataIndex: 'volume', align: 'right' as const },
             { title: 'REVENUE', dataIndex: 'revenue', align: 'right' as const },

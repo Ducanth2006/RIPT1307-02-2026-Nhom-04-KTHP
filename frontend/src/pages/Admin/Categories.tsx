@@ -233,7 +233,7 @@ export default function Categories() {
       key: 'has_products',
       width: 220,
       render: (_, record) => {
-        // Nếu là danh mục con (có parent_id)
+        // Chỉ hiển thị số lượng sản phẩm cho danh mục con (có parent_id)
         if (record.parent_id !== null) {
           const hasProducts = record.items > 0;
           return (
@@ -243,16 +243,8 @@ export default function Categories() {
           );
         }
         
-        // Nếu là danh mục cha (không có parent_id), đếm tổng sản phẩm của danh mục con
-        const totalChildItems = record.children
-          ? record.children.reduce((sum: number, child: any) => sum + (child.items || 0), 0)
-          : 0;
-
-        return (
-          <Tag color="processing" className="text-[13px] font-bold py-0.5 px-2.5 rounded-full">
-            Tổng: {totalChildItems} sản phẩm
-          </Tag>
-        );
+        // Trả về null để ẩn thông tin này ở danh mục cha
+        return null;
       }
     },
     {
@@ -260,20 +252,28 @@ export default function Categories() {
       dataIndex: 'status',
       key: 'status',
       width: 140,
-      render: (status, record) => (
-        <Space>
-          <Switch 
-            checked={status === 'Active'} 
-            onChange={(checked) => handleToggleStatus(record, checked)} 
-            size="small" 
-          />
-          <span className={`px-3 py-1 rounded-full text-[13px] font-bold tracking-wide ${
-            status === 'Active' ? 'bg-[#d5fcde] text-[#2a7a40]' : 'bg-[#eceef0] text-[#5b403d]'
-          }`}>
-            {status}
-          </span>
-        </Space>
-      ),
+      render: (status, record) => {
+        // Ẩn cột trạng thái đối với danh mục cha (không có parent_id)
+        if (record.parent_id === null) {
+          return null;
+        }
+
+        // Chỉ hiển thị cho danh mục con
+        return (
+          <Space>
+            <Switch 
+              checked={status === 'Active'} 
+              onChange={(checked) => handleToggleStatus(record, checked)} 
+              size="small" 
+            />
+            <span className={`px-3 py-1 rounded-full text-[13px] font-bold tracking-wide ${
+              status === 'Active' ? 'bg-[#d5fcde] text-[#2a7a40]' : 'bg-[#eceef0] text-[#5b403d]'
+            }`}>
+              {status}
+            </span>
+          </Space>
+        );
+      },
     },
     {
       title: 'Ngày tạo',
@@ -330,8 +330,9 @@ export default function Categories() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         {[
-          { label: 'Tổng danh mục Hàng (Cha)', value: stats.parent_categories, icon: FolderTree, color: 'text-blue-600', bg: 'bg-blue-50' },
-          { label: 'Tổng danh mục Sản phẩm (Con)', value: stats.child_categories, icon: FolderTree, color: 'text-purple-600', bg: 'bg-purple-50' },
+          // Đã xóa chữ (Cha) và (Con) theo yêu cầu
+          { label: 'Tổng danh mục Hàng', value: stats.parent_categories, icon: FolderTree, color: 'text-blue-600', bg: 'bg-blue-50' },
+          { label: 'Tổng danh mục Sản phẩm', value: stats.child_categories, icon: FolderTree, color: 'text-purple-600', bg: 'bg-purple-50' },
           { label: 'Danh mục đang hoạt động', value: activeCategoriesCount, icon: Activity, color: 'text-green-600', bg: 'bg-green-50' },
         ].map((stat, i) => (
           <div key={i} className="bg-white p-5 rounded-2xl border border-[#d8dadc] shadow-sm flex items-center gap-5 hover:shadow-md transition-shadow">

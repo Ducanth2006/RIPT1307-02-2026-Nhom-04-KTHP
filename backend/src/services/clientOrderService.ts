@@ -5,13 +5,68 @@ export interface CheckoutRequest {
     shippingAddress: any;
     paymentMethod: string;
     voucherCode?: string;
+    cartItemIds?: number[];
 }
 
+const layAnhChinhSanPham = (images: any[] = []) => {
+    const anhChinh = images.find((img: any) => img?.is_main);
+    return anhChinh?.image_url ?? images[0]?.image_url ?? null;
+};
+
+const layThanhToanDauTien = (payments: any) => {
+    if (!Array.isArray(payments) || payments.length === 0) {
+        return null;
+    }
+
+    return payments[0] ?? null;
+};
+
+const dinhDangItemChoClient = (item: any) => {
+    const variant = item?.product_variants;
+    const product = variant?.products;
+
+    return {
+        id: Number(item?.id ?? 0),
+        productId: Number(product?.id ?? variant?.product_id ?? 0),
+        productName: product?.name ?? null,
+        variantId: Number(item?.variant_id ?? 0),
+        variantSize: variant?.size ?? null,
+        variantColor: variant?.color ?? null,
+        imageUrl: layAnhChinhSanPham(product?.product_images ?? []),
+        quantity: Number(item?.quantity ?? 0),
+        price: Number(item?.unit_price ?? 0)
+    };
+};
+
+const dinhDangDonHangChoClient = (order: any) => {
+    const payment = layThanhToanDauTien(order?.payments);
+
+    return {
+        id: Number(order?.id ?? 0),
+        userId: Number(order?.user_id ?? 0),
+        status: order?.status ?? 'Pending',
+        totalPrice: Number(order?.final_amount ?? order?.total_amount ?? 0),
+        paymentMethod: payment?.method ?? null,
+        paymentStatus: order?.payment_status ?? payment?.status ?? 'Pending',
+        shippingAddress: order?.shipping_address ?? null,
+        voucherDiscount: Number(order?.discount_amount ?? 0),
+        items: (order?.order_items ?? []).map(dinhDangItemChoClient),
+        created_at: order?.created_at ?? null,
+        cancel_reason: order?.cancel_reason ?? null
+    };
+};
+
 export const checkoutOrder = async (data: CheckoutRequest) => {
-    const { userId, shippingAddress, paymentMethod, voucherCode } = data;
+    const {
+        userId,
+        shippingAddress,
+        paymentMethod,
+        voucherCode,
+        cartItemIds
+    } = data;
 
     // 1. Lấy danh sách giỏ hàng kèm thông tin giá và tồn kho
-    const { data: cartItems, error: cartError } = await supabaseClient
+    let truyVanGioHang = supabaseClient
         .from('cart_items')
         .select(`
             id,
@@ -26,13 +81,18 @@ export const checkoutOrder = async (data: CheckoutRequest) => {
         `)
         .eq('user_id', userId);
 
+    if (Array.isArray(cartItemIds) && cartItemIds.length > 0) {
+        truyVanGioHang = truyVanGioHang.in('id', cartItemIds);
+    }
+
+    const { data: cartItems, error: cartError } = await truyVanGioHang;
+
     if (cartError) throw new Error('Lỗi khi truy xuất giỏ hàng: ' + cartError.message);
     if (!cartItems || cartItems.length === 0) throw new Error('Giỏ hàng trống. Không thể đặt hàng.');
 
     // 2. Tính toán tổng tiền & Kiểm tra tồn kho
     let totalAmount = 0;
     const orderItemsToInsert = [];
-    const stockUpdates = [];
 
     for (const item of (cartItems as any[])) {
         const variant = item.product_variants;
@@ -50,12 +110,6 @@ export const checkoutOrder = async (data: CheckoutRequest) => {
             quantity: item.quantity,
             unit_price: variant.price,
             cost_price: variant.cost_price || 0  // Chốt giá vốn tại thời điểm mua
-        });
-
-        // Chuẩn bị mảng data để update stock_quantity
-        stockUpdates.push({
-            variant_id: variant.id,
-            new_stock: variant.stock_quantity - item.quantity
         });
     }
 
@@ -151,24 +205,17 @@ export const checkoutOrder = async (data: CheckoutRequest) => {
     // 7. Các tác vụ chạy song song (Parallel) để tiết kiệm thời gian (< 3s)
     const parallelTasks = [];
 
-    // 7a. Trừ tồn kho (Cập nhật tuần tự từng sản phẩm vì Supabase REST API không hỗ trợ bulk update tốt)
-    // Tuy nhiên chúng ta đưa vào Promise.all để chạy song song các requests
-    for (const update of stockUpdates) {
-        parallelTasks.push(
-            supabaseClient
-                .from('product_variants')
-                .update({ stock_quantity: update.new_stock })
-                .eq('id', update.variant_id)
-        );
+    // 7b. Xóa giỏ hàng của user
+    let xoaGioHang = supabaseClient
+        .from('cart_items')
+        .delete()
+        .eq('user_id', userId);
+
+    if (Array.isArray(cartItemIds) && cartItemIds.length > 0) {
+        xoaGioHang = xoaGioHang.in('id', cartItemIds);
     }
 
-    // 7b. Xóa giỏ hàng của user
-    parallelTasks.push(
-        supabaseClient
-            .from('cart_items')
-            .delete()
-            .eq('user_id', userId)
-    );
+    parallelTasks.push(xoaGioHang);
 
     // 7c. Trừ số lượng voucher (nếu có)
     if (voucherId && voucherData && voucherData.quantity !== null) {
@@ -182,6 +229,29 @@ export const checkoutOrder = async (data: CheckoutRequest) => {
 
     // Chờ tất cả các tác vụ vụ phụ hoàn thành
     await Promise.all(parallelTasks);
+
+    // 8. Tạo thông báo cho các tài khoản Admin
+    try {
+        const { data: admins } = await supabaseClient
+            .from('users')
+            .select('id')
+            .eq('role', 'Admin');
+
+        if (admins && admins.length > 0) {
+            const thongBao = admins.map((admin: any) => ({
+                user_id: admin.id,
+                title: 'Đơn hàng mới chờ duyệt',
+                message: `Đơn hàng #${orderId} trị giá ${finalAmount.toLocaleString('vi-VN')} ₫ vừa được đặt bởi khách hàng.`,
+                type: 'success',
+                is_read: false,
+                reference_id: String(orderId),
+                reference_type: 'order'
+            }));
+            await supabaseClient.from('notifications').insert(thongBao);
+        }
+    } catch (err) {
+        console.error("Lỗi khi tạo thông báo cho admin:", err);
+    }
 
     return newOrder;
 };
@@ -201,9 +271,11 @@ export const getUserOrders = async (userId: number) => {
                 unit_price,
                 variant_id,
                 product_variants (
+                    product_id,
                     size,
                     color,
                     products (
+                        id,
                         name,
                         product_images (
                             image_url,
@@ -211,6 +283,10 @@ export const getUserOrders = async (userId: number) => {
                         )
                     )
                 )
+            ),
+            payments (
+                method,
+                status
             )
         `)
         .eq('user_id', userId)
@@ -221,36 +297,7 @@ export const getUserOrders = async (userId: number) => {
     }
 
     // Format lại dữ liệu hình ảnh cho dễ nhìn ở FE
-    const formattedOrders = (orders as any[]).map((order) => {
-        const items = order.order_items.map((item: any) => {
-            const variant = item.product_variants;
-            const product = variant?.products;
-            
-            let imageUrl = null;
-            if (product?.product_images && product.product_images.length > 0) {
-                const mainImage = product.product_images.find((img: any) => img.is_main);
-                imageUrl = mainImage ? mainImage.image_url : product.product_images[0].image_url;
-            }
-
-            return {
-                itemId: item.id,
-                quantity: item.quantity,
-                unitPrice: item.unit_price,
-                variantId: item.variant_id,
-                size: variant?.size,
-                color: variant?.color,
-                productName: product?.name,
-                imageUrl: imageUrl
-            };
-        });
-
-        return {
-            ...order,
-            order_items: items
-        };
-    });
-
-    return formattedOrders;
+    return (orders as any[]).map(dinhDangDonHangChoClient);
 };
 
 // -------------------------------------------------------------
@@ -268,9 +315,11 @@ export const getOrderDetails = async (orderId: number, userId: number) => {
                 unit_price,
                 variant_id,
                 product_variants (
+                    product_id,
                     size,
                     color,
                     products (
+                        id,
                         name,
                         product_images (
                             image_url,
@@ -297,32 +346,7 @@ export const getOrderDetails = async (orderId: number, userId: number) => {
     }
 
     // Format lại dữ liệu hình ảnh
-    const formattedItems = order.order_items.map((item: any) => {
-        const variant = item.product_variants;
-        const product = variant?.products;
-        
-        let imageUrl = null;
-        if (product?.product_images && product.product_images.length > 0) {
-            const mainImage = product.product_images.find((img: any) => img.is_main);
-            imageUrl = mainImage ? mainImage.image_url : product.product_images[0].image_url;
-        }
-
-        return {
-            itemId: item.id,
-            quantity: item.quantity,
-            unitPrice: item.unit_price,
-            variantId: item.variant_id,
-            size: variant?.size,
-            color: variant?.color,
-            productName: product?.name,
-            imageUrl: imageUrl
-        };
-    });
-
-    return {
-        ...order,
-        order_items: formattedItems
-    };
+    return dinhDangDonHangChoClient(order);
 };
 
 // -------------------------------------------------------------
@@ -363,6 +387,7 @@ export const cancelOrder = async (orderId: number, userId: number, cancelReason?
         .from('orders')
         .update({
             status: 'Cancelled',
+            payment_status: 'Failed',
             cancel_reason: cancelReason || 'Khách hàng yêu cầu hủy'
         })
         .eq('id', orderId);
@@ -373,21 +398,37 @@ export const cancelOrder = async (orderId: number, userId: number, cancelReason?
     const restoreTasks: Promise<any>[] = [];
 
     // 4a. Hoàn lại tồn kho cho từng sản phẩm (đọc stock hiện tại → cộng thêm)
-    for (const item of (order.order_items as any[])) {
-        const restoreStock = async () => {
-            const { data: variant } = await supabaseClient
-                .from('product_variants')
-                .select('stock_quantity')
-                .eq('id', item.variant_id)
-                .single();
-            if (variant) {
-                await supabaseClient
+    // CHỈ hoàn kho khi đơn hàng đã từng được admin Confirmed (trừ kho)
+    if (['Confirmed', 'Packing', 'Shipping'].includes(order.status)) {
+        for (const item of (order.order_items as any[])) {
+            const restoreStock = async () => {
+                const { data: variant } = await supabaseClient
                     .from('product_variants')
-                    .update({ stock_quantity: variant.stock_quantity + item.quantity })
-                    .eq('id', item.variant_id);
-            }
-        };
-        restoreTasks.push(restoreStock());
+                    .select('stock_quantity, cost_price')
+                    .eq('id', item.variant_id)
+                    .single();
+                if (variant) {
+                    await supabaseClient
+                        .from('product_variants')
+                        .update({ stock_quantity: variant.stock_quantity + item.quantity })
+                        .eq('id', item.variant_id);
+
+                    // Ghi log nhập kho để hoàn kho
+                    await supabaseClient
+                        .from('inventory_logs')
+                        .insert([
+                            {
+                                variant_id: item.variant_id,
+                                action_type: 'IMPORT',
+                                reference_id: orderId,
+                                quantity: item.quantity,
+                                cost_price: variant.cost_price || 0
+                            }
+                        ]);
+                }
+            };
+            restoreTasks.push(restoreStock());
+        }
     }
 
     // 4b. Hoàn lại số lượt voucher (nếu đơn hàng có dùng voucher)
