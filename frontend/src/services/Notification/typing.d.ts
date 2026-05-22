@@ -6,6 +6,8 @@ export namespace Notification {
     type: string;
     is_read: boolean;
     created_at: string;
+    reference_type?: string;
+    reference_id?: string;
   }
 
   export interface IGetNotificationsResponse {

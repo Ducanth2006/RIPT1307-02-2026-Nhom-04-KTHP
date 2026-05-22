@@ -35,9 +35,13 @@ const Notifications = () => {
     enabled: !!userId,
   });
 
-  const notifications = data?.data || [];
-  const total = data?.total || 0;
-  const unreadCount = data?.unreadCount || 0;
+  const rawNotifications = data?.data || [];
+  const notifications = rawNotifications.filter((item: any) => {
+    const adminTitles = ["Đơn hàng mới chờ duyệt", "Yêu cầu hủy đơn hàng mới"];
+    return !adminTitles.includes(item.title);
+  });
+  const total = notifications.length;
+  const unreadCount = notifications.filter((n: any) => !n.is_read).length;
 
   // Mutation: Mark all as read
   const readAllMutation = useMutation({

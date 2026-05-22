@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Button, List, Spin } from 'antd';
 import { Package, AlertTriangle, ShieldAlert, CheckCircle, Clock, CheckCheck, Trash2, Bell } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { getNotificationsApi, readNotificationApi, readAllNotificationsApi } from '../services/Notification/apiClient';
 
 interface UINotification {
@@ -10,6 +11,8 @@ interface UINotification {
   time: string;
   type: string;
   read: boolean;
+  referenceId?: string;
+  referenceType?: string;
   icon: any;
   color: string;
   bg: string;
@@ -19,6 +22,7 @@ export default function NotificationPanel() {
   const [notifications, setNotifications] = useState<UINotification[]>([]);
   const [activeTab, setActiveTab] = useState('all');
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   const userStr = localStorage.getItem("user");
   const userObj = userStr ? JSON.parse(userStr) : null;
@@ -31,7 +35,10 @@ export default function NotificationPanel() {
       const res = await getNotificationsApi(userId);
       const dataList = res.data?.data || (res.data as any)?.data || [];
       
-      const uiList: UINotification[] = dataList.map((n: any) => {
+      const adminTitles = ["Đơn hàng mới chờ duyệt", "Yêu cầu hủy đơn hàng mới"];
+      const filteredList = dataList.filter((n: any) => adminTitles.includes(n.title));
+      
+      const uiList: UINotification[] = filteredList.map((n: any) => {
         let icon = Package;
         let color = 'text-[#00799c]';
         let bg = 'bg-[#e0f2fe]';
@@ -69,6 +76,8 @@ export default function NotificationPanel() {
           time: displayTime,
           type: n.type || 'info',
           read: !!n.is_read,
+          referenceId: n.reference_id,
+          referenceType: n.reference_type,
           icon,
           color,
           bg
@@ -103,15 +112,22 @@ export default function NotificationPanel() {
     }
   };
 
-  const handleMarkAsRead = async (id: string) => {
+  const handleItemClick = async (item: UINotification) => {
     if (!userId) return;
-    try {
-      await readNotificationApi(Number(id), userId);
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-      );
-    } catch (err) {
-      console.error("Lỗi khi đánh dấu đã đọc:", err);
+    
+    if (!item.read) {
+      try {
+        await readNotificationApi(Number(item.id), userId);
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === item.id ? { ...n, read: true } : n))
+        );
+      } catch (err) {
+        console.error("Lỗi khi đánh dấu đã đọc:", err);
+      }
+    }
+
+    if (item.referenceType === 'order' && item.referenceId) {
+      navigate(`/admin/orders?openOrderId=${item.referenceId}`);
     }
   };
   
@@ -195,7 +211,7 @@ export default function NotificationPanel() {
                 className={`p-4 hover:bg-[#f7f9fb] transition-colors border-b border-[#eceef0] last:border-b-0 cursor-pointer ${
                   !item.read ? 'bg-[#ffdad6]/10' : ''
                 }`}
-                onClick={() => handleMarkAsRead(item.id)}
+                onClick={() => handleItemClick(item)}
               >
                 <div className="flex w-full gap-3">
                   <div
