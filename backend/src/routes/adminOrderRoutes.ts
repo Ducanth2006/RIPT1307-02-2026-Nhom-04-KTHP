@@ -1,5 +1,10 @@
 import { Router } from 'express';
-import { getAllOrders, changeOrderStatus } from '../controllers/adminOrderController';
+import {
+    thongKeDonHang,
+    danhSachDonHang,
+    chiTietDonHang,
+    capNhatTrangThaiDonHang,
+} from '../controllers/adminOrderController';
 
 const router = Router();
 
@@ -12,7 +17,21 @@ const router = Router();
 
 /**
  * @swagger
- * /admin/orders:
+ * /admin/orders/stats:
+ *   get:
+ *     summary: Lấy thống kê đơn hàng
+ *     tags: ["[Admin] Orders"]
+ *     responses:
+ *       200:
+ *         description: Thống kê đơn hàng lấy thành công
+ *       500:
+ *         description: Lỗi hệ thống
+ */
+router.get('/stats', thongKeDonHang);
+
+/**
+ * @swagger
+ * /admin/orders/:
  *   get:
  *     summary: Lấy danh sách toàn bộ đơn hàng
  *     tags: ["[Admin] Orders"]
@@ -22,7 +41,31 @@ const router = Router();
  *       500:
  *         description: Lỗi hệ thống
  */
-router.get('/', getAllOrders);
+router.get('/', danhSachDonHang);
+
+/**
+ * @swagger
+ * /admin/orders/{id}:
+ *   get:
+ *     summary: Lấy chi tiết một đơn hàng
+ *     tags: ["[Admin] Orders"]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID của đơn hàng
+ *         example: "uuid-order-001"
+ *     responses:
+ *       200:
+ *         description: Lấy chi tiết đơn hàng thành công
+ *       404:
+ *         description: Không tìm thấy đơn hàng
+ *       500:
+ *         description: Lỗi hệ thống
+ */
+router.get('/:id', chiTietDonHang);
 
 /**
  * @swagger
@@ -50,16 +93,19 @@ router.get('/', getAllOrders);
  *               status:
  *                 type: string
  *                 description: Trạng thái mới của đơn hàng
- *                 enum: [Pending, Processing, Shipped, Delivered, Cancelled]
- *                 example: "Shipped"
+ *                 enum: [Pending, Confirmed, Packing, Shipping, Completed, Cancelled]
+ *                 example: "Confirmed"
  *     responses:
  *       200:
  *         description: Cập nhật trạng thái đơn hàng thành công
  *       400:
- *         description: Thiếu thông tin trạng thái mới
+ *         description: Thiếu thông tin trạng thái hoặc trạng thái không hợp lệ
+ *       404:
+ *         description: Không tìm thấy đơn hàng
  *       500:
  *         description: Lỗi hệ thống
  */
-router.patch('/:id/status', changeOrderStatus);
+router.patch('/:id/status', capNhatTrangThaiDonHang);
 
 export default router;
+

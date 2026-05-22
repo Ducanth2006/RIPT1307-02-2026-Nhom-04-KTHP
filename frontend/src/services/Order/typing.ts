@@ -9,6 +9,7 @@ export interface ICreateOrderRequest {
   shippingAddress: IShippingAddress;
   paymentMethod: string;
   voucherCode?: string;
+  cartItemIds?: number[];
 }
 
 export interface ICancelOrderRequest {

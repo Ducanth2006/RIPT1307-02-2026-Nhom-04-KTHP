@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { Layout, Input, Badge, Button, Popover, Empty, List, Dropdown } from "antd";
-import { SearchOutlined, ShoppingCartOutlined, UserOutlined } from "@ant-design/icons";
+import { SearchOutlined, ShoppingCartOutlined, UserOutlined, BellOutlined } from "@ant-design/icons";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { getCart } from "../../services/Cart/apiClient";
 import type { Cart as CartType } from "../../services/Cart/typing";
 import { logout } from "../../services/Auth/apiClient";
+import NotificationPopover from "./NotificationPopover";
 
 const { Header: AntHeader } = Layout;
 
@@ -66,14 +67,14 @@ const Header = () => {
                 <List.Item>
                   <List.Item.Meta
                     avatar={<img src={img} style={{ width: 40, height: 40, objectFit: "cover" }} alt="" />}
-                    title={<div style={{ fontSize: 13, fontWeight: 600 }}>{item.productName}</div>}
+                    title={<div style={{ fontSize: 13, fontWeight: 400 }}>{item.productName}</div>}
                     description={
                       <div style={{ fontSize: 12 }}>
                         {item.size || "N/A"} / {item.color || "N/A"} x {item.quantity}
                       </div>
                     }
                   />
-                  <div style={{ color: "#ff4d4f", fontSize: 13, fontWeight: 600 }}>
+                  <div style={{ color: "#000000ff", fontSize: 13, fontWeight: 600 }}>
                     {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(
                       item.price * item.quantity,
                     )}
@@ -84,7 +85,7 @@ const Header = () => {
           />
           <div style={{ marginTop: 15, textAlign: "right" }}>
             <Link to="/cart">
-              <Button type="primary" danger>
+              <Button type="primary">
                 Xem giỏ hàng
               </Button>
             </Link>
@@ -139,7 +140,7 @@ const Header = () => {
         </Link>
 
         <div style={{ display: "flex", gap: 32, fontWeight: 600 }}>
-          <Link to="/" style={{ color: "#ff4d4f", fontWeight: 700 }}>
+          <Link to="/" style={{ color: "#af101a", fontWeight: 700 }}>
             Nam
           </Link>
           <Link to="/" style={{ color: "#111" }}>
@@ -159,7 +160,7 @@ const Header = () => {
           </Link>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <Input
             placeholder="Tìm kiếm sản phẩm..."
             prefix={
@@ -174,6 +175,18 @@ const Header = () => {
               backgroundColor: "#f5f5f5",
             }}
           />
+
+          <Popover content={cartPreview} placement="bottomRight" arrow={true}>
+            <Badge count={cartCount} offset={[0, 4]}>
+              <Link to="/cart">
+                <Button type="text" icon={<ShoppingCartOutlined />} style={{ color: "#111", fontSize: 22 }} />
+              </Link>
+            </Badge>
+          </Popover>
+
+          <NotificationPopover>
+            <Button type="text" icon={<BellOutlined />} style={{ color: "#111", fontSize: 22 }} />
+          </NotificationPopover>
 
           {hasToken ? (
             <Dropdown
@@ -195,6 +208,7 @@ const Header = () => {
                         onClick={() => {
                           logout();
                         }}
+                        style={{ color: "red" }}
                       >
                         Đăng xuất
                       </div>
@@ -212,14 +226,6 @@ const Header = () => {
               <Button type="text" icon={<UserOutlined />} style={{ color: "#111" }} />
             </Link>
           )}
-
-          <Popover content={cartPreview} placement="bottomRight" arrow={true}>
-            <Badge count={cartCount} offset={[0, 4]}>
-              <Link to="/cart">
-                <Button type="text" icon={<ShoppingCartOutlined />} style={{ color: "#111", fontSize: 22 }} />
-              </Link>
-            </Badge>
-          </Popover>
         </div>
       </AntHeader>
     </>

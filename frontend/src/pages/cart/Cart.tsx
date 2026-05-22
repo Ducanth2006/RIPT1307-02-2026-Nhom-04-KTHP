@@ -1,14 +1,7 @@
-import { useState } from "react";
-import { Typography, Empty, Button, message, Spin, Modal, Form, Input, Radio, Divider, Tag, List, Switch } from "antd";
-import {
-  MinusOutlined,
-  PlusOutlined,
-  ShoppingCartOutlined,
-  DollarCircleOutlined,
-  EnvironmentOutlined,
-  CheckOutlined,
-} from "@ant-design/icons";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Typography, Button, message, Spin } from "antd";
+import { ShoppingCartOutlined, ShopOutlined } from "@ant-design/icons";
+import { Link, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getCart, updateCartItemApi, removeCartItemApi } from "../../services/Cart/apiClient";
 import { createOrder } from "../../services/Order/apiClient";
@@ -16,18 +9,30 @@ import { getAddresses, createAddress } from "../../services/Address/apiClient";
 import type { IAddress } from "../../services/Address/typing";
 import type { Cart as CartType } from "../../services/Cart/typing";
 import type { ICreateOrderRequest } from "../../services/Order/typing";
+
+// Subcomponents
+import EmptyCart from "./components/EmptyCart";
+import CartItem from "./components/CartItem";
+import CheckoutModal from "./components/CheckoutModal";
+import AddressSelectModal from "./components/AddressSelectModal";
+import AddAddressModal from "./components/AddAddressModal";
+
 import "./Cart.less";
 
-const { Title, Text } = Typography;
+const { Title } = Typography;
 const formatPrice = (p: number) => Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(p);
 
 const Cart = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const location = useLocation();
+  const buyNowVariantId: number | undefined = (location.state as { buyNowVariantId?: number })?.buyNowVariantId;
   const userStr = localStorage.getItem("user");
   const userObj = userStr ? JSON.parse(userStr) : null;
   const userId = userObj?.id;
+
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
+  const [selectedItemIds, setSelectedItemIds] = useState<number[]>([]);
 
   // Địa chỉ giao hàng
   const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
@@ -69,6 +74,19 @@ const Cart = () => {
   const cartItems: CartType.ICartItem[] = data?.data || [];
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["cart", userId] });
 
+  // Khi cartItems load xong: nếu buyNow thì chỉ chọn item đó, ngược lại không chọn mặc định
+  useEffect(() => {
+    if (!cartItems.length) return;
+    if (buyNowVariantId) {
+      const matchItem = cartItems.find((i) => i.variantId === buyNowVariantId);
+      if (matchItem) {
+        setSelectedItemIds([matchItem.cartItemId]);
+        return;
+      }
+    }
+    setSelectedItemIds([]);
+  }, [cartItems.length, buyNowVariantId]);
+
   const updateQty = useMutation({
     mutationFn: (args: { id: number; qty: number }) => updateCartItemApi(args.id, args.qty),
     onSuccess: invalidate,
@@ -96,20 +114,11 @@ const Cart = () => {
     },
   });
 
-  const [checkoutForm] = Form.useForm<{
-    paymentMethod: string;
-    voucherCode?: string;
-  }>();
-
-  const [newAddressForm] = Form.useForm<{
-    recipient_name: string;
-    phone: string;
-    address_line: string;
-    city: string;
-    is_default: boolean;
-  }>();
-
   const handleCheckoutSubmit = (values: { paymentMethod: string; voucherCode?: string }) => {
+    if (selectedItemIds.length === 0) {
+      message.warning("Vui lòng chọn ít nhất một sản phẩm để mua!");
+      return;
+    }
     if (!selectedAddress) {
       message.error("Vui lòng chọn hoặc thêm địa chỉ nhận hàng!");
       return;
@@ -123,6 +132,7 @@ const Cart = () => {
       },
       paymentMethod: values.paymentMethod,
       voucherCode: values.voucherCode,
+      cartItemIds: selectedItemIds,
     });
   };
 
@@ -138,9 +148,57 @@ const Cart = () => {
     );
   if (!cartItems.length) return <EmptyCart />;
 
-  const totalPrice = cartItems.reduce((s: number, i: CartType.ICartItem) => {
+  const selectedItems = cartItems.filter((i) => selectedItemIds.includes(i.cartItemId));
+  const totalPrice = selectedItems.reduce((s: number, i: CartType.ICartItem) => {
     return s + i.price * i.quantity;
   }, 0);
+
+  const toggleItem = (cartItemId: number) => {
+    setSelectedItemIds((prev) =>
+      prev.includes(cartItemId) ? prev.filter((id) => id !== cartItemId) : [...prev, cartItemId],
+    );
+  };
+
+  const isAllSelected = cartItems.length > 0 && selectedItemIds.length === cartItems.length;
+  const toggleAll = () => {
+    setSelectedItemIds(isAllSelected ? [] : cartItems.map((i) => i.cartItemId));
+  };
+
+  // Group items by productId while preserving their order in cartItems
+  const groupedProducts = cartItems.reduce<{
+    productId: number;
+    productName: string;
+    items: CartType.ICartItem[];
+  }[]>((acc, item) => {
+    let group = acc.find((g) => g.productId === item.productId);
+    if (!group) {
+      group = {
+        productId: item.productId,
+        productName: item.productName,
+        items: [],
+      };
+      acc.push(group);
+    }
+    group.items.push(item);
+    return acc;
+  }, []);
+
+  const isGroupSelected = (groupItems: CartType.ICartItem[]) => {
+    return groupItems.every((item) => selectedItemIds.includes(item.cartItemId));
+  };
+
+  const toggleGroup = (groupItems: CartType.ICartItem[]) => {
+    const itemIds = groupItems.map((item) => item.cartItemId);
+    const allSelected = isGroupSelected(groupItems);
+    if (allSelected) {
+      setSelectedItemIds((prev) => prev.filter((id) => !itemIds.includes(id)));
+    } else {
+      setSelectedItemIds((prev) => {
+        const filtered = prev.filter((id) => !itemIds.includes(id));
+        return [...filtered, ...itemIds];
+      });
+    }
+  };
 
   return (
     <div className="cart-page">
@@ -149,408 +207,113 @@ const Cart = () => {
           <ShoppingCartOutlined /> Giỏ Hàng
         </Title>
         <div className="cart-header-table">
-          <div>Sản Phẩm</div>
-          <div>Đơn Giá</div>
-          <div>Số Lượng</div>
-          <div>Số Tiền</div>
-          <div>Thao Tác</div>
-        </div>
-        <div className="cart-items-list">
-          {cartItems.map((item) => (
-            <CartItem
-              key={item.cartItemId}
-              item={item}
-              onUpdate={(qty: number) => updateQty.mutate({ id: item.cartItemId, qty })}
-              onRemove={() => removeIdx.mutate(item.cartItemId)}
-              loading={updateQty.isPending || removeIdx.isPending}
+          <div className="header-check">
+            <input
+              type="checkbox"
+              checked={isAllSelected}
+              onChange={toggleAll}
+              id="select-all"
+              className="cart-checkbox"
             />
-          ))}
-        </div>
-        <div className="cart-summary-bar">
-          <div className="total-label">Tổng thanh toán ({cartItems.length} sản phẩm):</div>
-          <div className="total-amount">{formatPrice(totalPrice)}</div>
-          <Button className="checkout-btn" onClick={() => setIsCheckoutModalOpen(true)}>
-            Mua Hàng
-          </Button>
-        </div>
-      </div>
-
-      {/* Checkout Modal */}
-      <Modal
-        title={
-          <span>
-            <ShoppingCartOutlined style={{ marginRight: 8, color: "#ee4d2d" }} /> Xác Nhận Đặt Hàng & Thanh Toán
-          </span>
-        }
-        open={isCheckoutModalOpen}
-        onCancel={() => {
-          setIsCheckoutModalOpen(false);
-          checkoutForm.resetFields();
-        }}
-        footer={null}
-        destroyOnClose
-        width={600}
-      >
-        <div style={{ margin: "16px 0" }}>
-          <Text type="secondary">
-            Vui lòng hoàn tất thông tin nhận hàng và chọn phương thức thanh toán để đặt hàng.
-          </Text>
-        </div>
-        <Divider />
-        <Form
-          form={checkoutForm}
-          layout="vertical"
-          onFinish={handleCheckoutSubmit}
-          initialValues={{ paymentMethod: "COD" }}
-        >
-          <div style={{ marginBottom: 16 }}>
-            <Text strong style={{ fontSize: 15, display: "flex", alignItems: "center", gap: 6 }}>
-              <EnvironmentOutlined style={{ color: "#ee4d2d" }} /> Địa Chỉ Nhận Hàng
-            </Text>
+            <label htmlFor="select-all">Tất cả</label>
           </div>
-
-          {selectedAddress ? (
-            <div
-              style={{
-                padding: "16px",
-                border: "1px solid #f0f0f0",
-                borderRadius: 8,
-                backgroundColor: "#fafafa",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: 20,
-              }}
-            >
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                  <Text strong style={{ fontSize: 15 }}>
-                    {selectedAddress.recipient_name}
-                  </Text>
-                  <Divider type="vertical" style={{ margin: "0 4px" }} />
-                  <Text strong>{selectedAddress.phone}</Text>
-                  {selectedAddress.is_default && (
-                    <Tag color="red" style={{ borderColor: "#ee4d2d", color: "#ee4d2d", backgroundColor: "#fff5f2" }}>
-                      Mặc định
-                    </Tag>
-                  )}
+          <div style={{ textAlign: "center" }}>Sản phẩm</div>
+          <div style={{ textAlign: "center" }}>Đơn giá</div>
+          <div style={{ textAlign: "center" }}>Số lượng</div>
+          <div style={{ textAlign: "center" }}>Số tiền</div>
+          <div style={{ textAlign: "center" }}>Thao tác</div>
+        </div>
+        <div className="cart-groups-list">
+          {groupedProducts.map((group) => {
+            const groupSelected = isGroupSelected(group.items);
+            return (
+              <div key={group.productId} className="cart-product-group">
+                <div className="group-header">
+                  <input
+                    type="checkbox"
+                    checked={groupSelected}
+                    onChange={() => toggleGroup(group.items)}
+                    className="cart-checkbox"
+                  />
+                  <ShopOutlined style={{ color: "#ee4d2d", fontSize: "16px", marginLeft: "4px" }} />
+                  <Link to={`/products/${group.productId}`} className="group-product-link">
+                    {group.productName}
+                  </Link>
                 </div>
-                <div style={{ color: "#555", fontSize: 14 }}>
-                  {selectedAddress.address_line}, {selectedAddress.city}
+                <div className="group-items">
+                  {group.items.map((item) => (
+                    <CartItem
+                      key={item.cartItemId}
+                      item={item}
+                      onUpdate={(qty: number) => updateQty.mutate({ id: item.cartItemId, qty })}
+                      onRemove={() => removeIdx.mutate(item.cartItemId)}
+                      loading={updateQty.isPending || removeIdx.isPending}
+                      checked={selectedItemIds.includes(item.cartItemId)}
+                      onToggle={() => toggleItem(item.cartItemId)}
+                    />
+                  ))}
                 </div>
               </div>
-              <Button
-                type="link"
-                onClick={() => setIsAddressSelectModalOpen(true)}
-                style={{ color: "#ee4d2d", fontWeight: 500 }}
-              >
-                Thay đổi
-              </Button>
-            </div>
-          ) : (
-            <div
-              style={{
-                padding: "24px",
-                border: "1px dashed #d9d9d9",
-                borderRadius: 8,
-                textAlign: "center",
-                marginBottom: 20,
-              }}
-            >
-              <Text type="secondary" style={{ display: "block", marginBottom: 12 }}>
-                Bạn chưa chọn hoặc chưa có địa chỉ nhận hàng nào.
-              </Text>
-              <Button
-                type="primary"
-                onClick={() => setIsAddNewAddressOpen(true)}
-                style={{ backgroundColor: "#ee4d2d", border: "none" }}
-              >
-                + Thêm Địa Chỉ Mới
-              </Button>
-            </div>
-          )}
-
-          <Divider />
-
-          <div style={{ marginBottom: 16 }}>
-            <Text strong style={{ fontSize: 15, display: "flex", alignItems: "center", gap: 6 }}>
-              <DollarCircleOutlined style={{ color: "#52c41a" }} /> Phương Thức Thanh Toán
-            </Text>
-          </div>
-          <Form.Item name="paymentMethod">
-            <Radio.Group style={{ width: "100%" }}>
-              <Radio value="COD" style={{ display: "block", marginBottom: 12 }}>
-                Thanh toán khi nhận hàng (COD)
-              </Radio>
-              <Radio value="Banking" style={{ display: "block" }}>
-                Chuyển khoản ngân hàng (Qua thẻ ngân hàng/Ví điện tử)
-              </Radio>
-            </Radio.Group>
-          </Form.Item>
-
-          <Divider />
-
-          <Form.Item label="Mã giảm giá / Voucher (nếu có)" name="voucherCode">
-            <Input placeholder="Ví dụ: SUMMER20, WELCOME50" style={{ textTransform: "uppercase" }} />
-          </Form.Item>
-
-          <div
-            style={{
-              marginTop: 24,
-              padding: "16px",
-              backgroundColor: "#fafafa",
-              borderRadius: 8,
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <div>
-              <Text type="secondary">Tổng số tiền cần thanh toán:</Text>
-              <br />
-              <Text style={{ fontSize: 22, fontWeight: 600, color: "#ee4d2d" }}>{formatPrice(totalPrice)}</Text>
-            </div>
-            <div style={{ display: "flex", gap: 8 }}>
-              <Button onClick={() => setIsCheckoutModalOpen(false)}>Quay lại</Button>
-              <Button
-                type="primary"
-                htmlType="submit"
-                loading={createOrderMutation.isPending}
-                style={{ backgroundColor: "#ee4d2d", borderColor: "#ee4d2d" }}
-              >
-                Đặt Hàng Ngay
-              </Button>
-            </div>
-          </div>
-        </Form>
-      </Modal>
-
-      {/* Address Selection Modal (Shopee Style) */}
-      <Modal
-        title="Địa Chỉ Của Tôi"
-        open={isAddressSelectModalOpen}
-        onCancel={() => setIsAddressSelectModalOpen(false)}
-        footer={null}
-        width={550}
-        destroyOnClose
-      >
-        <div style={{ maxHeight: 400, overflowY: "auto", marginBottom: 20 }}>
-          {addresses.length === 0 ? (
-            <Empty description="Chưa có địa chỉ nào được lưu." />
-          ) : (
-            <List
-              dataSource={addresses}
-              renderItem={(addr) => (
-                <div
-                  onClick={() => {
-                    setSelectedAddressId(addr.id);
-                    setIsAddressSelectModalOpen(false);
-                  }}
-                  style={{
-                    padding: "16px",
-                    border: "1px solid #f0f0f0",
-                    borderRadius: 8,
-                    marginBottom: 12,
-                    cursor: "pointer",
-                    backgroundColor: selectedAddress?.id === addr.id ? "#fffcfb" : "#fff",
-                    borderColor: selectedAddress?.id === addr.id ? "#ee4d2d" : "#f0f0f0",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    transition: "all 0.2s",
-                  }}
-                >
-                  <div style={{ flex: 1, paddingRight: 10 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                      <Text strong style={{ fontSize: 14 }}>
-                        {addr.recipient_name}
-                      </Text>
-                      <Divider type="vertical" style={{ margin: "0 2px" }} />
-                      <Text type="secondary" style={{ fontSize: 13 }}>
-                        {addr.phone}
-                      </Text>
-                      {addr.is_default && (
-                        <Tag
-                          color="red"
-                          style={{ borderColor: "#ee4d2d", color: "#ee4d2d", backgroundColor: "#fff5f2" }}
-                        >
-                          Mặc định
-                        </Tag>
-                      )}
-                    </div>
-                    <div style={{ color: "#666", fontSize: 13 }}>{addr.address_line}</div>
-                    <div style={{ color: "#999", fontSize: 12 }}>{addr.city}</div>
-                  </div>
-                  {selectedAddress?.id === addr.id && <CheckOutlined style={{ color: "#ee4d2d", fontSize: 16 }} />}
-                </div>
-              )}
-            />
-          )}
+            );
+          })}
         </div>
-        <div style={{ textAlign: "center" }}>
+        <div className="cart-summary-bar">
+          <div className="total-label">Tổng thanh toán ({selectedItems.length} sản phẩm được chọn):</div>
+          <div className="total-amount">{formatPrice(totalPrice)}</div>
           <Button
             type="primary"
+            className="checkout-btn"
             onClick={() => {
-              setIsAddressSelectModalOpen(false);
-              setIsAddNewAddressOpen(true);
+              if (selectedItemIds.length === 0) {
+                message.warning("Vui lòng chọn ít nhất một sản phẩm để mua!");
+                return;
+              }
+              setIsCheckoutModalOpen(true);
             }}
-            style={{ backgroundColor: "#ee4d2d", border: "none", width: "100%", height: 40 }}
           >
-            + Thêm Địa Chỉ Mới
+            Mua Hàng ({selectedItems.length})
           </Button>
         </div>
-      </Modal>
+      </div>
 
-      {/* Add New Address Modal (Inside Checkout) */}
-      <Modal
-        title="Thêm Địa Chỉ Mới"
+      <CheckoutModal
+        open={isCheckoutModalOpen}
+        onCancel={() => setIsCheckoutModalOpen(false)}
+        selectedAddress={selectedAddress}
+        onOpenAddressSelect={() => setIsAddressSelectModalOpen(true)}
+        onOpenAddAddress={() => setIsAddNewAddressOpen(true)}
+        selectedItemsCount={selectedItems.length}
+        totalPrice={totalPrice}
+        loading={createOrderMutation.isPending}
+        onSubmit={handleCheckoutSubmit}
+      />
+
+      <AddressSelectModal
+        open={isAddressSelectModalOpen}
+        onCancel={() => setIsAddressSelectModalOpen(false)}
+        addresses={addresses}
+        selectedAddress={selectedAddress}
+        onSelect={(addr) => setSelectedAddressId(addr.id)}
+        onOpenAddAddress={() => setIsAddNewAddressOpen(true)}
+      />
+
+      <AddAddressModal
         open={isAddNewAddressOpen}
         onCancel={() => setIsAddNewAddressOpen(false)}
-        footer={null}
-        destroyOnClose
-      >
-        <Form
-          form={newAddressForm}
-          layout="vertical"
-          onFinish={(values: {
-            recipient_name: string;
-            phone: string;
-            address_line: string;
-            city: string;
-            is_default: boolean;
-          }) => {
-            addNewAddressMutation.mutate({
-              userId: userId!,
-              recipient_name: values.recipient_name,
-              phone: values.phone,
-              address_line: values.address_line,
-              city: values.city,
-              is_default: !!values.is_default,
-            });
-          }}
-        >
-          <Form.Item
-            label="Họ và tên người nhận"
-            name="recipient_name"
-            rules={[{ required: true, message: "Vui lòng nhập họ tên người nhận!" }]}
-          >
-            <Input placeholder="Nguyễn Văn A" />
-          </Form.Item>
-
-          <Form.Item
-            label="Số điện thoại"
-            name="phone"
-            rules={[
-              { required: true, message: "Vui lòng nhập số điện thoại!" },
-              { pattern: /^[0-9]{10}$/, message: "Số điện thoại phải gồm 10 chữ số!" },
-            ]}
-          >
-            <Input placeholder="0901234567" />
-          </Form.Item>
-
-          <Form.Item
-            label="Địa chỉ chi tiết (Số nhà, Tên đường...)"
-            name="address_line"
-            rules={[{ required: true, message: "Vui lòng nhập địa chỉ chi tiết!" }]}
-          >
-            <Input placeholder="Ví dụ: 123 Đường Lê Lợi, Phường Bến Nghé" />
-          </Form.Item>
-
-          <Form.Item
-            label="Tỉnh/Thành phố, Quận/Huyện"
-            name="city"
-            rules={[{ required: true, message: "Vui lòng nhập thông tin Tỉnh/Thành phố!" }]}
-          >
-            <Input placeholder="Ví dụ: Quận 1, TP. Hồ Chí Minh" />
-          </Form.Item>
-
-          <Form.Item label="Đặt làm địa chỉ mặc định" name="is_default" valuePropName="checked">
-            <Switch />
-          </Form.Item>
-
-          <Form.Item style={{ textAlign: "right", marginBottom: 0, marginTop: 24 }}>
-            <Button style={{ marginRight: 8 }} onClick={() => setIsAddNewAddressOpen(false)}>
-              Hủy
-            </Button>
-            <Button
-              type="primary"
-              htmlType="submit"
-              loading={addNewAddressMutation.isPending}
-              style={{ backgroundColor: "#ee4d2d", borderColor: "#ee4d2d" }}
-            >
-              Lưu & Chọn
-            </Button>
-          </Form.Item>
-        </Form>
-      </Modal>
+        loading={addNewAddressMutation.isPending}
+        onSubmit={(values) => {
+          addNewAddressMutation.mutate({
+            userId: userId!,
+            recipient_name: values.recipient_name,
+            phone: values.phone,
+            address_line: values.address_line,
+            city: values.city,
+            is_default: !!values.is_default,
+          });
+        }}
+      />
     </div>
   );
 };
-
-const CartItem = ({
-  item,
-  onUpdate,
-  onRemove,
-  loading,
-}: {
-  item: CartType.ICartItem;
-  onUpdate: (qty: number) => void;
-  onRemove: () => void;
-  loading: boolean;
-}) => {
-  const img = item.imageUrl || "/placeholder.jpg";
-  const price = item.price;
-
-  return (
-    <div className="cart-item-row">
-      <div className="product-info">
-        <img src={img} alt="" />
-        <div className="details">
-          <Link to={`/products/${item.productId}`} className="name">
-            {item.productName}
-          </Link>
-          <div className="variant">
-            Phân loại: {item.size || "N/A"} / {item.color || "N/A"}
-          </div>
-        </div>
-      </div>
-      <div className="unit-price">{formatPrice(price)}</div>
-      <div className="quantity">
-        <div className="quantity-toggle">
-          <button onClick={() => onUpdate(item.quantity - 1)} disabled={item.quantity <= 1 || loading}>
-            <MinusOutlined />
-          </button>
-          <input type="text" value={item.quantity} readOnly />
-          <button
-            onClick={() => onUpdate(item.quantity + 1)}
-            disabled={item.quantity >= (item.stockQuantity || 99) || loading}
-          >
-            <PlusOutlined />
-          </button>
-        </div>
-      </div>
-      <div className="total-price">{formatPrice(price * item.quantity)}</div>
-      <div className="action">
-        <button onClick={onRemove} disabled={loading}>
-          Xóa
-        </button>
-      </div>
-    </div>
-  );
-};
-
-const EmptyCart = () => (
-  <div className="cart-page">
-    <div className="cart-container" style={{ textAlign: "center", padding: "100px 0" }}>
-      <Empty description="Giỏ hàng trống">
-        <Link to="/products">
-          <Button type="primary" size="large" style={{ background: "#000" }}>
-            MUA SẮM NGAY
-          </Button>
-        </Link>
-      </Empty>
-    </div>
-  </div>
-);
 
 export default Cart;

@@ -58,7 +58,7 @@ const HeroBanner = () => {
             <Button
               size="large"
               style={{
-                background: "#ff4d4f",
+                background: "#af101a",
                 color: "#fff",
                 border: "none",
                 height: 56,
