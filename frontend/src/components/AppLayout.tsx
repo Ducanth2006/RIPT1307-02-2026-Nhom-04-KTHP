@@ -21,6 +21,8 @@ import {
 import { Avatar, Dropdown, Popover, FloatButton } from "antd";
 import NotificationPanel from "./NotificationPanel";
 import { logout } from "../services/Auth/apiClient";
+import { useQuery } from "@tanstack/react-query";
+import { getNotificationsApi } from "../services/Notification/apiClient";
 
 export default function AppLayout() {
   const location = useLocation();
@@ -28,6 +30,20 @@ export default function AppLayout() {
   const currentPath = location.pathname;
 
   const token = localStorage.getItem("accessToken");
+  const userStr = localStorage.getItem("user");
+  const userObj = userStr ? JSON.parse(userStr) : null;
+  const userId = userObj?.id;
+
+  const { data: notificationsRes } = useQuery({
+    queryKey: ["notifications", userId],
+    queryFn: () => getNotificationsApi(userId!).then((res) => res.data),
+    enabled: !!userId && !!token,
+    refetchInterval: 30000,
+  });
+
+  const notificationsList = notificationsRes?.data || [];
+  const unreadCount = notificationsList.filter((n: any) => !n.is_read).length;
+
   if (!token) {
     return <Navigate to="/login" replace />;
   }
@@ -109,9 +125,13 @@ export default function AppLayout() {
               placement="bottomRight"
               overlayInnerStyle={{ padding: 0, borderRadius: "8px" }}
             >
-              <button className="text-[#5b403d] hover:text-[#af101a] relative">
+              <button className="text-[#5b403d] hover:text-[#af101a] relative p-1">
                 <Bell size={20} />
-                <span className="absolute top-0 right-0 w-2 h-2 bg-[#af101a] rounded-full"></span>
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-[#af101a] text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-[16px] h-[16px] flex items-center justify-center shadow-sm">
+                    {unreadCount}
+                  </span>
+                )}
               </button>
             </Popover>
             <button className="text-[#5b403d] hover:text-[#af101a] hidden sm:block" onClick={handleHelp}>

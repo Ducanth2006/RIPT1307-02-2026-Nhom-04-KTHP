@@ -93,6 +93,15 @@ export default function Inventory() {
   const [danhSachKho, setDanhSachKho] =
     useState<BienTheKho[]>([]);
 
+  const [cancelRequestedOrders, setCancelRequestedOrders] =
+    useState<any[]>([]);
+
+  const [activeCancelModalOpen, setActiveCancelModalOpen] =
+    useState(false);
+
+  const [cancellableOrdersForSelectedVariant, setCancellableOrdersForSelectedVariant] =
+    useState<any[]>([]);
+
   const [danhSachLichSu, setDanhSachLichSu] =
     useState<NhatKyBienDong[]>([]);
 
@@ -389,8 +398,39 @@ export default function Inventory() {
     }
   };
 
+  const taiDanhSachDonHangChoHuy = async () => {
+    try {
+      const res = await axiosInstance.get(`${ip}/admin/orders`);
+      const data = res.data?.data || [];
+      const cancelRequests = data.filter((o: any) => o.status === 'CancelRequested');
+      setCancelRequestedOrders(cancelRequests);
+    } catch (error) {
+      console.log('Lỗi tải danh sách đơn hàng:', error);
+    }
+  };
+
+  const xacNhanDuyetHuyTuInventory = async (orderId: string) => {
+    try {
+      setLoadingLuuPhieu(true);
+      await axiosInstance.patch(`${ip}/admin/orders/${orderId}/status`, {
+        status: 'Cancelled'
+      });
+      messageApi.success('Duyệt hủy đơn và hoàn kho thành công!');
+      setActiveCancelModalOpen(false);
+      await taiTatCaDuLieu();
+    } catch (loi: any) {
+      console.log(loi);
+      messageApi.error(
+        loi.response?.data?.message || 'Có lỗi xảy ra khi duyệt hủy đơn!'
+      );
+    } finally {
+      setLoadingLuuPhieu(false);
+    }
+  };
+
   const taiTatCaDuLieu = async () => {
     await taiDuLieuKho();
+    await taiDanhSachDonHangChoHuy();
 
     await Promise.all([
       taiThongKeKho(),
@@ -773,6 +813,35 @@ export default function Inventory() {
 
         render: (v) =>
           dinhDangTien(v)
+      },
+
+      {
+        title: 'Yêu cầu huỷ đơn',
+        key: 'cancelRequests',
+        width: 180,
+        render: (_, record) => {
+          const ordersWithCancelRequest = cancelRequestedOrders.filter((order: any) =>
+            order.chiTietDonHang?.some((item: any) => String(item.sanPhamChiTiet?.id || item.variantId) === String(record.id))
+          );
+
+          if (ordersWithCancelRequest.length === 0) return null;
+
+          return (
+            <Button
+              type="primary"
+              danger
+              size="small"
+              className="bg-red-500 hover:bg-red-600 text-xs rounded-lg border-none"
+              onClick={() => {
+                setCancellableOrdersForSelectedVariant(ordersWithCancelRequest);
+                setBienTheDangChon(record);
+                setActiveCancelModalOpen(true);
+              }}
+            >
+              Yêu cầu hủy ({ordersWithCancelRequest.length})
+            </Button>
+          );
+        }
       }
     ];
 
@@ -1402,6 +1471,98 @@ export default function Inventory() {
             }
           ]}
         />
+      </Modal>
+
+      {/* CANCEL REQUEST MODAL FROM INVENTORY */}
+      <Modal
+        title={
+          <div className="flex items-center gap-2 text-red-600 font-bold text-lg border-b border-gray-100 pb-3">
+            <AlertTriangle size={20} className="text-red-500" />
+            <span>Yêu Cầu Hủy Đơn Hàng - {bienTheDangChon?.productName}</span>
+          </div>
+        }
+        open={activeCancelModalOpen}
+        onCancel={() => setActiveCancelModalOpen(false)}
+        footer={null}
+        width={700}
+        centered
+      >
+        <div className="space-y-6 mt-4">
+          <Alert
+            message="Xác nhận duyệt hủy đơn hàng"
+            description="Phê duyệt hủy đơn tại đây sẽ cập nhật trạng thái đơn hàng thành 'Đã hủy', tự động hoàn trả số lượng sản phẩm vào tồn kho thực tế, và ghi nhận nhật ký biến động kho 'NHẬP KHO'."
+            type="warning"
+            showIcon
+            className="rounded-2xl"
+          />
+
+          <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
+            {cancellableOrdersForSelectedVariant.map((order) => {
+              const orderItem = order.chiTietDonHang?.find(
+                (item: any) => String(item.sanPhamChiTiet?.id || item.variantId) === String(bienTheDangChon?.id)
+              );
+              
+              let parsedReason = order.cancel_reason;
+              let proofImage = null;
+              try {
+                const parsed = JSON.parse(order.cancel_reason || '');
+                parsedReason = parsed.reason || order.cancel_reason;
+                proofImage = parsed.image || null;
+              } catch {}
+
+              return (
+                <div key={order.id} className="border border-gray-150 rounded-2xl p-5 bg-[#fafafa] space-y-4 shadow-sm">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <span className="font-bold text-red-600 text-[16px] block">Mã đơn hàng: #{order.id}</span>
+                      <span className="text-gray-400 text-xs">Ngày đặt: {new Date(order.created_at).toLocaleString('vi-VN')}</span>
+                    </div>
+                    <Tag color="orange" className="px-3 py-1 rounded-full text-xs font-semibold">Chờ duyệt hủy</Tag>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 text-sm border-t border-b border-gray-150 py-3 text-gray-600">
+                    <div><strong>Khách hàng:</strong> {order.nguoiNhan || order.khachHang?.name || '---'}</div>
+                    <div><strong>Số điện thoại:</strong> {order.soDienThoaiNhan || '---'}</div>
+                    <div><strong>Số lượng đặt mua:</strong> <span className="font-bold text-red-500">{orderItem?.quantity || 1} sản phẩm</span></div>
+                    <div><strong>Tổng tiền đơn hàng:</strong> <span className="font-bold text-green-600">{dinhDangTien(order.final_amount)}</span></div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <strong className="text-gray-700 block">Lý do hủy đơn của khách hàng:</strong>
+                    <div className="bg-white border border-gray-200 rounded-xl p-3 text-gray-600 italic">
+                      "{parsedReason || 'Không cung cấp lý do chi tiết'}"
+                    </div>
+                  </div>
+
+                  {proofImage && (
+                    <div className="space-y-2">
+                      <strong className="text-gray-700 block">Minh chứng hình ảnh:</strong>
+                      <div className="flex justify-start">
+                        <Image
+                          src={proofImage}
+                          alt="Proof"
+                          className="rounded-xl border border-gray-200 max-h-[250px] object-contain shadow-sm bg-white"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex justify-end pt-2 border-t border-gray-100 mt-2">
+                    <Button
+                      type="primary"
+                      danger
+                      loading={loadingLuuPhieu}
+                      className="bg-red-500 hover:bg-red-600 rounded-xl px-5 h-[42px] font-semibold text-sm border-none shadow-sm flex items-center gap-2"
+                      onClick={() => xacNhanDuyetHuyTuInventory(order.id)}
+                    >
+                      Duyệt hủy đơn & Hoàn kho
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </Modal>
     </div>
   );

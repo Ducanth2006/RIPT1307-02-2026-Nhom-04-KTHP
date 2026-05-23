@@ -2,6 +2,7 @@ export interface IShippingAddress {
   fullName: string;
   phone: string;
   address: string;
+  timeline?: Record<string, string>;
 }
 
 export interface ICreateOrderRequest {
@@ -32,7 +33,7 @@ export interface IOrderItem {
 export interface IOrder {
   id: number;
   userId: number;
-  status: "Pending" | "Confirmed" | "Packing" | "Shipping" | "Completed" | "Cancelled";
+  status: "Pending" | "Confirmed" | "Packing" | "Shipping" | "Completed" | "Cancelled" | "CancelRequested";
   totalPrice: number;
   paymentMethod: string;
   paymentStatus: string;
