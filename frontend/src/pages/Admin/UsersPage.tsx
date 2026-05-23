@@ -1,4 +1,11 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, {
+  useState,
+  useMemo,
+  useEffect
+} from 'react';
+
+import dayjs from 'dayjs';
+
 import {
   Table,
   Button,
@@ -12,7 +19,8 @@ import {
   Modal,
   Form,
   Tooltip,
-  Popconfirm
+  Popconfirm,
+  DatePicker
 } from 'antd';
 
 import {
@@ -36,27 +44,49 @@ import {
   revokeAdminUserTokens
 } from '../../services/adminUserService';
 
+const { RangePicker } =
+  DatePicker;
+
 interface User {
   id: string;
   name: string;
   email: string;
   username?: string;
   phone?: string;
-  role: 'Admin' | 'Staff' | 'Customer';
-  status: 'Active' | 'Locked';
+  role:
+    | 'Admin'
+    | 'Staff'
+    | 'Customer';
+  status:
+    | 'Active'
+    | 'Locked';
   lastLogin: string;
   createdAt: string;
 }
 
 export default function UsersPage() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [users, setUsers] =
+    useState<User[]>([]);
 
-  const [searchText, setSearchText] = useState('');
+  const [loading, setLoading] =
+    useState(false);
 
-  const [roleFilter, setRoleFilter] = useState<
-    'All' | 'Admin' | 'Staff' | 'Customer'
-  >('All');
+  const [searchText, setSearchText] =
+    useState('');
+
+  const [roleFilter, setRoleFilter] =
+    useState<
+      | 'All'
+      | 'Admin'
+      | 'Staff'
+      | 'Customer'
+    >('All');
+
+  // FILTER DATE
+  const [
+    createdDateFilter,
+    setCreatedDateFilter
+  ] = useState<any>(null);
 
   // PAGINATION
   const [currentPage, setCurrentPage] =
@@ -69,7 +99,9 @@ export default function UsersPage() {
     useState(false);
 
   const [editingUser, setEditingUser] =
-    useState<User | null>(null);
+    useState<User | null>(
+      null
+    );
 
   const [saving, setSaving] =
     useState(false);
@@ -92,7 +124,8 @@ export default function UsersPage() {
       message.error(
         'Không thể tải danh sách tài khoản: ' +
           (err.response?.data
-            ?.message || err.message)
+            ?.message ||
+            err.message)
       );
     } finally {
       setLoading(false);
@@ -107,39 +140,96 @@ export default function UsersPage() {
   // FILTER USERS
   // =========================
 
-  const filteredUsers = useMemo(() => {
-    return users.filter((item) => {
-      let matchRole = true;
+  const filteredUsers =
+    useMemo(() => {
+      return users.filter(
+        (item) => {
+          // ROLE
+          let matchRole = true;
 
-      if (roleFilter !== 'All') {
-        matchRole =
-          item.role === roleFilter;
-      }
+          if (
+            roleFilter !== 'All'
+          ) {
+            matchRole =
+              item.role ===
+              roleFilter;
+          }
 
-      let matchSearch = true;
+          // SEARCH
+          let matchSearch = true;
 
-      if (searchText) {
-        const lowerSearch =
-          searchText.toLowerCase();
+          if (searchText) {
+            const lowerSearch =
+              searchText.toLowerCase();
 
-        matchSearch =
-          item.name
-            .toLowerCase()
-            .includes(lowerSearch) ||
-          item.email
-            .toLowerCase()
-            .includes(lowerSearch);
-      }
+            const matchSearch =
+              item.name
+                .toLowerCase()
+                .includes(
+                  lowerSearch
+                ) ||
+              item.email
+                .toLowerCase()
+                .includes(
+                  lowerSearch
+                ) ||
+              item.username
+                ?.toLowerCase()
+                .includes(
+                  lowerSearch
+                ) ||
+              item.phone
+                ?.toLowerCase()
+                .includes(
+                  lowerSearch
+                );
+          }
 
-      return (
-        matchRole && matchSearch
+          // DATE
+          let matchDate = true;
+
+          if (
+            createdDateFilter &&
+            createdDateFilter.length ===
+              2
+          ) {
+            const startDate =
+              createdDateFilter[0].startOf(
+                'day'
+              );
+
+            const endDate =
+              createdDateFilter[1].endOf(
+                'day'
+              );
+
+            const createdAt =
+              dayjs(
+                item.createdAt
+              );
+
+            matchDate =
+              createdAt.isAfter(
+                startDate
+              ) &&
+              createdAt.isBefore(
+                endDate
+              );
+          }
+
+          return (
+            matchRole &&
+            matchSearch &&
+            matchDate
+          );
+        }
       );
-    });
-  }, [
-    users,
-    roleFilter,
-    searchText
-  ]);
+    }, [
+      users,
+      roleFilter,
+      searchText,
+      createdDateFilter
+    ]);
 
   // =========================
   // EXPORT CSV
@@ -151,26 +241,34 @@ export default function UsersPage() {
         'Mã tài khoản',
         'Họ tên',
         'Email',
+        'Username',
+        'Số điện thoại',
         'Vai trò',
         'Trạng thái',
         'Ngày tạo'
       ];
 
       const dataRows =
-        filteredUsers.map((u) => [
-          u.id,
-          u.name,
-          u.email,
-          u.role === 'Admin'
-            ? 'Quản trị viên'
-            : u.role === 'Staff'
-            ? 'Nhân viên'
-            : 'Khách hàng',
-          u.status === 'Active'
-            ? 'Đang hoạt động'
-            : 'Đã khóa',
-          u.createdAt
-        ]);
+        filteredUsers.map(
+          (u) => [
+            u.id,
+            u.name,
+            u.email,
+            u.username || '',
+            u.phone || '',
+            u.role === 'Admin'
+              ? 'Quản trị viên'
+              : u.role ===
+                'Staff'
+              ? 'Nhân viên'
+              : 'Khách hàng',
+            u.status ===
+            'Active'
+              ? 'Đang hoạt động'
+              : 'Đã khóa',
+            u.createdAt
+          ]
+        );
 
       const BOM = '\uFEFF';
 
@@ -178,16 +276,19 @@ export default function UsersPage() {
         BOM +
         [
           headers.join(','),
-          ...dataRows.map((row) =>
-            row
-              .map(
-                (cell) =>
-                  `"${String(cell).replace(
-                    /"/g,
-                    '""'
-                  )}"`
-              )
-              .join(',')
+          ...dataRows.map(
+            (row) =>
+              row
+                .map(
+                  (cell) =>
+                    `"${String(
+                      cell
+                    ).replace(
+                      /"/g,
+                      '""'
+                    )}"`
+                )
+                .join(',')
           )
         ].join('\n');
 
@@ -199,7 +300,9 @@ export default function UsersPage() {
       );
 
       const url =
-        URL.createObjectURL(blob);
+        URL.createObjectURL(
+          blob
+        );
 
       const link =
         document.createElement(
@@ -261,7 +364,8 @@ export default function UsersPage() {
         setUsers((prev) =>
           prev.map((u) => {
             if (
-              u.id === record.id
+              u.id ===
+              record.id
             ) {
               return {
                 ...u,
@@ -302,16 +406,19 @@ export default function UsersPage() {
     user?: User
   ) => {
     if (user) {
-      // EDIT
       setEditingUser(user);
 
       form.setFieldsValue({
         name: user.name,
         email: user.email,
-        role: user.role
+        username:
+          user.username || '',
+        phone:
+          user.phone || '',
+        role: user.role,
+        newPassword: ''
       });
     } else {
-      // ADD
       setEditingUser(null);
 
       form.resetFields();
@@ -344,16 +451,25 @@ export default function UsersPage() {
 
         setSaving(true);
 
-        // =====================
-        // UPDATE USER
-        // =====================
-
+        // UPDATE
         if (editingUser) {
-          const payload = {
+          const payload: any = {
             name: values.name,
             email: values.email,
+            username:
+              values.username,
+            phone:
+              values.phone,
             role: values.role
           };
+
+          if (
+            values.newPassword &&
+            values.newPassword.trim()
+          ) {
+            payload.password =
+              values.newPassword;
+          }
 
           const res =
             await updateAdminUser(
@@ -371,10 +487,7 @@ export default function UsersPage() {
           closeModal();
         }
 
-        // =====================
-        // CREATE USER
-        // =====================
-
+        // CREATE
         else {
           const payload = {
             name: values.name,
@@ -403,30 +516,18 @@ export default function UsersPage() {
           closeModal();
         }
       } catch (err: any) {
-        // VALIDATION ERROR
         if (err.errorFields) {
           return;
         }
 
-        // BACKEND ERROR
         const backendMessage =
           err.response?.data
             ?.message;
 
-        if (
-          backendMessage
-            ?.toLowerCase()
-            .includes('email')
-        ) {
-          message.error(
-            'Email này đã tồn tại trên hệ thống, vui lòng dùng email khác'
-          );
-        } else {
-          message.error(
-            backendMessage ||
-              'Lưu thông tin tài khoản thất bại'
-          );
-        }
+        message.error(
+          backendMessage ||
+            'Lưu thông tin tài khoản thất bại'
+        );
       } finally {
         setSaving(false);
       }
@@ -437,7 +538,10 @@ export default function UsersPage() {
   // =========================
 
   const handleRevokeTokens =
-    async (userId: string) => {
+    async (
+      userId: string,
+      userName?: string
+    ) => {
       try {
         const res =
           await revokeAdminUserTokens(
@@ -446,14 +550,15 @@ export default function UsersPage() {
 
         message.success(
           res.message ||
-            'Đã thu hồi toàn bộ phiên đăng nhập'
+            `Đã thu hồi phiên đăng nhập thành công! ${
+              userName || ''
+            } sẽ bị đăng xuất ngay lập tức.`
         );
       } catch (err: any) {
         message.error(
-          'Không thể thu hồi phiên đăng nhập: ' +
-            (err.response?.data
-              ?.message ||
-              err.message)
+          err.response?.data
+            ?.message ||
+            'Không thể thu hồi phiên đăng nhập.'
         );
       }
     };
@@ -558,8 +663,12 @@ export default function UsersPage() {
         dataIndex:
           'createdAt',
 
-        className:
-          'text-gray-500'
+        render: (
+          val: string
+        ) =>
+          dayjs(val).format(
+            'DD/MM/YYYY HH:mm'
+          )
       },
 
       {
@@ -619,6 +728,7 @@ export default function UsersPage() {
           record
         ) => (
           <Space size="middle">
+            {/* EDIT */}
             <Tooltip title="Chỉnh sửa thông tin">
               <Button
                 type="text"
@@ -636,17 +746,22 @@ export default function UsersPage() {
               />
             </Tooltip>
 
+            {/* REVOKE */}
             <Tooltip title="Thu hồi đăng nhập">
               <Popconfirm
-                title="Đăng xuất thiết bị?"
-                description="Hành động này sẽ thu hồi toàn bộ token đăng nhập hiện tại"
-                onConfirm={() =>
-                  handleRevokeTokens(
-                    record.id
-                  )
-                }
+                title="Bạn có chắc chắn muốn đăng xuất thiết bị của người dùng này?"
+                description="Phiên làm việc của họ sẽ bị thu hồi ngay lập tức."
                 okText="Đồng ý"
                 cancelText="Hủy"
+                okButtonProps={{
+                  danger: true
+                }}
+                onConfirm={() =>
+                  handleRevokeTokens(
+                    record.id,
+                    record.name
+                  )
+                }
               >
                 <Button
                   type="text"
@@ -656,6 +771,7 @@ export default function UsersPage() {
                       size={16}
                     />
                   }
+                  className="hover:bg-red-50"
                 />
               </Popconfirm>
             </Tooltip>
@@ -716,16 +832,11 @@ export default function UsersPage() {
           {
             label:
               'Tổng số tài khoản',
-
             val: users.length,
-
             sub: 'Toàn bộ hệ thống',
-
             icon: Users,
-
             color:
               'text-[#af101a]',
-
             bg: 'bg-[#ffdad6]/50'
           },
 
@@ -802,46 +913,72 @@ export default function UsersPage() {
 
       {/* TABLE */}
       <div className="bg-white border border-[#d8dadc] rounded-xl shadow-sm flex flex-col">
-        <div className="p-4 border-b border-[#eceef0] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <Select
-            value={
-              roleFilter
-            }
-            onChange={
-              setRoleFilter
-            }
-            className="w-full sm:w-56 rounded-lg"
-            options={[
-              {
-                value:
-                  'All',
-                label:
-                  'Tất cả vai trò'
-              },
-
-              {
-                value:
-                  'Admin',
-                label:
-                  'Quản trị viên'
-              },
-
-              {
-                value:
-                  'Staff',
-                label:
-                  'Nhân viên'
-              },
-
-              {
-                value:
-                  'Customer',
-                label:
-                  'Khách hàng'
+        <div className="p-4 border-b border-[#eceef0] flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+          {/* FILTER */}
+          <div className="flex flex-col sm:flex-row gap-3 w-full">
+            {/* ROLE FILTER */}
+            <Select
+              value={
+                roleFilter
               }
-            ]}
-          />
+              onChange={
+                setRoleFilter
+              }
+              className="w-full sm:w-56 rounded-lg"
+              options={[
+                {
+                  value:
+                    'All',
+                  label:
+                    'Tất cả vai trò'
+                },
 
+                {
+                  value:
+                    'Admin',
+                  label:
+                    'Quản trị viên'
+                },
+
+                {
+                  value:
+                    'Staff',
+                  label:
+                    'Nhân viên'
+                },
+
+                {
+                  value:
+                    'Customer',
+                  label:
+                    'Khách hàng'
+                }
+              ]}
+            />
+
+            {/* DATE FILTER */}
+            <RangePicker
+              format="DD/MM/YYYY"
+              placeholder={[
+                'Từ ngày',
+                'Đến ngày'
+              ]}
+              value={
+                createdDateFilter
+              }
+              onChange={(
+                dates
+              ) =>
+                setCreatedDateFilter(
+                  dates
+                )
+              }
+              className="w-full sm:w-80"
+              allowClear
+            />
+          </div>
+
+          {/* SEARCH */}
           <Input
             prefix={
               <Search
@@ -849,8 +986,8 @@ export default function UsersPage() {
                 className="text-gray-400"
               />
             }
-            placeholder="Tìm kiếm theo họ tên hoặc email..."
-            className="w-full sm:w-72 rounded-lg"
+            placeholder="Tìm kiếm theo họ tên, email, username..."
+            className="w-full lg:w-72 rounded-lg"
             value={
               searchText
             }
@@ -940,7 +1077,6 @@ export default function UsersPage() {
               {
                 required:
                   true,
-
                 message:
                   'Vui lòng nhập họ và tên hiển thị'
               }
@@ -957,14 +1093,12 @@ export default function UsersPage() {
               {
                 required:
                   true,
-
                 message:
                   'Vui lòng nhập email'
               },
 
               {
                 type: 'email',
-
                 message:
                   'Email không đúng định dạng'
               }
@@ -980,83 +1114,88 @@ export default function UsersPage() {
             />
           </Form.Item>
 
-          {/* ADD MODE ONLY */}
-          {!editingUser && (
-            <>
-              {/* USERNAME */}
-              <Form.Item
-                name="username"
-                label="Tên đăng nhập (Username)"
-                rules={[
-                  {
-                    required:
-                      true,
+          {/* USERNAME */}
+          <Form.Item
+            name="username"
+            label="Tên đăng nhập (Username)"
+            rules={[
+              {
+                required:
+                  true,
+                message:
+                  'Vui lòng nhập username'
+              },
 
-                    message:
-                      'Vui lòng nhập username'
-                  },
+              {
+                pattern:
+                  /^[a-zA-Z0-9_]+$/,
+                message:
+                  'Username không được chứa ký tự đặc biệt'
+              }
+            ]}
+          >
+            <Input placeholder="nguyenvana" />
+          </Form.Item>
 
-                  {
-                    pattern:
-                      /^[a-zA-Z0-9_]+$/,
+          {/* PHONE */}
+          <Form.Item
+            name="phone"
+            label="Số điện thoại liên hệ"
+            rules={[
+              {
+                required:
+                  true,
+                message:
+                  'Vui lòng nhập số điện thoại'
+              },
 
-                    message:
-                      'Username không được chứa dấu hoặc ký tự đặc biệt'
-                  }
-                ]}
-              >
-                <Input placeholder="nguyenvana" />
-              </Form.Item>
+              {
+                pattern:
+                  /^(0[3|5|7|8|9])+([0-9]{8})$/,
+                message:
+                  'Số điện thoại Việt Nam không hợp lệ'
+              }
+            ]}
+          >
+            <Input placeholder="0912345678" />
+          </Form.Item>
 
-              {/* PHONE */}
-              <Form.Item
-                name="phone"
-                label="Số điện thoại liên hệ"
-                rules={[
-                  {
-                    required:
-                      true,
+          {/* PASSWORD */}
+          {!editingUser ? (
+            <Form.Item
+              name="password"
+              label="Mật khẩu khởi tạo"
+              rules={[
+                {
+                  required:
+                    true,
+                  message:
+                    'Vui lòng nhập mật khẩu'
+                },
 
-                    message:
-                      'Vui lòng nhập số điện thoại'
-                  },
-
-                  {
-                    pattern:
-                      /^(0[3|5|7|8|9])+([0-9]{8})$/,
-
-                    message:
-                      'Số điện thoại Việt Nam phải gồm 10 chữ số hợp lệ'
-                  }
-                ]}
-              >
-                <Input placeholder="0912345678" />
-              </Form.Item>
-
-              {/* PASSWORD */}
-              <Form.Item
-                name="password"
-                label="Mật khẩu khởi tạo"
-                rules={[
-                  {
-                    required:
-                      true,
-
-                    message:
-                      'Vui lòng nhập mật khẩu'
-                  },
-
-                  {
-                    min: 6,
-
-                    message:
-                      'Mật khẩu tối thiểu phải có 6 ký tự'
-                  }
-                ]}
-              >
-                <Input.Password placeholder="Nhập mật khẩu khởi tạo" />
-              </Form.Item>
-            </>
+                {
+                  min: 6,
+                  message:
+                    'Mật khẩu tối thiểu phải có 6 ký tự'
+                }
+              ]}
+            >
+              <Input.Password placeholder="Nhập mật khẩu khởi tạo" />
+            </Form.Item>
+          ) : (
+            <Form.Item
+              name="newPassword"
+              label="Mật khẩu mới (Bỏ trống nếu không muốn đổi)"
+              rules={[
+                {
+                  min: 6,
+                  message:
+                    'Mật khẩu tối thiểu phải có 6 ký tự'
+                }
+              ]}
+            >
+              <Input.Password placeholder="Nhập mật khẩu mới..." />
+            </Form.Item>
           )}
 
           {/* ROLE */}
@@ -1067,7 +1206,6 @@ export default function UsersPage() {
               {
                 required:
                   true,
-
                 message:
                   'Vui lòng chọn vai trò'
               }
@@ -1078,7 +1216,6 @@ export default function UsersPage() {
                 {
                   value:
                     'Customer',
-
                   label:
                     'Khách hàng (Customer)'
                 },
@@ -1086,7 +1223,6 @@ export default function UsersPage() {
                 {
                   value:
                     'Staff',
-
                   label:
                     'Nhân viên (Staff)'
                 },
@@ -1094,7 +1230,6 @@ export default function UsersPage() {
                 {
                   value:
                     'Admin',
-
                   label:
                     'Quản trị viên (Admin)'
                 }
