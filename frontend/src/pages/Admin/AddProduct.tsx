@@ -5,6 +5,7 @@ import { ArrowLeft, Save, UploadCloud, Image as ImageIcon, Plus, Trash2 } from "
 import axiosInstance from "../../utils/axiosConfig";
 import ip from "../../utils/ip";
 import { createAdminProduct } from "../../services/adminProductService";
+import ProductImageUploader, { ProductImage } from "../../components/ProductImageUploader";
 
 const { TextArea } = Input;
 const { confirm } = Modal;
@@ -12,6 +13,7 @@ const { confirm } = Modal;
 export default function AddProduct() {
   const navigate = useNavigate();
   const [form] = Form.useForm();
+  const [images, setImages] = useState<ProductImage[]>([]);
   
   const [allCategories, setAllCategories] = useState<any[]>([]);
   const [parentCategories, setParentCategories] = useState<{ value: number; label: string }[]>([]);
@@ -78,7 +80,10 @@ export default function AddProduct() {
               stock_quantity: Number(v.stock_quantity || 0),
               sku: v.sku || null
             })),
-            images: []
+            images: images.map(img => ({
+              image_url: img.image_url,
+              is_main: img.is_main
+            }))
         };
         
         message.loading({ content: "Đang lưu sản phẩm...", key: "save" });
@@ -307,22 +312,7 @@ export default function AddProduct() {
 
           <div className="bg-white border border-[#d8dadc] rounded-lg shadow-sm p-6">
             <h2 className="text-lg font-semibold text-[#191c1e] mb-4 border-b border-[#eceef0] pb-2">Hình ảnh sản phẩm</h2>
-            <div className="border-2 border-dashed border-[#d8dadc] rounded-lg p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-[#f7f9fb] transition-colors">
-              <div className="w-12 h-12 rounded-full bg-[#eceef0] flex items-center justify-center text-[#5b403d] mb-3">
-                <UploadCloud size={24} />
-              </div>
-              <div className="font-medium text-[#191c1e] text-sm mb-1">Click để tải ảnh lên</div>
-              <div className="text-xs text-[#5b403d]">SVG, PNG, JPG (tối đa 5MB)</div>
-            </div>
-
-            <div className="mt-4 flex gap-2">
-              <div className="w-16 h-16 rounded border border-[#d8dadc] bg-[#f7f9fb] flex items-center justify-center text-[#8f6f6c]">
-                <ImageIcon size={20} />
-              </div>
-              <div className="w-16 h-16 rounded border border-[#d8dadc] border-dashed flex items-center justify-center text-[#8f6f6c] cursor-pointer hover:bg-[#f7f9fb]">
-                <Plus size={20} />
-              </div>
-            </div>
+            <ProductImageUploader value={images} onChange={setImages} />
           </div>
         </div>
       </div>
