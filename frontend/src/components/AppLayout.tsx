@@ -18,7 +18,7 @@ import {
   Ticket,
   Boxes
 } from "lucide-react";
-import { Avatar, Dropdown, Popover, FloatButton } from "antd";
+import { Avatar, Dropdown, Popover, FloatButton, message } from "antd";
 import NotificationPanel from "./NotificationPanel";
 import { logout } from "../services/Auth/apiClient";
 import { useQuery } from "@tanstack/react-query";
@@ -48,6 +48,13 @@ export default function AppLayout() {
     return <Navigate to="/login" replace />;
   }
 
+  // 🛡️ Route Guard: Chỉ Quản trị viên (Admin) mới có quyền vào quản lý Users & Cài đặt hệ thống
+  const isProtectedPath = currentPath.startsWith("/admin/users") || currentPath.startsWith("/admin/settings");
+  if (isProtectedPath && userObj?.role !== "Admin") {
+    message.error("Bạn không có quyền truy cập vào khu vực bảo mật này! Chỉ dành cho Quản trị viên (Admin).");
+    return <Navigate to="/admin/dashboard" replace />;
+  }
+
   const handleHelp = () => {
     navigate("/admin/help");
   };
@@ -58,11 +65,11 @@ export default function AppLayout() {
     { name: "Categories", path: "/admin/categories", icon: FolderTree },
     { name: "Inventory", path:"/admin/inventory", icon: Boxes },
     { name: "Orders", path: "/admin/orders", icon: ShoppingCart },
-    { name: "Users", path: "/admin/users", icon: Users },
+    ...(userObj?.role === "Admin" ? [{ name: "Users", path: "/admin/users", icon: Users }] : []),
     { name: "Vouchers", path: "/admin/vouchers", icon: Ticket },
     { name: "Reports", path: "/admin/reports", icon: BarChart2 },
     { name: "Complaints", path: "/admin/complaints", icon: Headset },
-    { name: "Settings", path: "/admin/settings", icon: SettingsIcon },
+    ...(userObj?.role === "Admin" ? [{ name: "Settings", path: "/admin/settings", icon: SettingsIcon }] : []),
   ];
 
   return (
@@ -145,7 +152,7 @@ export default function AppLayout() {
                     key: "account",
                     label: (
                       <Link to="/admin/account" className="flex items-center gap-2">
-                        <User size={14} /> My Account
+                        <User size={14} /> Tài khoản của tôi
                       </Link>
                     ),
                   },
@@ -157,7 +164,7 @@ export default function AppLayout() {
                         onClick={() => logout()}
                         className="flex items-center gap-2 text-red-600 cursor-pointer"
                       >
-                        <LogOut size={14} /> Logout
+                        <LogOut size={14} /> Đăng xuất
                       </div>
                     ),
                   },
@@ -166,8 +173,10 @@ export default function AppLayout() {
               placement="bottomRight"
             >
               <button className="flex items-center gap-2 hover:bg-[#eceef0] p-1 px-2 rounded transition-colors">
-                <span className="text-sm font-medium hidden sm:block">Admin</span>
-                <Avatar src="https://ui-avatars.com/api/?name=Admin+User&background=0D8ABC&color=fff" size="small" />
+                <span className="text-sm font-medium hidden sm:block">
+                  {userObj?.full_name || (userObj?.role === "Admin" ? "Quản trị viên" : userObj?.role === "Staff" ? "Nhân viên" : "Khách hàng")}
+                </span>
+                <Avatar src={`https://ui-avatars.com/api/?name=${encodeURIComponent(userObj?.full_name || userObj?.role || 'Admin')}&background=0D8ABC&color=fff`} size="small" />
               </button>
             </Dropdown>
           </div>
