@@ -121,8 +121,8 @@ const dinhDangDonHangChoAdmin = (order: any) => {
                 payment?.method ?? null,
             amount: Number(
                 payment?.amount ??
-                    order?.final_amount ??
-                    0
+                order?.final_amount ??
+                0
             ),
             status:
                 order?.payment_status ??
@@ -352,7 +352,7 @@ export const chiTietDonHang = async (
                 image_url:
                     layAnhChinhSanPham(
                         sanPham?.product_images ??
-                            []
+                        []
                     ),
                 size:
                     bienThe?.size ?? null,
@@ -447,7 +447,7 @@ export const capNhatTrangThaiDonHang = async (
 
     const trangThaiTiepTheoHopLe =
         CHUYEN_TRANG_THAI_HOP_LE[
-            trangThaiCu as TrangThaiDonHang
+        trangThaiCu as TrangThaiDonHang
         ];
 
     // Cho phép chuyển sang Cancelled hoặc các trạng thái tiếp theo chuẩn
@@ -533,8 +533,8 @@ export const capNhatTrangThaiDonHang = async (
 
         // 2. Hủy đơn: Hoàn tồn kho và ghi log NHẬP KHO (IMPORT)
         // Chỉ hoàn kho khi đơn hàng đã từng được trừ kho (ở Confirmed hoặc Packing hoặc Shipping)
-        const wasStockReduced = ['Confirmed', 'Packing', 'Shipping'].includes(trangThaiCu) || 
-                               (trangThaiCu === 'CancelRequested' && (timeline.Confirmed || timeline.Packing));
+        const wasStockReduced = ['Confirmed', 'Packing', 'Shipping'].includes(trangThaiCu) ||
+            (trangThaiCu === 'CancelRequested' && (timeline.Confirmed || timeline.Packing));
 
         if (status === 'Cancelled' && wasStockReduced) {
             for (const item of orderItems) {
@@ -545,7 +545,7 @@ export const capNhatTrangThaiDonHang = async (
                     item?.product_variants;
                 const variantId = Number(
                     item?.variant_id ??
-                        bienThe?.id
+                    bienThe?.id
                 );
                 const tenSanPham =
                     bienThe?.products?.name ??
@@ -575,15 +575,15 @@ export const capNhatTrangThaiDonHang = async (
 
                 const stockHienTai = Number(
                     bienTheHienTai.stock_quantity ??
-                        0
+                    0
                 );
                 const soLuongSau =
                     stockHienTai +
                     soLuongMua;
                 const costPrice = Number(
                     item?.cost_price ??
-                        bienTheHienTai.cost_price ??
-                        0
+                    bienTheHienTai.cost_price ??
+                    0
                 );
 
                 const {
@@ -654,7 +654,7 @@ export const capNhatTrangThaiDonHang = async (
 
         if (status === 'Cancelled') {
             duLieuCapNhat.payment_status = 'Failed';
-            
+
             // Trích xuất lý do hủy sạch từ JSON của khách hàng
             let cleanReason = 'Hủy bởi Admin / Đồng ý hủy';
             if (donHang.cancel_reason) {

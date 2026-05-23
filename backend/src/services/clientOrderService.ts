@@ -131,7 +131,7 @@ export const checkoutOrder = async (data: CheckoutRequest) => {
         if (voucherError || !voucher) throw new Error('Voucher không hợp lệ hoặc không tồn tại.');
         if (voucher.status !== 'Active' && voucher.status !== 'active') throw new Error('Voucher không còn hoạt động.');
         if (voucher.quantity !== null && voucher.quantity <= 0) throw new Error('Voucher đã hết lượt sử dụng.');
-        
+
         const now = new Date();
         if (voucher.start_date && new Date(voucher.start_date) > now) throw new Error('Voucher chưa đến thời gian sử dụng.');
         if (voucher.end_date && new Date(voucher.end_date) < now) throw new Error('Voucher đã hết hạn.');
@@ -416,7 +416,7 @@ export const cancelOrder = async (orderId: number, userId: number, cancelReason?
     const currentShipping = order.shipping_address ? (typeof order.shipping_address === 'string' ? JSON.parse(order.shipping_address) : order.shipping_address) : {};
     const currentTimeline = currentShipping.timeline || {};
     currentTimeline['CancelRequested'] = new Date().toISOString();
-    
+
     const updatedShippingAddress = {
         ...currentShipping,
         timeline: currentTimeline
