@@ -40,11 +40,13 @@ const dinhDangItemChoClient = (item: any) => {
 
 const dinhDangDonHangChoClient = (order: any) => {
     const payment = layThanhToanDauTien(order?.payments);
+    const hasCancelRequest = order?.cancel_reason && order.cancel_reason.includes('"isCancelRequested":true');
+    const displayStatus = hasCancelRequest ? 'CancelRequested' : (order?.status ?? 'Pending');
 
     return {
         id: Number(order?.id ?? 0),
         userId: Number(order?.user_id ?? 0),
-        status: order?.status ?? 'Pending',
+        status: displayStatus,
         totalPrice: Number(order?.final_amount ?? order?.total_amount ?? 0),
         paymentMethod: payment?.method ?? null,
         paymentStatus: order?.payment_status ?? payment?.status ?? 'Pending',
@@ -157,6 +159,15 @@ export const checkoutOrder = async (data: CheckoutRequest) => {
     // =========================================================================
 
     // 4. Tạo Order
+    const timelineInit = {
+        Pending: new Date().toISOString()
+    };
+    const currentShipping = typeof shippingAddress === 'string' ? JSON.parse(shippingAddress) : shippingAddress;
+    const updatedShippingAddress = {
+        ...currentShipping,
+        timeline: timelineInit
+    };
+
     const { data: newOrder, error: orderError } = await supabaseClient
         .from('orders')
         .insert([{
@@ -166,7 +177,7 @@ export const checkoutOrder = async (data: CheckoutRequest) => {
             final_amount: finalAmount,
             status: 'Pending',
             payment_status: 'Pending',
-            shipping_address: shippingAddress,
+            shipping_address: updatedShippingAddress,
             voucher_id: voucherId
         }])
         .select()
@@ -230,27 +241,46 @@ export const checkoutOrder = async (data: CheckoutRequest) => {
     // Chờ tất cả các tác vụ vụ phụ hoàn thành
     await Promise.all(parallelTasks);
 
-    // 8. Tạo thông báo cho các tài khoản Admin
+    // 8. Tạo thông báo cho khách hàng và các tài khoản Admin
     try {
+        const listNotifications = [];
+
+        // 8a. Thông báo cho khách hàng (Client)
+        listNotifications.push({
+            user_id: userId,
+            title: 'Đặt hàng thành công',
+            message: `Cảm ơn bạn đã mua sắm! Đơn hàng #${orderId} của bạn đã được đặt thành công và đang chờ duyệt.`,
+            type: 'success',
+            is_read: false,
+            reference_id: String(orderId),
+            reference_type: 'order'
+        });
+
+        // 8b. Thông báo cho Admins
         const { data: admins } = await supabaseClient
             .from('users')
             .select('id')
             .eq('role', 'Admin');
 
         if (admins && admins.length > 0) {
-            const thongBao = admins.map((admin: any) => ({
-                user_id: admin.id,
-                title: 'Đơn hàng mới chờ duyệt',
-                message: `Đơn hàng #${orderId} trị giá ${finalAmount.toLocaleString('vi-VN')} ₫ vừa được đặt bởi khách hàng.`,
-                type: 'success',
-                is_read: false,
-                reference_id: String(orderId),
-                reference_type: 'order'
-            }));
-            await supabaseClient.from('notifications').insert(thongBao);
+            admins.forEach((admin: any) => {
+                listNotifications.push({
+                    user_id: admin.id,
+                    title: 'Đơn hàng mới chờ duyệt',
+                    message: `Đơn hàng #${orderId} trị giá ${finalAmount.toLocaleString('vi-VN')} ₫ vừa được đặt bởi khách hàng.`,
+                    type: 'success',
+                    is_read: false,
+                    reference_id: String(orderId),
+                    reference_type: 'order'
+                });
+            });
+        }
+
+        if (listNotifications.length > 0) {
+            await supabaseClient.from('notifications').insert(listNotifications);
         }
     } catch (err) {
-        console.error("Lỗi khi tạo thông báo cho admin:", err);
+        console.error("Lỗi khi tạo thông báo đặt hàng:", err);
     }
 
     return newOrder;
@@ -353,11 +383,11 @@ export const getOrderDetails = async (orderId: number, userId: number) => {
 // CANCEL ORDER
 // -------------------------------------------------------------
 
-// Các trạng thái cho phép hủy (chưa đóng gói)
-const CANCELLABLE_STATUSES = ['Pending', 'Confirmed'];
+// Các trạng thái cho phép hủy
+const CANCELLABLE_STATUSES = ['Pending', 'Confirmed', 'Packing'];
 
 export const cancelOrder = async (orderId: number, userId: number, cancelReason?: string) => {
-    // 1. Lấy thông tin đơn hàng (kèm chi tiết sản phẩm và voucher)
+    // 1. Lấy thông tin đơn hàng
     const { data: order, error: fetchError } = await supabaseClient
         .from('orders')
         .select(`
@@ -378,92 +408,99 @@ export const cancelOrder = async (orderId: number, userId: number, cancelReason?
     // 2. Kiểm tra trạng thái có cho phép hủy không
     if (!CANCELLABLE_STATUSES.includes(order.status)) {
         throw new Error(
-            `Không thể hủy đơn hàng ở trạng thái "${order.status}". Chỉ có thể hủy khi đơn ở trạng thái Pending hoặc Confirmed.`
+            `Không thể hủy đơn hàng ở trạng thái "${order.status}". Đơn hàng đang được vận chuyển hoặc đã hoàn thành, bắt buộc phải nhận.`
         );
     }
 
-    // 3. Cập nhật trạng thái đơn hàng → Cancelled
+    // 3. Cập nhật timeline trong shipping_address
+    const currentShipping = order.shipping_address ? (typeof order.shipping_address === 'string' ? JSON.parse(order.shipping_address) : order.shipping_address) : {};
+    const currentTimeline = currentShipping.timeline || {};
+    currentTimeline['CancelRequested'] = new Date().toISOString();
+    
+    const updatedShippingAddress = {
+        ...currentShipping,
+        timeline: currentTimeline
+    };
+
+    // Chuẩn hóa cancel_reason chứa cờ isCancelRequested: true
+    let packagedReason = '';
+    if (cancelReason) {
+        try {
+            const parsed = JSON.parse(cancelReason);
+            parsed.isCancelRequested = true;
+            packagedReason = JSON.stringify(parsed);
+        } catch (e) {
+            packagedReason = JSON.stringify({
+                isCancelRequested: true,
+                reason: cancelReason,
+                image: null
+            });
+        }
+    } else {
+        packagedReason = JSON.stringify({
+            isCancelRequested: true,
+            reason: 'Khách hàng gửi yêu cầu hủy',
+            image: null
+        });
+    }
+
+    // 4. Cập nhật trạng thái đơn hàng (giữ nguyên cột status của DB để tránh vi phạm check constraint chk_status)
     const { error: updateError } = await supabaseClient
         .from('orders')
         .update({
-            status: 'Cancelled',
-            payment_status: 'Failed',
-            cancel_reason: cancelReason || 'Khách hàng yêu cầu hủy'
+            cancel_reason: packagedReason,
+            shipping_address: updatedShippingAddress
         })
-        .eq('id', orderId);
+        .eq('id', orderId)
+        .eq('user_id', userId);
 
     if (updateError) throw new Error('Lỗi khi cập nhật trạng thái đơn hàng: ' + updateError.message);
 
-    // 4. Các tác vụ hoàn lại chạy song song (Restore stock & voucher)
-    const restoreTasks: Promise<any>[] = [];
+    // 5. Tạo thông báo cho khách hàng và các tài khoản Admin
+    try {
+        const listNotifications = [];
 
-    // 4a. Hoàn lại tồn kho cho từng sản phẩm (đọc stock hiện tại → cộng thêm)
-    // CHỈ hoàn kho khi đơn hàng đã từng được admin Confirmed (trừ kho)
-    if (['Confirmed', 'Packing', 'Shipping'].includes(order.status)) {
-        for (const item of (order.order_items as any[])) {
-            const restoreStock = async () => {
-                const { data: variant } = await supabaseClient
-                    .from('product_variants')
-                    .select('stock_quantity, cost_price')
-                    .eq('id', item.variant_id)
-                    .single();
-                if (variant) {
-                    await supabaseClient
-                        .from('product_variants')
-                        .update({ stock_quantity: variant.stock_quantity + item.quantity })
-                        .eq('id', item.variant_id);
+        // 5a. Thông báo cho khách hàng (Client)
+        listNotifications.push({
+            user_id: userId,
+            title: 'Yêu cầu hủy đơn hàng',
+            message: `Bạn đã gửi yêu cầu hủy đơn hàng #${orderId}. Yêu cầu đang được chờ duyệt.`,
+            type: 'info',
+            is_read: false,
+            reference_id: String(orderId),
+            reference_type: 'order'
+        });
 
-                    // Ghi log nhập kho để hoàn kho
-                    await supabaseClient
-                        .from('inventory_logs')
-                        .insert([
-                            {
-                                variant_id: item.variant_id,
-                                action_type: 'IMPORT',
-                                reference_id: orderId,
-                                quantity: item.quantity,
-                                cost_price: variant.cost_price || 0
-                            }
-                        ]);
-                }
-            };
-            restoreTasks.push(restoreStock());
+        // 5b. Thông báo cho Admins
+        const { data: admins } = await supabaseClient
+            .from('users')
+            .select('id')
+            .eq('role', 'Admin');
+
+        if (admins && admins.length > 0) {
+            admins.forEach((admin: any) => {
+                listNotifications.push({
+                    user_id: admin.id,
+                    title: 'Yêu cầu hủy đơn hàng mới',
+                    message: `Khách hàng yêu cầu hủy đơn hàng #${orderId}. Vui lòng kiểm tra lý do và hình ảnh minh chứng.`,
+                    type: 'warning',
+                    is_read: false,
+                    reference_id: String(orderId),
+                    reference_type: 'order'
+                });
+            });
         }
+
+        if (listNotifications.length > 0) {
+            await supabaseClient.from('notifications').insert(listNotifications);
+        }
+    } catch (err) {
+        console.error("Lỗi khi tạo thông báo yêu cầu hủy đơn hàng:", err);
     }
-
-    // 4b. Hoàn lại số lượt voucher (nếu đơn hàng có dùng voucher)
-    if (order.voucher_id) {
-        const restoreVoucher = async () => {
-            const { data: voucher } = await supabaseClient
-                .from('vouchers')
-                .select('quantity')
-                .eq('id', order.voucher_id)
-                .single();
-            if (voucher && voucher.quantity !== null) {
-                await supabaseClient
-                    .from('vouchers')
-                    .update({ quantity: voucher.quantity + 1 })
-                    .eq('id', order.voucher_id);
-            }
-        };
-        restoreTasks.push(restoreVoucher());
-    }
-
-    // 4c. Cập nhật trạng thái thanh toán → Failed (nếu chưa thanh toán)
-    const markPaymentFailed = async () => {
-        await supabaseClient
-            .from('payments')
-            .update({ status: 'Failed' })
-            .eq('order_id', orderId)
-            .eq('status', 'Pending');
-    };
-    restoreTasks.push(markPaymentFailed());
-
-    await Promise.all(restoreTasks);
 
     return {
         orderId,
-        status: 'Cancelled',
-        cancel_reason: cancelReason || 'Khách hàng yêu cầu hủy'
+        status: 'CancelRequested',
+        cancel_reason: cancelReason || 'Khách hàng gửi yêu cầu hủy'
     };
 };

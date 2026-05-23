@@ -7,6 +7,7 @@ import React, {
   useMemo,
   useState
 } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 import {
   Button,
@@ -26,7 +27,8 @@ import {
   Divider,
   Modal,
   Avatar,
-  Image
+  Image,
+  Tooltip as AntdTooltip
 } from 'antd';
 
 import {
@@ -48,7 +50,8 @@ import {
   MapPin,
   Phone,
   Mail,
-  CreditCard
+  CreditCard,
+  AlertTriangle
 } from 'lucide-react';
 
 import {
@@ -76,7 +79,8 @@ type BackendOrderStatus =
   | 'Packing'
   | 'Shipping'
   | 'Completed'
-  | 'Cancelled';
+  | 'Cancelled'
+  | 'CancelRequested';
 
 type OrderStatus =
   | 'PENDING'
@@ -84,7 +88,8 @@ type OrderStatus =
   | 'PACKING'
   | 'SHIPPING'
   | 'SUCCESS'
-  | 'FAILED';
+  | 'FAILED'
+  | 'CANCEL_REQUESTED';
 
 interface BackendOrderItem {
   id: string;
@@ -121,6 +126,14 @@ interface BackendOrder {
   payment_status: string;
 
   final_amount: number;
+
+  total_amount?: number;
+
+  discount_amount?: number;
+
+  cancel_reason?: string | null;
+
+  timeline?: any | null;
 
   khachHang?: {
     name?: string;
@@ -173,9 +186,19 @@ interface Order {
 
   paymentMethod: string;
 
+  paymentStatus: string;
+
   status: OrderStatus;
 
   total: number;
+
+  originalAmount: number;
+
+  discountAmount: number;
+
+  cancelReason?: string | null;
+
+  timeline?: any | null;
 
   items: OrderItem[];
 }
@@ -192,6 +215,8 @@ interface DashboardStats {
   donDangGiao: number;
 
   donDaHuy: number;
+
+  donYeuCauHuy: number;
 }
 
 // =========================
@@ -220,6 +245,9 @@ const mapBackendStatusToFrontend = (
     case 'Cancelled':
       return 'FAILED';
 
+    case 'CancelRequested':
+      return 'CANCEL_REQUESTED';
+
     default:
       return 'PENDING';
   }
@@ -246,6 +274,9 @@ const mapFrontendStatusToBackend = (
 
     case 'FAILED':
       return 'Cancelled';
+
+    case 'CANCEL_REQUESTED':
+      return 'CancelRequested';
 
     default:
       return 'Pending';
@@ -298,6 +329,12 @@ const statusConfig: Record<
     label: 'Đã huỷ',
     color: 'error',
     icon: <XCircle size={14} />
+  },
+
+  CANCEL_REQUESTED: {
+    label: 'Yêu cầu huỷ',
+    color: 'orange',
+    icon: <Clock3 size={14} />
   }
 };
 
@@ -306,6 +343,9 @@ const statusConfig: Record<
 // =========================
 
 export default function Orders() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const openOrderId = searchParams.get('openOrderId');
+
   const [messageApi, contextHolder] =
     message.useMessage();
 
@@ -326,13 +366,17 @@ export default function Orders() {
       donChoDuyet: 0,
       donDangDongGoi: 0,
       donDangGiao: 0,
-      donDaHuy: 0
+      donDaHuy: 0,
+      donYeuCauHuy: 0
     });
 
   const [selectedOrder, setSelectedOrder] =
     useState<Order | null>(null);
 
   const [isDrawerOpen, setIsDrawerOpen] =
+    useState(false);
+
+  const [cancelRequestModalVisible, setCancelRequestModalVisible] =
     useState(false);
 
   const [searchText, setSearchText] =
@@ -388,7 +432,10 @@ export default function Orders() {
           data.donDangGiao || 0,
 
         donDaHuy:
-          data.donDaHuy || 0
+          data.donDaHuy || 0,
+
+        donYeuCauHuy:
+          data.donYeuCauHuy || 0
       });
     } catch (error) {
       console.log(error);
@@ -440,6 +487,10 @@ export default function Orders() {
                 order.thanhToan
                   ?.method || '---',
 
+              paymentStatus:
+                order.payment_status ||
+                '---',
+
               status:
                 mapBackendStatusToFrontend(
                   order.status
@@ -450,51 +501,42 @@ export default function Orders() {
                   0
               ),
 
+              originalAmount: Number(
+                order.total_amount ||
+                  order.final_amount ||
+                  0
+              ),
+
+              discountAmount: Number(
+                order.discount_amount ||
+                  0
+              ),
+
+              cancelReason:
+                order.cancel_reason ||
+                null,
+
+              timeline:
+                order.timeline ||
+                (order as any).shipping_address?.timeline ||
+                null,
+
               items:
-                order.chiTietDonHang?.map(
-                  (item) => ({
-                    id: item.id,
-
-                    name:
-                      item
-                        .sanPhamChiTiet
-                        ?.sanPham
-                        ?.tenSanPham ||
-                      'Sản phẩm',
-
-                    image:
-                      item
-                        .sanPhamChiTiet
-                        ?.sanPham
-                        ?.hinhAnh ||
-                      '',
-
-                    sku:
-                      item
-                        .sanPhamChiTiet
-                        ?.sku ||
-                      '---',
-
-                    color:
-                      item
-                        .sanPhamChiTiet
-                        ?.mauSac
-                        ?.tenMau ||
-                      '---',
-
-                    size:
-                      item
-                        .sanPhamChiTiet
-                        ?.kichThuoc
-                        ?.tenKichThuoc ||
-                      '---',
-
-                    quantity:
-                      item.quantity,
-
-                    price:
-                      item.price
-                  })
+                ((order as any).order_items || (order as any).chiTietDonHang || [])?.map(
+                  (item: any) => {
+                    const prod = item.product || item.sanPhamChiTiet?.sanPham || {};
+                    const bienThe = item.sanPhamChiTiet || {};
+                    return {
+                      id: String(item.id),
+                      name: prod.name || prod.tenSanPham || 'Sản phẩm',
+                      image: prod.image_url || prod.hinhAnh || '',
+                      sku: item.sku || prod.sku || bienThe.sku || '---',
+                      color: prod.color || bienThe.mauSac?.tenMau || '---',
+                      size: prod.size || bienThe.kichThuoc?.tenKichThuoc || '---',
+                      quantity: Number(item.quantity || 0),
+                      price: Number(item.price || item.unit_price || 0)
+                    };
+                  }
                 ) || []
             })
           );
@@ -523,7 +565,7 @@ export default function Orders() {
       try {
         setActionLoading(true);
 
-        await axiosInstance.patch(
+        const res = await axiosInstance.patch(
           `${ip}/admin/orders/${orderId}/status`,
           {
             status:
@@ -540,11 +582,44 @@ export default function Orders() {
         await taiDanhSachDonHang();
         await taiThongKe();
 
-        if (selectedOrder) {
-          setSelectedOrder({
-            ...selectedOrder,
-            status: newStatus
-          });
+        const updatedOrderRaw = res.data?.data;
+        if (updatedOrderRaw) {
+          const mappedItem = {
+            id: String(updatedOrderRaw.id),
+            customerName:
+              updatedOrderRaw.nguoiNhan ||
+              updatedOrderRaw.khachHang?.name ||
+              '---',
+            phone: updatedOrderRaw.soDienThoaiNhan || '---',
+            email: updatedOrderRaw.khachHang?.email || '---',
+            address: updatedOrderRaw.diaChiGiaoHang || '---',
+            date: new Date(updatedOrderRaw.created_at).toLocaleString('vi-VN'),
+            paymentMethod: updatedOrderRaw.thanhToan?.method || '---',
+            paymentStatus: updatedOrderRaw.payment_status || '---',
+            status: mapBackendStatusToFrontend(updatedOrderRaw.status),
+            total: Number(updatedOrderRaw.final_amount || 0),
+            originalAmount: Number(updatedOrderRaw.total_amount || updatedOrderRaw.final_amount || 0),
+            discountAmount: Number(updatedOrderRaw.discount_amount || 0),
+            cancelReason: updatedOrderRaw.cancel_reason || null,
+            timeline: updatedOrderRaw.timeline || updatedOrderRaw.shipping_address?.timeline || null,
+            items: ((updatedOrderRaw.order_items || updatedOrderRaw.chiTietDonHang || []) as any[])?.map(
+              (item: any) => {
+                const prod = item.product || item.sanPhamChiTiet?.sanPham || {};
+                const bienThe = item.sanPhamChiTiet || {};
+                return {
+                  id: String(item.id),
+                  name: prod.name || prod.tenSanPham || 'Sản phẩm',
+                  image: prod.image_url || prod.hinhAnh || '',
+                  sku: item.sku || prod.sku || bienThe.sku || '---',
+                  color: prod.color || bienThe.mauSac?.tenMau || '---',
+                  size: prod.size || bienThe.kichThuoc?.tenKichThuoc || '---',
+                  quantity: Number(item.quantity || 0),
+                  price: Number(item.price || item.unit_price || 0)
+                };
+              }
+            ) || []
+          };
+          setSelectedOrder(mappedItem);
         }
       } catch (error) {
         console.log(error);
@@ -565,6 +640,19 @@ export default function Orders() {
     taiThongKe();
     taiDanhSachDonHang();
   }, []);
+
+  useEffect(() => {
+    if (openOrderId && orders.length > 0) {
+      const foundOrder = orders.find(o => String(o.id) === String(openOrderId));
+      if (foundOrder) {
+        setSelectedOrder(foundOrder);
+        setIsDrawerOpen(true);
+        const newParams = new URLSearchParams(searchParams);
+        newParams.delete('openOrderId');
+        setSearchParams(newParams, { replace: true });
+      }
+    }
+  }, [openOrderId, orders, setSearchParams, searchParams]);
 
   // =========================
   // FILTER
@@ -642,6 +730,17 @@ export default function Orders() {
   // ACTION BUTTONS
   // =========================
 
+  const handleRejectCancel = (order: Order) => {
+    const timeline = order.timeline || {};
+    let restoredStatus: OrderStatus = 'PENDING';
+    if (timeline.Packing) {
+      restoredStatus = 'PACKING';
+    } else if (timeline.Confirmed) {
+      restoredStatus = 'CONFIRMED';
+    }
+    capNhatTrangThaiDonHang(order.id, restoredStatus);
+  };
+
   const renderActionButtons = () => {
     if (!selectedOrder) return null;
 
@@ -653,7 +752,7 @@ export default function Orders() {
               type="primary"
               size="large"
               loading={actionLoading}
-              className="rounded-xl bg-green-600"
+              className="rounded-xl bg-green-600 border-none"
               onClick={() =>
                 capNhatTrangThaiDonHang(
                   selectedOrder.id,
@@ -678,6 +777,19 @@ export default function Orders() {
             >
               Huỷ đơn
             </Button>
+
+            {selectedOrder.cancelReason && (
+              <Button
+                type="dashed"
+                danger
+                size="large"
+                icon={<AlertTriangle size={18} />}
+                className="rounded-xl flex items-center gap-2 border-amber-500 text-amber-600 hover:text-amber-700 hover:border-amber-600"
+                onClick={() => setCancelRequestModalVisible(true)}
+              >
+                Xem yêu cầu hủy
+              </Button>
+            )}
           </Space>
         );
 
@@ -688,7 +800,7 @@ export default function Orders() {
               type="primary"
               size="large"
               loading={actionLoading}
-              className="rounded-xl"
+              className="rounded-xl border-none"
               onClick={() =>
                 capNhatTrangThaiDonHang(
                   selectedOrder.id,
@@ -713,6 +825,19 @@ export default function Orders() {
             >
               Huỷ đơn
             </Button>
+
+            {selectedOrder.cancelReason && (
+              <Button
+                type="dashed"
+                danger
+                size="large"
+                icon={<AlertTriangle size={18} />}
+                className="rounded-xl flex items-center gap-2 border-amber-500 text-amber-600 hover:text-amber-700 hover:border-amber-600"
+                onClick={() => setCancelRequestModalVisible(true)}
+              >
+                Xem yêu cầu hủy
+              </Button>
+            )}
           </Space>
         );
 
@@ -723,7 +848,7 @@ export default function Orders() {
               type="primary"
               size="large"
               loading={actionLoading}
-              className="rounded-xl bg-purple-600"
+              className="rounded-xl bg-purple-600 border-none"
               onClick={() =>
                 capNhatTrangThaiDonHang(
                   selectedOrder.id,
@@ -748,6 +873,19 @@ export default function Orders() {
             >
               Huỷ đơn
             </Button>
+
+            {selectedOrder.cancelReason && (
+              <Button
+                type="dashed"
+                danger
+                size="large"
+                icon={<AlertTriangle size={18} />}
+                className="rounded-xl flex items-center gap-2 border-amber-500 text-amber-600 hover:text-amber-700 hover:border-amber-600"
+                onClick={() => setCancelRequestModalVisible(true)}
+              >
+                Xem yêu cầu hủy
+              </Button>
+            )}
           </Space>
         );
 
@@ -758,7 +896,7 @@ export default function Orders() {
               type="primary"
               size="large"
               loading={actionLoading}
-              className="rounded-xl bg-green-600"
+              className="rounded-xl bg-green-600 border-none"
               onClick={() =>
                 capNhatTrangThaiDonHang(
                   selectedOrder.id,
@@ -783,6 +921,44 @@ export default function Orders() {
             >
               Giao hàng thất bại
             </Button>
+
+            {selectedOrder.cancelReason && (
+              <Button
+                type="dashed"
+                danger
+                size="large"
+                icon={<AlertTriangle size={18} />}
+                className="rounded-xl flex items-center gap-2 border-amber-500 text-amber-600 hover:text-amber-700 hover:border-amber-600"
+                onClick={() => setCancelRequestModalVisible(true)}
+              >
+                Xem yêu cầu hủy
+              </Button>
+            )}
+          </Space>
+        );
+
+      case 'CANCEL_REQUESTED':
+        return (
+          <Space wrap>
+            <Button
+              type="primary"
+              size="large"
+              loading={actionLoading}
+              icon={<AlertTriangle size={18} />}
+              className="rounded-xl bg-amber-500 hover:bg-amber-600 border-none text-white flex items-center gap-2"
+              onClick={() => setCancelRequestModalVisible(true)}
+            >
+              Xem yêu cầu hủy
+            </Button>
+
+            <Button
+              size="large"
+              loading={actionLoading}
+              className="rounded-xl"
+              onClick={() => handleRejectCancel(selectedOrder)}
+            >
+              Từ chối hủy (Tiếp tục xử lý)
+            </Button>
           </Space>
         );
 
@@ -798,12 +974,26 @@ export default function Orders() {
 
       case 'FAILED':
         return (
-          <Tag
-            color="error"
-            className="px-5 py-2 rounded-full"
-          >
-            Đơn hàng đã bị huỷ
-          </Tag>
+          <Space wrap align="center">
+            <Tag
+              color="error"
+              className="px-5 py-2 rounded-full m-0"
+            >
+              Đơn hàng đã bị huỷ
+            </Tag>
+            {selectedOrder.cancelReason && (
+              <Button
+                type="dashed"
+                danger
+                size="large"
+                icon={<AlertTriangle size={18} />}
+                className="rounded-xl flex items-center gap-2 border-amber-500 text-amber-600 hover:text-amber-700 hover:border-amber-600"
+                onClick={() => setCancelRequestModalVisible(true)}
+              >
+                Xem lý do hủy
+              </Button>
+            )}
+          </Space>
         );
 
       default:
@@ -908,23 +1098,30 @@ export default function Orders() {
         title: 'Hành Động',
 
         render: (_, record) => (
-          <Button
-            className="rounded-xl"
-            icon={
-              <Eye size={16} />
-            }
-            onClick={() => {
-              setSelectedOrder(
-                record
-              );
+          <div className="flex items-center gap-2">
+            <Button
+              className="rounded-xl"
+              icon={
+                <Eye size={16} />
+              }
+              onClick={() => {
+                setSelectedOrder(
+                  record
+                );
 
-              setIsDrawerOpen(
-                true
-              );
-            }}
-          >
-            Xem chi tiết
-          </Button>
+                setIsDrawerOpen(
+                  true
+                );
+              }}
+            >
+              Xem chi tiết
+            </Button>
+            {record.status === 'CANCEL_REQUESTED' && (
+              <AntdTooltip title="Đơn hàng này có yêu cầu hủy từ khách hàng!">
+                <AlertTriangle size={20} className="text-amber-500 animate-bounce cursor-pointer" />
+              </AntdTooltip>
+            )}
+          </div>
         )
       }
     ];
@@ -1077,7 +1274,8 @@ export default function Orders() {
                 ),
                 color:
                   'text-green-600',
-                bg: 'bg-green-100'
+                bg: 'bg-green-100',
+                fullWidth: true
               },
 
               {
@@ -1108,6 +1306,21 @@ export default function Orders() {
                 color:
                   'text-orange-500',
                 bg: 'bg-orange-100'
+              },
+
+              {
+                title:
+                  'Yêu cầu huỷ',
+                value:
+                  stats.donYeuCauHuy,
+                icon: (
+                  <AlertTriangle
+                    size={30}
+                  />
+                ),
+                color:
+                  'text-amber-600',
+                bg: 'bg-amber-100'
               },
 
               {
@@ -1158,7 +1371,7 @@ export default function Orders() {
               <Card
                 key={index}
                 bordered={false}
-                className="rounded-[28px] shadow-sm border border-gray-100"
+                className={`rounded-[28px] shadow-sm border border-gray-100 ${item.fullWidth ? 'col-span-2' : ''}`}
               >
                 <div className="flex flex-col gap-4">
                   <div
@@ -1322,6 +1535,13 @@ export default function Orders() {
 
               {
                 label:
+                  'Yêu cầu huỷ',
+                value:
+                  'CANCEL_REQUESTED'
+              },
+
+              {
+                label:
                   'Đã xác nhận',
                 value:
                   'CONFIRMED'
@@ -1408,6 +1628,86 @@ export default function Orders() {
           <Spin />
         ) : (
           <div className="space-y-7">
+            {/* CANCEL PROOF IF APPLICABLE */}
+            {selectedOrder.status === 'CANCEL_REQUESTED' && (
+              <Card className="rounded-2xl border-orange-200 bg-orange-50/20">
+                <div className="flex items-start gap-4">
+                  <XCircle className="text-orange-500 mt-1" size={24} />
+                  <div className="flex-1">
+                    <h3 className="text-xl font-bold text-orange-700">Yêu cầu hủy đơn từ khách hàng</h3>
+                    <p className="text-gray-600 mt-2 text-[15px]">
+                      <strong>Lý do khách hàng cung cấp:</strong>{' '}
+                      {(() => {
+                        try {
+                          const parsed = JSON.parse(selectedOrder.cancelReason || '');
+                          return parsed.reason || selectedOrder.cancelReason;
+                        } catch {
+                          return selectedOrder.cancelReason || 'Chưa cung cấp lý do';
+                        }
+                      })()}
+                    </p>
+                    {(() => {
+                      try {
+                        const parsed = JSON.parse(selectedOrder.cancelReason || '');
+                        if (parsed.image) {
+                          return (
+                            <div className="mt-4">
+                              <span className="text-sm font-semibold text-gray-500 block mb-2">Hình ảnh minh chứng hủy đơn:</span>
+                              <Image
+                                src={parsed.image}
+                                alt="Minh chứng hủy hàng"
+                                className="rounded-xl border border-gray-200 max-h-[300px] object-contain shadow-sm"
+                              />
+                            </div>
+                          );
+                        }
+                      } catch {}
+                      return null;
+                    })()}
+                  </div>
+                </div>
+              </Card>
+            )}
+
+            {selectedOrder.status === 'FAILED' && selectedOrder.cancelReason && (
+              <Card className="rounded-2xl border-red-200 bg-red-50/20">
+                <div className="flex items-start gap-4">
+                  <XCircle className="text-red-500 mt-1" size={24} />
+                  <div className="flex-1">
+                    <h3 className="text-xl font-bold text-red-700">Đơn hàng đã bị hủy</h3>
+                    <p className="text-gray-600 mt-2 text-[15px]">
+                      <strong>Lý do hủy đơn:</strong>{' '}
+                      {(() => {
+                        try {
+                          const parsed = JSON.parse(selectedOrder.cancelReason || '');
+                          return parsed.reason || selectedOrder.cancelReason;
+                        } catch {
+                          return selectedOrder.cancelReason || 'Chưa cung cấp lý do';
+                        }
+                      })()}
+                    </p>
+                    {(() => {
+                      try {
+                        const parsed = JSON.parse(selectedOrder.cancelReason || '');
+                        if (parsed.image) {
+                          return (
+                            <div className="mt-4">
+                              <Image
+                                src={parsed.image}
+                                alt="Minh chứng hủy đơn"
+                                className="rounded-xl border border-gray-200 max-h-[300px] object-contain shadow-sm"
+                              />
+                            </div>
+                          );
+                        }
+                      } catch {}
+                      return null;
+                    })()}
+                  </div>
+                </div>
+              </Card>
+            )}
+
             {/* CUSTOMER */}
             <Card className="rounded-2xl">
               <div className="flex items-start gap-4">
@@ -1454,7 +1754,7 @@ export default function Orders() {
 
                       {
                         selectedOrder.paymentMethod
-                      }
+                      } ({selectedOrder.paymentStatus})
                     </div>
                   </div>
                 </div>
@@ -1468,14 +1768,14 @@ export default function Orders() {
                   Danh sách sản phẩm
                 </h2>
 
-                <div className="text-2xl font-black text-green-600">
+                <div className="text-2xl font-black text-red-600">
                   {dinhDangTien(
                     selectedOrder.total
                   )}
                 </div>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-4 mb-6">
                 {selectedOrder.items
                   .length === 0 && (
                   <Empty description="Không có sản phẩm" />
@@ -1528,7 +1828,7 @@ export default function Orders() {
                       </div>
 
                       <div className="text-right">
-                        <div className="text-xl font-bold text-green-600">
+                        <div className="text-xl font-bold text-gray-800">
                           {dinhDangTien(
                             item.price
                           )}
@@ -1538,6 +1838,26 @@ export default function Orders() {
                   )
                 )}
               </div>
+
+              <Divider />
+
+              {/* PAYMENT BREAKDOWN */}
+              <div className="space-y-3 text-right">
+                <div className="flex justify-between text-gray-600 text-sm">
+                  <span>Tạm tính:</span>
+                  <span className="font-medium">{dinhDangTien(selectedOrder.originalAmount)}</span>
+                </div>
+                {selectedOrder.discountAmount > 0 && (
+                  <div className="flex justify-between text-red-500 text-sm">
+                    <span>Giảm giá (Voucher):</span>
+                    <span className="font-medium">-{dinhDangTien(selectedOrder.discountAmount)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-[16px] font-black border-t border-gray-100 pt-3">
+                  <span>Tổng cộng:</span>
+                  <span className="text-red-600">{dinhDangTien(selectedOrder.total)}</span>
+                </div>
+              </div>
             </Card>
 
             {/* STEPS */}
@@ -1546,46 +1866,60 @@ export default function Orders() {
                 Tiến trình đơn hàng
               </h2>
 
-              <Steps
-                current={getStepCurrent(
-                  selectedOrder.status
-                )}
-                status={
-                  selectedOrder.status ===
-                  'FAILED'
-                    ? 'error'
-                    : 'process'
-                }
-                items={[
-                  {
-                    title:
-                      'Chờ duyệt'
-                  },
-
-                  {
-                    title:
-                      'Xác nhận'
-                  },
-
-                  {
-                    title:
-                      'Đóng gói'
-                  },
-
-                  {
-                    title:
-                      'Vận chuyển'
-                  },
-
-                  {
-                    title:
+              {(() => {
+                const timeline = selectedOrder.timeline || {};
+                const formatTimelineTime = (isoString?: string) => {
+                  if (!isoString) return "";
+                  const date = new Date(isoString);
+                  return date.toLocaleString("vi-VN", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit"
+                  });
+                };
+                
+                return (
+                  <Steps
+                    current={getStepCurrent(
+                      selectedOrder.status
+                    )}
+                    status={
                       selectedOrder.status ===
                       'FAILED'
-                        ? 'Thất bại'
-                        : 'Hoàn thành'
-                  }
-                ]}
-              />
+                        ? 'error'
+                        : selectedOrder.status === 'CANCEL_REQUESTED'
+                        ? 'error'
+                        : 'process'
+                    }
+                    items={[
+                      {
+                        title: 'Chờ duyệt',
+                        description: timeline.Pending ? formatTimelineTime(timeline.Pending) : ''
+                      },
+                      {
+                        title: 'Xác nhận',
+                        description: timeline.Confirmed ? formatTimelineTime(timeline.Confirmed) : ''
+                      },
+                      {
+                        title: 'Đóng gói',
+                        description: timeline.Packing ? formatTimelineTime(timeline.Packing) : ''
+                      },
+                      {
+                        title: 'Vận chuyển',
+                        description: timeline.Shipping ? formatTimelineTime(timeline.Shipping) : ''
+                      },
+                      {
+                        title: selectedOrder.status === 'FAILED' ? 'Bị hủy' : 'Hoàn thành',
+                        description: selectedOrder.status === 'FAILED' 
+                          ? ''
+                          : (timeline.Completed ? formatTimelineTime(timeline.Completed) : '')
+                      }
+                    ]}
+                  />
+                );
+              })()}
             </Card>
 
             {/* ACTIONS */}
@@ -1599,6 +1933,111 @@ export default function Orders() {
           </div>
         )}
       </Drawer>
+
+      {/* Modal Xem Yêu Cầu Hủy Đơn Hàng */}
+      <Modal
+        title={
+          <span className="flex items-center gap-2 text-red-600 font-bold text-lg">
+            <AlertTriangle size={22} className="text-red-500" />
+            Yêu Cầu Hủy Đơn Hàng #{selectedOrder?.id}
+          </span>
+        }
+        open={cancelRequestModalVisible}
+        onCancel={() => setCancelRequestModalVisible(false)}
+        footer={[
+          <Button
+            key="reject"
+            size="large"
+            className="rounded-xl"
+            loading={actionLoading}
+            onClick={() => {
+              if (selectedOrder) {
+                handleRejectCancel(selectedOrder);
+                setCancelRequestModalVisible(false);
+              }
+            }}
+          >
+            Từ chối hủy (Tiếp tục xử lý)
+          </Button>,
+          <Button
+            key="approve"
+            type="primary"
+            danger
+            size="large"
+            loading={actionLoading}
+            className="rounded-xl bg-red-600 border-none"
+            onClick={async () => {
+              if (selectedOrder) {
+                await capNhatTrangThaiDonHang(selectedOrder.id, 'FAILED');
+                setCancelRequestModalVisible(false);
+                setIsDrawerOpen(false); // Also close the drawer
+              }
+            }}
+          >
+            Đồng ý hủy đơn (Hoàn lại kho)
+          </Button>,
+          <Button
+            key="close"
+            size="large"
+            className="rounded-xl"
+            onClick={() => setCancelRequestModalVisible(false)}
+          >
+            Đóng
+          </Button>
+        ]}
+        width={600}
+        destroyOnClose
+      >
+        {selectedOrder && (() => {
+          const parseCancelReason = (reasonStr?: string | null) => {
+            if (!reasonStr) return { reason: "Không có lý do cụ thể", image: null };
+            try {
+              const parsed = JSON.parse(reasonStr);
+              if (parsed && typeof parsed === 'object') {
+                return {
+                  reason: parsed.reason || "Không có lý do cụ thể",
+                  image: parsed.image || null
+                };
+              }
+            } catch (e) {}
+            return { reason: reasonStr, image: null };
+          };
+
+          const info = parseCancelReason(selectedOrder.cancelReason);
+
+          return (
+            <div className="space-y-6 py-4">
+              <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-2xl">
+                <p className="text-red-700 font-semibold mb-1">Cảnh báo nghiệp vụ:</p>
+                <p className="text-red-600 text-sm">
+                  Nếu đồng ý hủy đơn hàng này, toàn bộ số lượng sản phẩm đã mua sẽ được tự động hoàn trả lại vào tồn kho trong kho hàng theo thời gian thực.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="text-gray-500 text-sm font-semibold mb-2">LÝ DO YÊU CẦU HỦY ĐƠN:</h3>
+                <div className="bg-gray-50 border border-gray-100 p-4 rounded-2xl text-gray-800 text-base italic leading-relaxed shadow-inner">
+                  "{info.reason}"
+                </div>
+              </div>
+
+              {info.image && (
+                <div>
+                  <h3 className="text-gray-500 text-sm font-semibold mb-2">HÌNH ẢNH MINH CHỨNG ĐÍNH KÈM:</h3>
+                  <div className="flex justify-center border border-dashed border-gray-200 p-4 rounded-2xl bg-gray-50">
+                    <Image
+                      src={info.image}
+                      alt="Proof of Cancellation"
+                      style={{ maxHeight: 300, objectFit: 'contain', borderRadius: 8 }}
+                      className="shadow-sm max-w-full"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+      </Modal>
     </div>
   );
 }

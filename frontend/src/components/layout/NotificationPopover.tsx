@@ -31,8 +31,12 @@ const NotificationPopover = ({ children }: NotificationPopoverProps) => {
     refetchInterval: 30000, // Auto-refetch every 30s
   });
 
-  const notifications = data?.data || [];
-  const unreadCount = data?.unreadCount || 0;
+  const rawNotifications = data?.data || [];
+  const notifications = rawNotifications.filter((item: any) => {
+    const adminTitles = ["Đơn hàng mới chờ duyệt", "Yêu cầu hủy đơn hàng mới"];
+    return !adminTitles.includes(item.title);
+  });
+  const unreadCount = notifications.filter((n: any) => !n.is_read).length;
 
   // Mutation: Mark all as read
   const readAllMutation = useMutation({
@@ -70,6 +74,18 @@ const NotificationPopover = ({ children }: NotificationPopoverProps) => {
     setSelectedNotif(item);
     if (!item.is_read) {
       readSingleMutation.mutate(item.id);
+    }
+    if (item.reference_type === "order" && item.reference_id) {
+      setVisible(false);
+      setSelectedNotif(null);
+      const userStr = localStorage.getItem("user");
+      const userObj = userStr ? JSON.parse(userStr) : null;
+      const isAdmin = userObj?.role === "Admin";
+      if (isAdmin) {
+        navigate(`/admin/orders?openOrderId=${item.reference_id}`);
+      } else {
+        navigate(`/orders?openOrderId=${item.reference_id}`);
+      }
     }
   };
 

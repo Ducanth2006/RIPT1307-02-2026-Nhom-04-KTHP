@@ -11,7 +11,8 @@ type TrangThaiDonHang =
     | 'Packing'
     | 'Shipping'
     | 'Completed'
-    | 'Cancelled';
+    | 'Cancelled'
+    | 'CancelRequested';
 
 const taoLoi = (
     code: string,
@@ -30,24 +31,27 @@ const DANH_SACH_TRANG_THAI_HOP_LE: TrangThaiDonHang[] = [
     'Packing',
     'Shipping',
     'Completed',
-    'Cancelled'
+    'Cancelled',
+    'CancelRequested'
 ];
 
 const CAC_TRANG_THAI_CHO_PHEP_HUY = new Set<TrangThaiDonHang>([
     'Pending',
-    'Confirmed'
+    'Confirmed',
+    'Packing'
 ]);
 
 const CHUYEN_TRANG_THAI_HOP_LE: Record<
     TrangThaiDonHang,
     TrangThaiDonHang[]
 > = {
-    Pending: ['Confirmed', 'Cancelled'],
-    Confirmed: ['Packing', 'Cancelled'],
-    Packing: ['Shipping', 'Cancelled'],
-    Shipping: ['Completed', 'Cancelled'],
+    Pending: ['Confirmed', 'Cancelled', 'CancelRequested'],
+    Confirmed: ['Packing', 'Cancelled', 'CancelRequested'],
+    Packing: ['Shipping', 'Cancelled', 'CancelRequested'],
+    Shipping: ['Completed'],
     Completed: [],
-    Cancelled: []
+    Cancelled: [],
+    CancelRequested: ['Cancelled', 'Pending', 'Confirmed', 'Packing']
 };
 
 const laTrangThaiHopLe = (
@@ -95,8 +99,12 @@ const dinhDangDonHangChoAdmin = (order: any) => {
         name: order.users.full_name || null
     } : null;
 
+    const hasCancelRequest = order?.cancel_reason && order.cancel_reason.includes('"isCancelRequested":true');
+    const displayStatus = hasCancelRequest ? 'CancelRequested' : (order?.status ?? 'Pending');
+
     return {
         ...order,
+        status: displayStatus,
         users: mappedUser,
         khachHang: mappedUser,
         nguoiNhan:
@@ -151,54 +159,42 @@ export const thongKeDonHang = async () => {
     );
 
     const {
-        count: tongSoDon,
+        data: allOrders,
         error: loiCountTong
     } = await supabaseClient
         .from('orders')
-        .select('*', {
-            count: 'exact',
-            head: true
-        });
+        .select('status, cancel_reason');
 
     if (loiCountTong) throw loiCountTong;
 
-    const laySoLuongTheoTrangThai = async (
-        status: string
-    ) => {
-        const {
-            count,
-            error
-        } = await supabaseClient
-            .from('orders')
-            .select('*', {
-                count: 'exact',
-                head: true
-            })
-            .eq('status', status);
+    const tongSoDon = allOrders?.length ?? 0;
 
-        if (error) throw error;
-        return count ?? 0;
-    };
+    let donChoDuyet = 0;
+    let donDangDongGoi = 0;
+    let donDangGiao = 0;
+    let donDaHuy = 0;
+    let donYeuCauHuy = 0;
 
-    const donChoDuyet =
-        await laySoLuongTheoTrangThai(
-            'Pending'
-        );
-    const donDangDongGoi =
-        await laySoLuongTheoTrangThai(
-            'Packing'
-        );
-    const donDangGiao =
-        await laySoLuongTheoTrangThai(
-            'Shipping'
-        );
+    (allOrders || []).forEach((o: any) => {
+        const hasCancelRequest = o.cancel_reason && o.cancel_reason.includes('"isCancelRequested":true');
+        if (hasCancelRequest) {
+            donYeuCauHuy++;
+        } else {
+            if (o.status === 'Pending') donChoDuyet++;
+            else if (o.status === 'Packing') donDangDongGoi++;
+            else if (o.status === 'Shipping') donDangGiao++;
+            else if (o.status === 'Cancelled') donDaHuy++;
+        }
+    });
 
     return {
         tongDoanhThu,
-        tongSoDon: tongSoDon ?? 0,
+        tongSoDon,
         donChoDuyet,
         donDangDongGoi,
-        donDangGiao
+        donDangGiao,
+        donDaHuy,
+        donYeuCauHuy
     };
 };
 
@@ -220,6 +216,26 @@ export const danhSachDonHang = async () => {
                 amount,
                 status,
                 created_at
+            ),
+            order_items (
+                id,
+                quantity,
+                unit_price,
+                cost_price,
+                variant_id,
+                product_variants (
+                    id,
+                    sku,
+                    size,
+                    color,
+                    products (
+                        name,
+                        product_images (
+                            image_url,
+                            is_main
+                        )
+                    )
+                )
             )
         `)
         .order('created_at', {
@@ -228,9 +244,32 @@ export const danhSachDonHang = async () => {
 
     if (error) throw error;
 
-    return (data ?? []).map(
-        dinhDangDonHangChoAdmin
-    );
+    return (data ?? []).map((order: any) => {
+        const orderItems = (order.order_items ?? []).map((it: any) => {
+            const bienThe = it?.product_variants;
+            const sanPham = bienThe?.products;
+
+            return {
+                id: it?.id ?? null,
+                quantity: Number(it?.quantity ?? 0),
+                unit_price: Number(it?.unit_price ?? 0),
+                cost_price: Number(it?.cost_price ?? 0),
+                variant_id: it?.variant_id ?? null,
+                product: {
+                    name: sanPham?.name ?? null,
+                    sku: bienThe?.sku ?? null,
+                    image_url: layAnhChinhSanPham(sanPham?.product_images ?? []),
+                    size: bienThe?.size ?? null,
+                    color: bienThe?.color ?? null
+                }
+            };
+        });
+
+        return {
+            ...dinhDangDonHangChoAdmin(order),
+            order_items: orderItems
+        };
+    });
 };
 
 // =========================
@@ -338,7 +377,7 @@ export const capNhatTrangThaiDonHang = async (
 ) => {
     if (!laTrangThaiHopLe(status)) {
         throw new Error(
-            'Status khÃ´ng há»£p lá»‡. Chá»‰ cháº¥p nháº­n Pending, Confirmed, Packing, Shipping, Completed, Cancelled.'
+            'Status không hợp lệ. Chỉ chấp nhận Pending, Confirmed, Packing, Shipping, Completed, Cancelled, CancelRequested.'
         );
     }
 
@@ -349,8 +388,11 @@ export const capNhatTrangThaiDonHang = async (
         .from('orders')
         .select(`
             id,
+            user_id,
             status,
             payment_status,
+            shipping_address,
+            cancel_reason,
             order_items (
                 quantity,
                 cost_price,
@@ -370,31 +412,48 @@ export const capNhatTrangThaiDonHang = async (
     if (!donHang) {
         throw taoLoi(
             'NOT_FOUND',
-            'KhÃ´ng tÃ¬m tháº¥y Ä‘Æ¡n hÃ ng'
+            'Không tìm thấy đơn hàng'
         );
     }
 
     const trangThaiCu = donHang.status as string;
     if (!laTrangThaiHopLe(trangThaiCu)) {
         throw new Error(
-            `Tráº¡ng thÃ¡i hiá»‡n táº¡i "${trangThaiCu}" khÃ´ng náº±m trong luá»“ng xá»­ lÃ½ chuáº©n.`
+            `Trạng thái hiện tại "${trangThaiCu}" không nằm trong luồng xử lý chuẩn.`
         );
     }
 
     if (trangThaiCu === status) {
+        const hasCancelRequest = donHang.cancel_reason && donHang.cancel_reason.includes('"isCancelRequested":true');
+        if (hasCancelRequest) {
+            // Từ chối hủy: chỉ cần xóa cancel_reason
+            const { data: donCapNhat, error: loiCapNhat } = await supabaseClient
+                .from('orders')
+                .update({ cancel_reason: null })
+                .eq('id', orderId)
+                .select()
+                .single();
+            if (loiCapNhat) throw loiCapNhat;
+            return dinhDangDonHangChoAdmin(donCapNhat);
+        }
         throw new Error(
-            `ÄÆ¡n hÃ ng Ä‘Ã£ á»Ÿ tráº¡ng thÃ¡i "${status}".`
+            `Đơn hàng đã ở trạng thái "${status}".`
         );
     }
 
+    // Nếu đang có yêu cầu hủy mà Admin duyệt tiếp sang trạng thái khác (tiếp tục xử lý)
+    // thì tự động xóa yêu cầu hủy
+    const hasCancelRequest = donHang.cancel_reason && donHang.cancel_reason.includes('"isCancelRequested":true');
+
     const trangThaiTiepTheoHopLe =
         CHUYEN_TRANG_THAI_HOP_LE[
-            trangThaiCu
+            trangThaiCu as TrangThaiDonHang
         ];
 
-    if (!trangThaiTiepTheoHopLe.includes(status)) {
+    // Cho phép chuyển sang Cancelled hoặc các trạng thái tiếp theo chuẩn
+    if (status !== 'Cancelled' && !trangThaiTiepTheoHopLe.includes(status as TrangThaiDonHang)) {
         throw new Error(
-            `KhÃ´ng thá»ƒ chuyá»ƒn tráº¡ng thÃ¡i tá»« "${trangThaiCu}" sang "${status}".`
+            `Không thể chuyển trạng thái từ "${trangThaiCu}" sang "${status}".`
         );
     }
 
@@ -409,6 +468,10 @@ export const capNhatTrangThaiDonHang = async (
     }> = [];
 
     try {
+        // Parse shipping_address và timeline hiện tại
+        const currentShipping = donHang.shipping_address ? (typeof donHang.shipping_address === 'string' ? JSON.parse(donHang.shipping_address) : donHang.shipping_address) : {};
+        const timeline = currentShipping.timeline || {};
+
         // 1. Duyệt đơn (Pending -> Confirmed): thực hiện trừ kho và ghi log BÁN HÀNG (EXPORT_SELL)
         if (trangThaiCu === 'Pending' && status === 'Confirmed') {
             for (const item of orderItems) {
@@ -451,7 +514,7 @@ export const capNhatTrangThaiDonHang = async (
                     soLuongSau
                 });
 
-                // Ghi log bán hàng (EXPORT_SELL - hiển thị tag màu xanh dương)
+                // Ghi log bán hàng
                 const { error: loiThemLog } = await supabaseClient
                     .from('inventory_logs')
                     .insert([
@@ -468,11 +531,12 @@ export const capNhatTrangThaiDonHang = async (
             }
         }
 
-        // 2. Hủy đơn (Trạng thái cũ đã từng trừ kho: Confirmed, Packing, Shipping) -> Hoàn tồn kho và ghi log NHẬP KHO (IMPORT)
-        if (
-            status === 'Cancelled' &&
-            ['Confirmed', 'Packing', 'Shipping'].includes(trangThaiCu)
-        ) {
+        // 2. Hủy đơn: Hoàn tồn kho và ghi log NHẬP KHO (IMPORT)
+        // Chỉ hoàn kho khi đơn hàng đã từng được trừ kho (ở Confirmed hoặc Packing hoặc Shipping)
+        const wasStockReduced = ['Confirmed', 'Packing', 'Shipping'].includes(trangThaiCu) || 
+                               (trangThaiCu === 'CancelRequested' && (timeline.Confirmed || timeline.Packing));
+
+        if (status === 'Cancelled' && wasStockReduced) {
             for (const item of orderItems) {
                 const soLuongMua = Number(
                     item?.quantity ?? 0
@@ -568,21 +632,47 @@ export const capNhatTrangThaiDonHang = async (
             }
         }
 
+        // Cập nhật timeline
+        const updatedTimeline = {
+            ...timeline,
+            [status]: new Date().toISOString()
+        };
+        const updatedShippingAddress = {
+            ...currentShipping,
+            timeline: updatedTimeline
+        };
+
         const duLieuCapNhat: {
             status: TrangThaiDonHang;
             payment_status?: string;
+            shipping_address: any;
+            cancel_reason?: string | null;
         } = {
-            status
+            status: status as TrangThaiDonHang,
+            shipping_address: updatedShippingAddress
         };
 
         if (status === 'Cancelled') {
-            duLieuCapNhat.payment_status =
-                'Failed';
+            duLieuCapNhat.payment_status = 'Failed';
+            
+            // Trích xuất lý do hủy sạch từ JSON của khách hàng
+            let cleanReason = 'Hủy bởi Admin / Đồng ý hủy';
+            if (donHang.cancel_reason) {
+                try {
+                    const parsed = JSON.parse(donHang.cancel_reason);
+                    cleanReason = parsed.reason || 'Khách hàng gửi yêu cầu hủy';
+                } catch (e) {
+                    cleanReason = donHang.cancel_reason;
+                }
+            }
+            duLieuCapNhat.cancel_reason = cleanReason;
+        } else {
+            // Nếu Admin duyệt tiếp trạng thái khác, tự động xóa yêu cầu hủy
+            duLieuCapNhat.cancel_reason = null;
         }
 
         if (status === 'Completed') {
-            duLieuCapNhat.payment_status =
-                'Paid';
+            duLieuCapNhat.payment_status = 'Paid';
         }
 
         const {
@@ -599,8 +689,54 @@ export const capNhatTrangThaiDonHang = async (
         if (!donCapNhat) {
             throw taoLoi(
                 'NOT_FOUND',
-                'KhÃ´ng tÃ¬m tháº¥y Ä‘Æ¡n hÃ ng'
+                'Không tìm thấy đơn hàng'
             );
+        }
+
+        // 3. Tạo thông báo gửi cho khách hàng (Client)
+        try {
+            let title = 'Cập nhật đơn hàng';
+            let message = `Đơn hàng #${orderId} của bạn đã thay đổi trạng thái sang: ${status}.`;
+            let type = 'info';
+
+            if (status === 'Confirmed') {
+                title = 'Đơn hàng đã được xác nhận';
+                message = `Đơn hàng #${orderId} của bạn đã được xác nhận và chuẩn bị soạn hàng.`;
+                type = 'success';
+            } else if (status === 'Packing') {
+                title = 'Đơn hàng đang đóng gói';
+                message = `Đơn hàng #${orderId} của bạn đang được soạn và đóng gói.`;
+                type = 'info';
+            } else if (status === 'Shipping') {
+                title = 'Đơn hàng đang được giao';
+                message = `Đơn hàng #${orderId} của bạn đang được vận chuyển tới bạn.`;
+                type = 'info';
+            } else if (status === 'Completed') {
+                title = 'Đơn hàng hoàn tất';
+                message = `Đơn hàng #${orderId} của bạn đã được giao thành công. Cảm ơn bạn đã tin dùng sản phẩm của ELITE PERFORMANCE!`;
+                type = 'success';
+            } else if (status === 'Cancelled') {
+                type = 'error';
+                if (trangThaiCu === 'CancelRequested') {
+                    title = 'Yêu cầu hủy đơn hàng đã được duyệt';
+                    message = `Yêu cầu hủy đơn hàng #${orderId} của bạn đã được quản trị viên phê duyệt thành công.`;
+                } else {
+                    title = 'Đơn hàng đã bị hủy';
+                    message = `Đơn hàng #${orderId} của bạn đã bị hủy.`;
+                }
+            }
+
+            await supabaseClient.from('notifications').insert([{
+                user_id: donHang.user_id,
+                title,
+                message,
+                type,
+                is_read: false,
+                reference_id: String(orderId),
+                reference_type: 'order'
+            }]);
+        } catch (err) {
+            console.error("Lỗi khi tạo thông báo trạng thái đơn hàng:", err);
         }
 
         return donCapNhat;

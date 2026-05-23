@@ -11,8 +11,7 @@ const initialState: Cart.ICartState = {
 const calculateTotals = (state: Cart.ICartState) => {
   state.totalItems = state.items.reduce((sum, item) => sum + item.quantity, 0);
   state.totalPrice = state.items.reduce((sum, item) => {
-    const variant = item.product_variants?.find((v) => v.id === item.selectedVariantId);
-    return sum + (variant?.price || item.base_price) * item.quantity;
+    return sum + (item.price || 0) * item.quantity;
   }, 0);
   localStorage.setItem("cart_items", JSON.stringify(state.items));
 };
@@ -25,7 +24,7 @@ export const cartSlice = createSlice({
   initialState,
   reducers: {
     addToCart: (state, action: PayloadAction<Cart.ICartItem>) => {
-      const existingItem = state.items.find((item) => item.selectedVariantId === action.payload.selectedVariantId);
+      const existingItem = state.items.find((item) => item.variantId === action.payload.variantId);
       if (existingItem) {
         existingItem.quantity += action.payload.quantity;
       } else {
@@ -34,14 +33,14 @@ export const cartSlice = createSlice({
       calculateTotals(state);
     },
     updateQuantity: (state, action: PayloadAction<{ variantId: number; quantity: number }>) => {
-      const item = state.items.find((i) => i.selectedVariantId === action.payload.variantId);
+      const item = state.items.find((i) => i.variantId === action.payload.variantId);
       if (item) {
         item.quantity = action.payload.quantity;
       }
       calculateTotals(state);
     },
     removeFromCart: (state, action: PayloadAction<number>) => {
-      state.items = state.items.filter((item) => item.selectedVariantId !== action.payload);
+      state.items = state.items.filter((item) => item.variantId !== action.payload);
       calculateTotals(state);
     },
     clearCart: (state) => {

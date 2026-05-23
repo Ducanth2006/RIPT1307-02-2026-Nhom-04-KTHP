@@ -1,6 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link, Navigate } from "react-router-dom";
+import { Link, Navigate, useSearchParams } from "react-router-dom";
 import {
   Typography,
   Tabs,
@@ -28,6 +28,7 @@ import {
   EyeOutlined,
   CarOutlined,
   StarOutlined,
+  ClockCircleOutlined,
 } from "@ant-design/icons";
 import { getOrders, cancelOrder, getOrderById } from "../../services/Order/apiClient";
 import { getMyReviewsApi, createReviewApi } from "../../services/Review/apiClient";
@@ -44,10 +45,14 @@ const Orders = () => {
   const userObj = userStr ? JSON.parse(userStr) : null;
   const userId = userObj?.id;
 
+  const [searchParams, setSearchParams] = useSearchParams();
+  const openOrderId = searchParams.get("openOrderId");
+
   const [activeTab, setActiveTab] = useState<string>("all");
   const [trackingOrderId, setTrackingOrderId] = useState<number | null>(null);
   const [cancelOrderId, setCancelOrderId] = useState<number | null>(null);
   const [cancelForm] = Form.useForm<{ cancelReason: string }>();
+  const [proofImageBase64, setProofImageBase64] = useState<string | null>(null);
 
   // Review states
   const [reviewingOrder, setReviewingOrder] = useState<IOrder | null>(null);
@@ -93,16 +98,29 @@ const Orders = () => {
     mutationFn: (args: { id: number; cancelReason: string }) =>
       cancelOrder(args.id, { userId: userId!, cancelReason: args.cancelReason }),
     onSuccess: () => {
-      message.success("Hủy đơn hàng thành công!");
+      message.success("Gửi yêu cầu hủy đơn hàng thành công! Vui lòng chờ admin phê duyệt.");
       queryClient.invalidateQueries({ queryKey: ["orders", userId] });
       setCancelOrderId(null);
+      setProofImageBase64(null);
       cancelForm.resetFields();
     },
     onError: (error: unknown) => {
       const err = error as { response?: { data?: { message?: string } } };
-      message.error(err.response?.data?.message || "Không thể hủy đơn hàng này.");
+      message.error(err.response?.data?.message || "Không thể gửi yêu cầu hủy đơn hàng này.");
     },
   });
+
+  useEffect(() => {
+    if (openOrderId && orders.length > 0) {
+      const foundOrder = orders.find(o => String(o.id) === String(openOrderId));
+      if (foundOrder) {
+        setTrackingOrderId(foundOrder.id);
+        const newParams = new URLSearchParams(searchParams);
+        newParams.delete("openOrderId");
+        setSearchParams(newParams, { replace: true });
+      }
+    }
+  }, [openOrderId, orders, setSearchParams, searchParams]);
 
   if (!userId) {
     return <Navigate to="/login" replace />;
@@ -124,7 +142,11 @@ const Orders = () => {
 
   const handleCancelSubmit = (values: { cancelReason: string }) => {
     if (cancelOrderId) {
-      cancelOrderMutation.mutate({ id: cancelOrderId, cancelReason: values.cancelReason });
+      const packagedReason = JSON.stringify({
+        reason: values.cancelReason,
+        image: proofImageBase64
+      });
+      cancelOrderMutation.mutate({ id: cancelOrderId, cancelReason: packagedReason });
     }
   };
 
@@ -182,6 +204,8 @@ const Orders = () => {
         return <Tag color="success">Đã hoàn thành</Tag>;
       case "Cancelled":
         return <Tag color="error">Đã hủy</Tag>;
+      case "CancelRequested":
+        return <Tag color="orange">Đang yêu cầu hủy</Tag>;
       default:
         return <Tag>{status}</Tag>;
     }
@@ -199,6 +223,8 @@ const Orders = () => {
         return 3;
       case "Completed":
         return 4;
+      case "CancelRequested":
+        return 2;
       default:
         return 0;
     }
@@ -212,6 +238,7 @@ const Orders = () => {
     { key: "Shipping", label: "Đang giao hàng" },
     { key: "Completed", label: "Đã hoàn thành" },
     { key: "Cancelled", label: "Đã hủy" },
+    { key: "CancelRequested", label: "Yêu cầu hủy" },
   ];
 
   return (
@@ -315,12 +342,27 @@ const Orders = () => {
                           Đánh giá sản phẩm
                         </Button>
                       )}
-                      {(order.status === "Pending" || order.status === "Confirmed") && (
+                      {order.status === "CancelRequested" ? (
                         <Button
-                          danger
+                          disabled
+                          icon={<ClockCircleOutlined />}
+                          className="action-btn"
+                          style={{ opacity: 0.6, cursor: "not-allowed" }}
+                        >
+                          Đang yêu cầu hủy
+                        </Button>
+                      ) : (
+                        <Button
+                          danger={order.status === "Pending" || order.status === "Confirmed" || order.status === "Packing"}
+                          disabled={!["Pending", "Confirmed", "Packing"].includes(order.status)}
                           icon={<CloseCircleOutlined />}
                           onClick={() => setCancelOrderId(order.id)}
                           className="action-btn"
+                          style={
+                            !["Pending", "Confirmed", "Packing"].includes(order.status)
+                              ? { opacity: 0.5, cursor: "not-allowed", backgroundColor: "#f5f5f5", color: "rgba(0, 0, 0, 0.25)", borderColor: "#d9d9d9" }
+                              : {}
+                          }
                         >
                           Hủy đơn
                         </Button>
@@ -358,32 +400,154 @@ const Orders = () => {
           </div>
         ) : trackingData?.data ? (
           <div className="tracking-modal-content">
-            <Steps
-              current={getStepStatusIndex(trackingData.data.status)}
-              className="tracking-steps"
-              direction="horizontal"
-              size="small"
-              items={[
-                { title: "Chờ xử lý", description: "Chờ cửa hàng duyệt" },
-                { title: "Đã xác nhận", description: "Đã nhận đơn hàng" },
-                { title: "Đóng gói", description: "Đang soạn hàng" },
-                { title: "Giao hàng", description: "Đang vận chuyển" },
-                { title: "Hoàn thành", description: "Giao hàng thành công" },
-              ]}
-            />
+            {/* Steps Timeline with Exact Times */}
+            {(() => {
+              const timeline = trackingData.data.shippingAddress?.timeline || {};
+              const formatTimelineTime = (isoString?: string) => {
+                if (!isoString) return "";
+                const date = new Date(isoString);
+                return date.toLocaleString("vi-VN", {
+                  day: "2-digit",
+                  month: "2-digit",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit"
+                });
+              };
+              
+              const stepItems = [
+                { title: "Chờ xử lý", description: timeline.Pending ? formatTimelineTime(timeline.Pending) : "" },
+                { title: "Đã xác nhận", description: timeline.Confirmed ? formatTimelineTime(timeline.Confirmed) : "" },
+                { title: "Đóng gói", description: timeline.Packing ? formatTimelineTime(timeline.Packing) : "" },
+                { title: "Giao hàng", description: timeline.Shipping ? formatTimelineTime(timeline.Shipping) : "" },
+                { title: "Hoàn thành", description: timeline.Completed ? formatTimelineTime(timeline.Completed) : "" },
+              ];
+
+              return (
+                <Steps
+                  current={getStepStatusIndex(trackingData.data.status)}
+                  className="tracking-steps"
+                  direction="horizontal"
+                  size="small"
+                  items={stepItems}
+                  style={{ marginBottom: 24 }}
+                />
+              );
+            })()}
+
+            {trackingData.data.status === "CancelRequested" && (
+              <div className="cancelled-alert" style={{ background: "#fffbe6", border: "1px solid #ffe58f", color: "#d46b08", padding: "12px", borderRadius: "6px", marginBottom: "16px", display: "flex", gap: 10, alignItems: "center" }}>
+                <ClockCircleOutlined style={{ color: "#faad14", fontSize: 20 }} />
+                <div>
+                  <Text strong style={{ color: "#d46b08" }}>
+                    Đơn hàng này đang chờ phê duyệt hủy từ Admin
+                  </Text>
+                  <br />
+                  <Text type="secondary">
+                    Lý do hủy: {(() => {
+                      try {
+                        const parsed = JSON.parse(trackingData.data.cancel_reason || "");
+                        return parsed.reason || trackingData.data.cancel_reason;
+                      } catch {
+                        return trackingData.data.cancel_reason || "Khách hàng yêu cầu hủy";
+                      }
+                    })()}
+                  </Text>
+                  {(() => {
+                    try {
+                      const parsed = JSON.parse(trackingData.data.cancel_reason || "");
+                      if (parsed.image) {
+                        return (
+                          <div style={{ marginTop: 8 }}>
+                            <Text type="secondary" style={{ display: "block", marginBottom: 4 }}>Minh chứng hủy hàng:</Text>
+                            <img src={parsed.image} alt="Proof" style={{ maxWidth: 200, maxHeight: 150, borderRadius: 4, border: "1px solid #ddd" }} />
+                          </div>
+                        );
+                      }
+                    } catch {}
+                    return null;
+                  })()}
+                </div>
+              </div>
+            )}
 
             {trackingData.data.status === "Cancelled" && (
-              <div className="cancelled-alert">
-                <CloseCircleOutlined style={{ color: "#ff4d4f", fontSize: 20, marginRight: 8 }} />
+              <div className="cancelled-alert" style={{ background: "#fff2f0", border: "1px solid #ffccc7", color: "#ff4d4f", padding: "12px", borderRadius: "6px", marginBottom: "16px", display: "flex", gap: 10, alignItems: "center" }}>
+                <CloseCircleOutlined style={{ color: "#ff4d4f", fontSize: 20 }} />
                 <div>
                   <Text strong style={{ color: "#ff4d4f" }}>
                     Đơn hàng này đã bị hủy
                   </Text>
                   <br />
-                  <Text type="secondary">Lý do: {trackingData.data.cancel_reason || "Khách hàng yêu cầu hủy"}</Text>
+                  <Text type="secondary">
+                    Lý do: {(() => {
+                      try {
+                        const parsed = JSON.parse(trackingData.data.cancel_reason || "");
+                        return parsed.reason || trackingData.data.cancel_reason;
+                      } catch {
+                        return trackingData.data.cancel_reason || "Khách hàng yêu cầu hủy";
+                      }
+                    })()}
+                  </Text>
+                  {(() => {
+                    try {
+                      const parsed = JSON.parse(trackingData.data.cancel_reason || "");
+                      if (parsed.image) {
+                        return (
+                          <div style={{ marginTop: 8 }}>
+                            <img src={parsed.image} alt="Proof" style={{ maxWidth: 200, maxHeight: 150, borderRadius: 4, border: "1px solid #ddd" }} />
+                          </div>
+                        );
+                      }
+                    } catch {}
+                    return null;
+                  })()}
                 </div>
               </div>
             )}
+
+            <Divider orientation={"left" as any}>Danh sách sản phẩm</Divider>
+            <div className="order-items-list" style={{ marginBottom: 24 }}>
+              {trackingData.data.items?.map((item: any) => {
+                const image = item.imageUrl || "https://placehold.co/80";
+                return (
+                  <div key={item.id} style={{ display: "flex", gap: 16, padding: "12px 0", borderBottom: "1px solid #f0f0f0" }}>
+                    <img src={image} alt={item.productName} style={{ width: 64, height: 64, objectFit: "cover", borderRadius: 4 }} />
+                    <div style={{ flex: 1 }}>
+                      <h4 style={{ margin: "0 0 4px 0", fontSize: 14 }}>{item.productName}</h4>
+                      <div style={{ fontSize: 12, color: "#8c8c8c" }}>
+                        Phân loại: {item.variantColor || "-"} / {item.variantSize || "-"}
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8 }}>
+                        <span style={{ fontSize: 13, color: "#595959" }}>
+                          {formatPrice(item.price)} x {item.quantity}
+                        </span>
+                        <span style={{ fontWeight: 600, marginLeft: "auto" }}>
+                          {formatPrice(item.price * item.quantity)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            
+            <div style={{ background: "#fafafa", padding: 16, borderRadius: 8, textAlign: "right", marginBottom: 24 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                <Text type="secondary">Tạm tính:</Text>
+                <Text strong>{formatPrice(trackingData.data.totalPrice + (trackingData.data.voucherDiscount || 0))}</Text>
+              </div>
+              {(trackingData.data.voucherDiscount || 0) > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, color: "#ff4d4f" }}>
+                  <Text type="secondary" style={{ color: "#ff4d4f" }}>Giảm giá:</Text>
+                  <Text strong style={{ color: "#ff4d4f" }}>-{formatPrice(trackingData.data.voucherDiscount || 0)}</Text>
+                </div>
+              )}
+              <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid #f0f0f0", paddingTop: 8 }}>
+                <Text strong style={{ fontSize: 16 }}>Tổng tiền:</Text>
+                <Text strong style={{ fontSize: 18, color: "#af101a" }}>{formatPrice(trackingData.data.totalPrice)}</Text>
+              </div>
+            </div>
 
             <Divider />
 
@@ -407,10 +571,11 @@ const Orders = () => {
 
       {/* Modal Hủy Đơn Hàng */}
       <Modal
-        title="Lý Do Hủy Đơn Hàng"
+        title="Yêu Cầu Hủy Đơn Hàng"
         open={cancelOrderId !== null}
         onCancel={() => {
           setCancelOrderId(null);
+          setProofImageBase64(null);
           cancelForm.resetFields();
         }}
         footer={null}
@@ -424,18 +589,51 @@ const Orders = () => {
           >
             <Input.TextArea rows={4} placeholder="Ví dụ: Tôi muốn thay đổi địa chỉ nhận hàng, chọn nhầm sản phẩm..." />
           </Form.Item>
+
+          <Form.Item
+            label="Tải lên hình ảnh minh chứng (nếu có)"
+            extra="Vui lòng tải lên ảnh chụp sản phẩm lỗi hoặc tin nhắn xác nhận để Admin duyệt nhanh hơn."
+          >
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  const reader = new FileReader();
+                  reader.onloadend = () => {
+                    setProofImageBase64(reader.result as string);
+                  };
+                  reader.readAsDataURL(file);
+                }
+              }}
+              style={{ display: "block", marginBottom: 12 }}
+            />
+            {proofImageBase64 && (
+              <div style={{ marginTop: 8 }}>
+                <Text type="secondary" style={{ display: "block", marginBottom: 4 }}>Xem trước hình ảnh:</Text>
+                <img
+                  src={proofImageBase64}
+                  alt="Preview proof"
+                  style={{ maxWidth: "100%", maxHeight: 200, borderRadius: 8, border: "1px solid #ddd", objectFit: "contain" }}
+                />
+              </div>
+            )}
+          </Form.Item>
+
           <Form.Item style={{ textAlign: "right", marginBottom: 0 }}>
             <Button
               style={{ marginRight: 8 }}
               onClick={() => {
                 setCancelOrderId(null);
+                setProofImageBase64(null);
                 cancelForm.resetFields();
               }}
             >
               Hủy bỏ
             </Button>
             <Button type="primary" danger htmlType="submit" loading={cancelOrderMutation.isPending}>
-              Xác nhận hủy đơn
+              Gửi yêu cầu hủy đơn
             </Button>
           </Form.Item>
         </Form>
