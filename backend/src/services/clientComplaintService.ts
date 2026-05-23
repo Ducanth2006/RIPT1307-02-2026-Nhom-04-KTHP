@@ -6,8 +6,9 @@ export const createComplaint = async (payload: {
     orderId: number;
     subject: string;
     content: string;
+    images?: string[];
 }) => {
-    const { userId, orderId, subject, content } = payload;
+    const { userId, orderId, subject, content, images } = payload;
 
     // Kiểm tra đơn hàng thuộc về user
     const { data: order, error: orderErr } = await supabaseClient
@@ -26,7 +27,8 @@ export const createComplaint = async (payload: {
             order_id: orderId,
             subject,
             content,
-            status: 'New'
+            status: 'New',
+            images: images ?? []
         }])
         .select()
         .single();
@@ -45,6 +47,7 @@ export const getComplaintsByUserId = async (userId: number) => {
             content,
             status,
             admin_response,
+            images,
             created_at,
             order_id,
             orders (
