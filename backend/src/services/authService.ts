@@ -58,8 +58,10 @@ export const loginUser = async (payload: { email: string; password: string }) =>
   if (error || !user) throw new Error("Email hoặc mật khẩu không đúng.");
 
   // Kiểm tra tài khoản có bị khoá không
-  if (user.status === "Banned") throw new Error("Tài khoản của bạn đã bị khoá.");
-  if (user.status === "Inactive") throw new Error("Tài khoản chưa được kích hoạt.");
+  const s = user.status ? user.status.toLowerCase() : "";
+  if (s === "banned" || s === "locked" || s === "inactive") {
+    throw new Error("Tài khoản của bạn đã bị khóa hoặc vô hiệu hóa. Vui lòng liên hệ với Quản trị viên.");
+  }
 
   // Kiểm tra tài khoản đăng nhập bằng provider khác (Google, ...)
   if (user.provider && user.provider.toLowerCase() !== "local") {
