@@ -51,7 +51,7 @@ export const fetchAllUsers = async (): Promise<AdminUserResponse[]> => {
 
     return (userList || []).map((user: any) => {
         const dateObj = new Date(user.created_at);
-        const formatCreatedAt = dateObj.toISOString().split('T')[0];
+        const formatCreatedAt = dateObj.toISOString().split('T')[0] || '';
         
         // Tạo lastLogin giả lập
         const lastLoginMock = dateObj.toLocaleDateString('vi-VN') + ' ' + dateObj.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
