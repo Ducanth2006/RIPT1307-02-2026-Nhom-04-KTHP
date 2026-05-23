@@ -603,6 +603,33 @@ export const capNhatTrangThaiDonHang = async (
             );
         }
 
+        // Gửi thông báo cho client (user) sau khi admin đổi trạng thái
+        try {
+            const noiDungThongBao: Record<TrangThaiDonHang, { title: string; message: string; type: string } | null> = {
+                Confirmed: { title: 'Đơn hàng đã được xác nhận', message: `Đơn hàng #${orderId} đã được xác nhận. Chúng tôi đang chuẩn bị hàng cho bạn!`, type: 'success' },
+                Packing:   { title: 'Đơn hàng đang được đóng gói', message: `Đơn hàng #${orderId} đang được đóng gói, sắp được giao cho đơn vị vận chuyển.`, type: 'info' },
+                Shipping:  { title: 'Đơn hàng đang được giao', message: `Đơn hàng #${orderId} đã được bàn giao cho đơn vị vận chuyển và đang trên đường đến bạn.`, type: 'info' },
+                Completed: { title: 'Đơn hàng đã giao thành công 🎉', message: `Đơn hàng #${orderId} đã được giao thành công. Cảm ơn bạn đã mua hàng!`, type: 'success' },
+                Cancelled: { title: 'Đơn hàng đã bị hủy', message: `Đơn hàng #${orderId} đã bị hủy. Nếu có thắc mắc, vui lòng liên hệ hỗ trợ.`, type: 'error' },
+                Pending:   null,
+            };
+
+            const thongBao = noiDungThongBao[status];
+            if (thongBao && donCapNhat.user_id) {
+                await supabaseClient.from('notifications').insert([{
+                    user_id: donCapNhat.user_id,
+                    title: thongBao.title,
+                    message: thongBao.message,
+                    type: thongBao.type,
+                    is_read: false,
+                    reference_id: String(orderId),
+                    reference_type: 'order'
+                }]);
+            }
+        } catch (err) {
+            console.error('Lỗi khi tạo thông báo cho client:', err);
+        }
+
         return donCapNhat;
     } catch (error: any) {
         for (
