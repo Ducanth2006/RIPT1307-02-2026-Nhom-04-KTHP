@@ -60,7 +60,7 @@ export const createUser = async (req: Request, res: Response): Promise<any> => {
 // 3. Cập nhật tài khoản người dùng (Sửa thông tin: cho phép thay đổi mật khẩu tùy chọn, sđt, tên đăng nhập...)
 export const updateUser = async (req: Request, res: Response): Promise<any> => {
     try {
-        const userId = req.params.id;
+        const userId = String(req.params.id || '');
         const { name, email, role, phone, username, password } = req.body;
 
         if (!name || !email || !role) {
@@ -93,7 +93,7 @@ export const updateUser = async (req: Request, res: Response): Promise<any> => {
 // 4. Khóa / Mở khóa tài khoản
 export const toggleLock = async (req: Request, res: Response): Promise<any> => {
     try {
-        const userId = req.params.id;
+        const userId = String(req.params.id || '');
         const { isLocked } = req.body; // true = khóa, false = mở khóa
 
         if (isLocked === undefined) {
@@ -118,12 +118,14 @@ export const toggleLock = async (req: Request, res: Response): Promise<any> => {
 // 5. Thu hồi toàn bộ quyền truy cập (JWT Blacklist)
 export const revokeTokens = async (req: Request, res: Response): Promise<any> => {
     try {
-        const userId = req.params.id;
+        const userId = String(req.params.id || '');
 
         const authHeader = req.headers.authorization;
         if (authHeader && authHeader.startsWith('Bearer ')) {
             const token = authHeader.split(' ')[1];
-            blacklistToken(token);
+            if (token) {
+                blacklistToken(token);
+            }
         }
 
         res.status(200).json({
