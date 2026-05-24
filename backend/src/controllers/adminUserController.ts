@@ -3,7 +3,8 @@ import {
     fetchAllUsers,
     createAdminUser,
     updateAdminUser,
-    toggleUserLockStatus
+    toggleUserLockStatus,
+    deleteAdminUser
 } from '../services/adminUserService';
 import { blacklistToken } from '../services/authService';
 
@@ -135,6 +136,29 @@ export const revokeTokens = async (req: Request, res: Response): Promise<any> =>
     } catch (error: any) {
         res.status(500).json({
             message: "Lỗi hệ thống khi thu hồi phiên truy cập.",
+            error: error.message
+        });
+    }
+};
+
+// 6. Xóa tài khoản người dùng (Soft Delete)
+export const deleteUser = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const userId = String(req.params.id || '');
+        if (!userId) {
+            return res.status(400).json({
+                message: "Vui lòng cung cấp ID người dùng cần xóa."
+            });
+        }
+
+        const deletedUser = await deleteAdminUser(userId);
+        res.status(200).json({
+            message: "Xóa tài khoản người dùng thành công!",
+            data: deletedUser
+        });
+    } catch (error: any) {
+        res.status(500).json({
+            message: error.message || "Lỗi hệ thống khi xóa tài khoản người dùng.",
             error: error.message
         });
     }

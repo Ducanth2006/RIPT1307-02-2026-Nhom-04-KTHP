@@ -207,3 +207,20 @@ export const toggleUserLockStatus = async (userId: string, isLock: boolean) => {
         createdAt: dateObj.toISOString().split('T')[0]
     };
 };
+
+// 5. Xóa tài khoản người dùng (Hard Delete - Xóa vĩnh viễn khỏi Database)
+export const deleteAdminUser = async (userId: string) => {
+    const { data: deletedUser, error: deleteError } = await supabaseClient
+        .from('users')
+        .delete()
+        .eq('id', userId)
+        .select('id, email, full_name')
+        .single();
+
+    if (deleteError) {
+        throw new Error('Không thể xóa tài khoản người dùng: ' + deleteError.message);
+    }
+
+    return deletedUser;
+};
+

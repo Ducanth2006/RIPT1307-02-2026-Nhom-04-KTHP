@@ -32,3 +32,10 @@ export const revokeAdminUserTokens = async (id: string | number) => {
   const response = await axiosInstance.post(`${BASE_URL}/${id}/revoke`);
   return response.data;
 };
+
+// 6. Xóa tài khoản người dùng
+export const deleteAdminUser = async (id: string | number) => {
+  const response = await axiosInstance.delete(`${BASE_URL}/${id}`);
+  return response.data;
+};
+

@@ -4,7 +4,8 @@ import {
     createUser,
     updateUser,
     toggleLock,
-    revokeTokens
+    revokeTokens,
+    deleteUser
 } from '../controllers/adminUserController';
 
 const router = Router();
@@ -171,5 +172,28 @@ router.patch('/:id/status', toggleLock);
  *         description: Lỗi hệ thống
  */
 router.post('/:id/revoke', revokeTokens);
+
+/**
+ * @swagger
+ * /admin/users/{id}:
+ *   delete:
+ *     summary: Xóa tài khoản người dùng (Soft Delete)
+ *     tags: ["[Admin] Users"]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID của người dùng cần xóa
+ *     responses:
+ *       200:
+ *         description: Xóa tài khoản thành công
+ *       400:
+ *         description: Thiếu dữ liệu
+ *       500:
+ *         description: Lỗi hệ thống
+ */
+router.delete('/:id', deleteUser);
 
 export default router;
