@@ -24,6 +24,10 @@ export function getNewArrivals() {
   return axiosInstance.get<{ message: string; data: Products.IRecord[] }>(`${ip}/products/new-arrivals`);
 }
 
+export function getLowStockProducts() {
+  return axiosInstance.get<{ message: string; data: Products.IRecord[] }>(`${ip}/products/low-stock`);
+}
+
 export function getHomepageCollections() {
   return axiosInstance.get<{ message: string; data: Products.IHomepageCollections }>(`${ip}/products/homepage-collections`);
 }

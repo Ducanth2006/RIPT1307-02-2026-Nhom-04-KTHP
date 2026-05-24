@@ -25,6 +25,9 @@ import Cart from "../pages/cart/Cart";
 import Profile from "../pages/profile/Profile";
 import ClientOrders from "../pages/orders/Orders";
 import Notifications from "../pages/notifications/Notifications";
+import CollectionDetail from "../pages/products/CollectionDetail";
+import NewArrivalsPage from "../pages/products/NewArrivalsPage";
+import LimitedProductsPage from "../pages/products/LimitedProductsPage";
 
 const router = createBrowserRouter([
   {
@@ -62,6 +65,18 @@ const router = createBrowserRouter([
       {
         path: "notifications",
         element: <Notifications />,
+      },
+      {
+        path: "collections/:id",
+        element: <CollectionDetail />,
+      },
+      {
+        path: "new-arrivals",
+        element: <NewArrivalsPage />,
+      },
+      {
+        path: "limited-products",
+        element: <LimitedProductsPage />,
       },
       {
         path: "login",

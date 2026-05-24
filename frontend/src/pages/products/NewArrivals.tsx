@@ -1,34 +1,17 @@
-import { useState, useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { Typography, Button } from "antd";
 import { Link } from "react-router-dom";
-import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { LeftOutlined, RightOutlined } from "@ant-design/icons";
 import ProductCard from "../../components/product/ProductCard";
-import { getProducts } from "../../services/Product/apiClient";
-import ProductPagination from "../../components/layout/ProductPagination";
+import { getNewArrivals } from "../../services/Product/apiClient";
 
 const { Title, Text } = Typography;
 
-interface ProductListProps {
-  genderFilter?: string;
-}
-
-const ProductList = ({ genderFilter }: ProductListProps) => {
-  const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10;
-
-  // Reset page khi đổi filter
-  const [prevFilter, setPrevFilter] = useState(genderFilter);
-  if (genderFilter !== prevFilter) {
-    setPrevFilter(genderFilter);
-    setCurrentPage(1);
-  }
-
-  // Lấy dữ liệu từ API
+const NewArrivals = () => {
   const { data, isLoading, isFetching } = useQuery({
-    queryKey: ["products", currentPage, genderFilter],
-    queryFn: () => getProducts({ page: currentPage, limit: pageSize }).then((res) => res.data),
-    placeholderData: keepPreviousData,
+    queryKey: ["newArrivals"],
+    queryFn: () => getNewArrivals().then((res) => res.data),
   });
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -44,52 +27,43 @@ const ProductList = ({ genderFilter }: ProductListProps) => {
     }
   };
 
-  useEffect(() => {
-    // Reset scroll when data changes
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTo({ left: 0 });
-    }
-    // Timeout to allow DOM to render before checking scroll
-    setTimeout(checkScroll, 100);
-  }, [data]);
+  const [isHovering, setIsHovering] = useState(false);
 
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-    document.getElementById("trending-now")?.scrollIntoView({ behavior: "smooth" });
-  };
+  useEffect(() => {
+    if (isHovering || !data?.data || data.data.length === 0) return;
+    const interval = setInterval(() => {
+      if (scrollContainerRef.current) {
+        const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+        const scrollAmount = clientWidth * 0.8;
+        if (Math.ceil(scrollLeft + clientWidth) >= scrollWidth - 1) {
+          scrollContainerRef.current.scrollTo({ left: 0, behavior: "smooth" });
+        } else {
+          scrollContainerRef.current.scrollBy({ left: scrollAmount, behavior: "smooth" });
+        }
+      }
+    }, 3500);
+    return () => clearInterval(interval);
+  }, [isHovering, data?.data]);
 
   const products = data?.data || [];
-  const totalItems = data?.pagination?.total || 0;
 
   const handleScroll = (direction: 'left' | 'right') => {
     if (!scrollContainerRef.current) return;
-    const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
-    const scrollAmount = clientWidth * 0.8; // Scroll 80% of container width
+    const { clientWidth } = scrollContainerRef.current;
+    const scrollAmount = clientWidth * 0.8;
 
     if (direction === 'right') {
-      if (Math.ceil(scrollLeft + clientWidth) >= scrollWidth - 1) {
-        if (currentPage * pageSize < totalItems) {
-          handlePageChange(currentPage + 1);
-        }
-      } else {
-        scrollContainerRef.current.scrollBy({ left: scrollAmount, behavior: "smooth" });
-      }
+      scrollContainerRef.current.scrollBy({ left: scrollAmount, behavior: "smooth" });
     } else {
-      if (scrollLeft <= 0) {
-        if (currentPage > 1) {
-          handlePageChange(currentPage - 1);
-        }
-      } else {
-        scrollContainerRef.current.scrollBy({ left: -scrollAmount, behavior: "smooth" });
-      }
+      scrollContainerRef.current.scrollBy({ left: -scrollAmount, behavior: "smooth" });
     }
   };
 
-  const showLeftBtn = currentPage > 1 || !scrollState.isAtStart;
-  const showRightBtn = (currentPage * pageSize < totalItems) || !scrollState.isAtEnd;
+  const showLeftBtn = !scrollState.isAtStart;
+  const showRightBtn = !scrollState.isAtEnd && products.length > 0;
 
   return (
-    <div style={{ padding: "16px 40px 60px" }} id="trending-now">
+    <div style={{ padding: "24px 40px" }} id="new-arrivals">
       <div
         style={{
           display: "flex",
@@ -99,16 +73,20 @@ const ProductList = ({ genderFilter }: ProductListProps) => {
         }}
       >
         <Title level={2} style={{ margin: 0 }}>
-          Sản phẩm thịnh hành
+          Sản phẩm mới
         </Title>
-        <Link to="/products">
+        <Link to="/new-arrivals">
           <Button type="link" style={{ fontSize: 16, fontWeight: 800, color: "#000", padding: 0 }}>
-            Tất cả sản phẩm →
+            Tất cả sản phẩm mới →
           </Button>
         </Link>
       </div>
 
-      <div style={{ position: "relative" }}>
+      <div
+        style={{ position: "relative" }}
+        onMouseEnter={() => setIsHovering(true)}
+        onMouseLeave={() => setIsHovering(false)}
+      >
         {showLeftBtn && (
           <Button
             shape="circle"
@@ -150,7 +128,7 @@ const ProductList = ({ genderFilter }: ProductListProps) => {
           ))}
           {products.length === 0 && !isLoading && (
             <div style={{ width: "100%", textAlign: "center", padding: "100px 0" }}>
-              <Text type="secondary">No products found.</Text>
+              <Text type="secondary">Chưa có sản phẩm mới nào.</Text>
             </div>
           )}
         </div>
@@ -173,12 +151,8 @@ const ProductList = ({ genderFilter }: ProductListProps) => {
           />
         )}
       </div>
-
-      {totalItems > pageSize && (
-        <ProductPagination current={currentPage} total={totalItems} pageSize={pageSize} onChange={handlePageChange} />
-      )}
     </div>
   );
 };
 
-export default ProductList;
+export default NewArrivals;

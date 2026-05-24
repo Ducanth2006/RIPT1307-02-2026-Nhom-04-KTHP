@@ -8,9 +8,10 @@ const { Text } = Typography;
 
 interface Props {
   product: Products.IRecord;
+  badge?: "NEW" | "LIMITED";
 }
 
-const ProductCard = ({ product }: Props) => {
+const ProductCard = ({ product, badge }: Props) => {
   const [liked, setLiked] = useState(false);
 
   // Lấy ảnh chính hoặc ảnh đầu tiên, nếu không có dùng placeholder
@@ -18,6 +19,8 @@ const ProductCard = ({ product }: Props) => {
     product.product_images?.find((img) => img.is_main)?.image_url ||
     product.product_images?.[0]?.image_url ||
     "/placeholder.jpg";
+
+  const displayBadge = badge || (product.status === "NEW" ? "NEW" : null);
 
   return (
     <Card
@@ -27,14 +30,14 @@ const ProductCard = ({ product }: Props) => {
         <div style={{ position: "relative" }}>
           <Image src={imageUrl} alt={product.name} style={{ height: 280, objectFit: "cover" }} preview={false} />
 
-          {/* Badge NEW/BEST SELLER có thể thêm logic ở đây nếu API trả về */}
-          {product.status === "NEW" && (
+          {/* Badge NEW/LIMITED */}
+          {displayBadge && (
             <div
               style={{
                 position: "absolute",
                 top: 12,
                 left: 12,
-                background: "#f50",
+                background: displayBadge === "LIMITED" ? "#ff4d4f" : "#f50",
                 color: "#fff",
                 padding: "4px 10px",
                 fontSize: "12px",
@@ -42,7 +45,7 @@ const ProductCard = ({ product }: Props) => {
                 borderRadius: 4,
               }}
             >
-              NEW
+              {displayBadge}
             </div>
           )}
           {/* {product.isBestSeller && (

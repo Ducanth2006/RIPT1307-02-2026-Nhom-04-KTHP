@@ -45,9 +45,13 @@ export namespace Products {
     data: IRecord;
   }
 
+  export interface ICollectionData {
+    title: string;
+    subtitle: string;
+    products: IRecord[];
+  }
+
   export interface IHomepageCollections {
-    newArrivals?: IRecord[];
-    bestSellers?: IRecord[];
-    topRated?: IRecord[];
+    [key: string]: ICollectionData;
   }
 }

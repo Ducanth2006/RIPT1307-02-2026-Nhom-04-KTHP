@@ -3,7 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { Button, Row, Col, Typography, Carousel } from "antd";
 import { LeftOutlined, RightOutlined } from "@ant-design/icons";
 import ProductList from "./products/ProductList";
+import NewArrivals from "./products/NewArrivals";
+import LimitedProducts from "./products/LimitedProducts";
 import CategoryBar from "../components/layout/CategoryBar";
+import HomepageCollections from "../components/BoSuuTap/HomepageCollections";
 
 const { Title, Text } = Typography;
 
@@ -196,75 +199,17 @@ const Home = () => {
 
       <CategoryBar />
 
+      <NewArrivals />
+
+      <LimitedProducts />
+
       <div id="trending-now">
         <ProductList genderFilter={genderFilter} />
       </div>
 
-      <div style={{ padding: "0 40px 80px" }}>
-        <Row gutter={24}>
-          <Col xs={24} md={12}>
-            <div
-              style={{
-                height: "380px",
-                backgroundImage: `url('/gym.png')`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-                borderRadius: "12px",
-                position: "relative",
-                display: "flex",
-                alignItems: "flex-end",
-                padding: "40px",
-                color: "#fff",
-                cursor: "pointer",
-              }}
-            >
-              <h2
-                style={{
-                  fontSize: "42px",
-                  fontWeight: 900,
-                  lineHeight: 1,
-                  textShadow: "0 4px 12px rgba(0,0,0,0.7)",
-                }}
-              >
-                RUNNING
-                <br />
-                ESSENTIALS
-              </h2>
-            </div>
-          </Col>
+      <HomepageCollections />
 
-          <Col xs={24} md={12}>
-            <div
-              style={{
-                height: "380px",
-                backgroundImage: `url('/chạy1.png')`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-                borderRadius: "12px",
-                position: "relative",
-                display: "flex",
-                alignItems: "flex-end",
-                padding: "40px",
-                color: "#fff",
-                cursor: "pointer",
-              }}
-            >
-              <h2
-                style={{
-                  fontSize: "42px",
-                  fontWeight: 900,
-                  lineHeight: 1,
-                  textShadow: "0 4px 12px rgba(0,0,0,0.7)",
-                }}
-              >
-                TRAINING
-                <br />
-                GEAR
-              </h2>
-            </div>
-          </Col>
-        </Row>
-      </div>
+
 
       <div
         style={{
