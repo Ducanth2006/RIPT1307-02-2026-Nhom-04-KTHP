@@ -18,8 +18,6 @@ import {
   message,
   Empty,
   Card,
-  Row,
-  Col,
   Select,
   Steps,
   Space,
@@ -43,7 +41,6 @@ import {
   RefreshCw,
   ShoppingCart,
   DollarSign,
-  TrendingUp,
   Clock3,
   Ban,
   User,
@@ -53,16 +50,6 @@ import {
   CreditCard,
   AlertTriangle
 } from 'lucide-react';
-
-import {
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid
-} from 'recharts';
 
 import type { ColumnsType } from 'antd/es/table';
 
@@ -93,22 +80,16 @@ type OrderStatus =
 
 interface BackendOrderItem {
   id: string;
-
   quantity: number;
-
   price: number;
-
   sanPhamChiTiet?: {
     sku?: string;
-
     mauSac?: {
       tenMau?: string;
     };
-
     kichThuoc?: {
       tenKichThuoc?: string;
     };
-
     sanPham?: {
       tenSanPham?: string;
       hinhAnh?: string;
@@ -118,104 +99,63 @@ interface BackendOrderItem {
 
 interface BackendOrder {
   id: string;
-
   created_at: string;
-
   status: BackendOrderStatus;
-
   payment_status: string;
-
   final_amount: number;
-
   total_amount?: number;
-
   discount_amount?: number;
-
   cancel_reason?: string | null;
-
   timeline?: any | null;
-
   khachHang?: {
     name?: string;
     email?: string;
   } | null;
-
   nguoiNhan?: string | null;
-
   soDienThoaiNhan?: string | null;
-
   diaChiGiaoHang?: string | null;
-
   thanhToan?: {
     method?: string | null;
   } | null;
-
   chiTietDonHang?: BackendOrderItem[];
 }
 
 interface OrderItem {
   id: string;
-
   name: string;
-
   image: string;
-
   sku: string;
-
   color: string;
-
   size: string;
-
   quantity: number;
-
   price: number;
 }
 
 interface Order {
   id: string;
-
   customerName: string;
-
   phone: string;
-
   email: string;
-
   address: string;
-
   date: string;
-
   paymentMethod: string;
-
   paymentStatus: string;
-
   status: OrderStatus;
-
   total: number;
-
   originalAmount: number;
-
   discountAmount: number;
-
   cancelReason?: string | null;
-
   timeline?: any | null;
-
   items: OrderItem[];
 }
 
 interface DashboardStats {
   tongDoanhThu: number;
-
   tongSoDon: number;
-
   donChoDuyet: number;
-
   donDangDongGoi: number;
-
   donDangGiao: number;
-
   donDaHuy: number;
-
   donYeuCauHuy: number;
 }
 
@@ -229,25 +169,18 @@ const mapBackendStatusToFrontend = (
   switch (status) {
     case 'Pending':
       return 'PENDING';
-
     case 'Confirmed':
       return 'CONFIRMED';
-
     case 'Packing':
       return 'PACKING';
-
     case 'Shipping':
       return 'SHIPPING';
-
     case 'Completed':
       return 'SUCCESS';
-
     case 'Cancelled':
       return 'FAILED';
-
     case 'CancelRequested':
       return 'CANCEL_REQUESTED';
-
     default:
       return 'PENDING';
   }
@@ -259,25 +192,18 @@ const mapFrontendStatusToBackend = (
   switch (status) {
     case 'PENDING':
       return 'Pending';
-
     case 'CONFIRMED':
       return 'Confirmed';
-
     case 'PACKING':
       return 'Packing';
-
     case 'SHIPPING':
       return 'Shipping';
-
     case 'SUCCESS':
       return 'Completed';
-
     case 'FAILED':
       return 'Cancelled';
-
     case 'CANCEL_REQUESTED':
       return 'CancelRequested';
-
     default:
       return 'Pending';
   }
@@ -300,37 +226,31 @@ const statusConfig: Record<
     color: 'warning',
     icon: <Clock3 size={14} />
   },
-
   CONFIRMED: {
     label: 'Đã xác nhận',
     color: 'blue',
     icon: <CheckCircle size={14} />
   },
-
   PACKING: {
     label: 'Đang đóng gói',
     color: 'processing',
     icon: <Package size={14} />
   },
-
   SHIPPING: {
     label: 'Đang vận chuyển',
     color: 'purple',
     icon: <Truck size={14} />
   },
-
   SUCCESS: {
     label: 'Hoàn thành',
     color: 'success',
     icon: <Check size={14} />
   },
-
   FAILED: {
     label: 'Đã huỷ',
     color: 'error',
     icon: <XCircle size={14} />
   },
-
   CANCEL_REQUESTED: {
     label: 'Yêu cầu huỷ',
     color: 'orange',
@@ -346,59 +266,37 @@ export default function Orders() {
   const [searchParams, setSearchParams] = useSearchParams();
   const openOrderId = searchParams.get('openOrderId');
 
-  const [messageApi, contextHolder] =
-    message.useMessage();
+  const [messageApi, contextHolder] = message.useMessage();
 
-  const [orders, setOrders] = useState<
-    Order[]
-  >([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
 
-  const [loading, setLoading] =
-    useState(false);
+  const [stats, setStats] = useState<DashboardStats>({
+    tongDoanhThu: 0,
+    tongSoDon: 0,
+    donChoDuyet: 0,
+    donDangDongGoi: 0,
+    donDangGiao: 0,
+    donDaHuy: 0,
+    donYeuCauHuy: 0
+  });
 
-  const [actionLoading, setActionLoading] =
-    useState(false);
-
-  const [stats, setStats] =
-    useState<DashboardStats>({
-      tongDoanhThu: 0,
-      tongSoDon: 0,
-      donChoDuyet: 0,
-      donDangDongGoi: 0,
-      donDangGiao: 0,
-      donDaHuy: 0,
-      donYeuCauHuy: 0
-    });
-
-  const [selectedOrder, setSelectedOrder] =
-    useState<Order | null>(null);
-
-  const [isDrawerOpen, setIsDrawerOpen] =
-    useState(false);
-
-  const [cancelRequestModalVisible, setCancelRequestModalVisible] =
-    useState(false);
-
-  const [searchText, setSearchText] =
-    useState('');
-
-  const [filterStatus, setFilterStatus] =
-    useState<string>('ALL');
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [cancelRequestModalVisible, setCancelRequestModalVisible] = useState(false);
+  const [searchText, setSearchText] = useState('');
+  const [filterStatus, setFilterStatus] = useState<string>('ALL');
 
   // =========================
   // FORMAT
   // =========================
 
-  const dinhDangTien = (
-    soTien?: number | null
-  ) => {
-    return new Intl.NumberFormat(
-      'vi-VN',
-      {
-        style: 'currency',
-        currency: 'VND'
-      }
-    ).format(Number(soTien || 0));
+  const dinhDangTien = (soTien?: number | null) => {
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND'
+    }).format(Number(soTien || 0));
   };
 
   // =========================
@@ -407,230 +305,133 @@ export default function Orders() {
 
   const taiThongKe = async () => {
     try {
-      const res =
-        await axiosInstance.get(
-          `${ip}/admin/orders/stats`
-        );
-
-      const data =
-        res.data?.data || {};
+      const res = await axiosInstance.get(`${ip}/admin/orders/stats`);
+      const data = res.data?.data || {};
 
       setStats({
-        tongDoanhThu:
-          data.tongDoanhThu || 0,
-
-        tongSoDon:
-          data.tongSoDon || 0,
-
-        donChoDuyet:
-          data.donChoDuyet || 0,
-
-        donDangDongGoi:
-          data.donDangDongGoi || 0,
-
-        donDangGiao:
-          data.donDangGiao || 0,
-
-        donDaHuy:
-          data.donDaHuy || 0,
-
-        donYeuCauHuy:
-          data.donYeuCauHuy || 0
+        tongDoanhThu: data.tongDoanhThu || 0,
+        tongSoDon: data.tongSoDon || 0,
+        donChoDuyet: data.donChoDuyet || 0,
+        donDangDongGoi: data.donDangDongGoi || 0,
+        donDangGiao: data.donDangGiao || 0,
+        donDaHuy: data.donDaHuy || 0,
+        donYeuCauHuy: data.donYeuCauHuy || 0
       });
     } catch (error) {
       console.log(error);
     }
   };
 
-  const taiDanhSachDonHang =
-    async () => {
-      try {
-        setLoading(true);
+  const taiDanhSachDonHang = async () => {
+    try {
+      setLoading(true);
+      const res = await axiosInstance.get(`${ip}/admin/orders`);
+      const data = res.data?.data || [];
 
-        const res =
-          await axiosInstance.get(
-            `${ip}/admin/orders`
-          );
+      const mapped: Order[] = data.map((order: BackendOrder) => ({
+        id: String(order.id),
+        customerName:
+          order.nguoiNhan ||
+          order.khachHang?.name ||
+          '---',
+        phone: order.soDienThoaiNhan || '---',
+        email: order.khachHang?.email || '---',
+        address: order.diaChiGiaoHang || '---',
+        date: new Date(order.created_at).toLocaleString('vi-VN'),
+        paymentMethod: order.thanhToan?.method || '---',
+        paymentStatus: order.payment_status || '---',
+        status: mapBackendStatusToFrontend(order.status),
+        total: Number(order.final_amount || 0),
+        originalAmount: Number(order.total_amount || order.final_amount || 0),
+        discountAmount: Number(order.discount_amount || 0),
+        cancelReason: order.cancel_reason || null,
+        timeline: order.timeline || (order as any).shipping_address?.timeline || null,
+        items: ((order as any).order_items || (order as any).chiTietDonHang || [])?.map(
+          (item: any) => {
+            const prod = item.product || item.sanPhamChiTiet?.sanPham || {};
+            const bienThe = item.sanPhamChiTiet || {};
+            return {
+              id: String(item.id),
+              name: prod.name || prod.tenSanPham || 'Sản phẩm',
+              image: prod.image_url || prod.hinhAnh || '',
+              sku: item.sku || prod.sku || bienThe.sku || '---',
+              color: prod.color || bienThe.mauSac?.tenMau || '---',
+              size: prod.size || bienThe.kichThuoc?.tenKichThuoc || '---',
+              quantity: Number(item.quantity || 0),
+              price: Number(item.price || item.unit_price || 0)
+            };
+          }
+        ) || []
+      }));
 
-        const data =
-          res.data?.data || [];
-
-        const mapped: Order[] =
-          data.map(
-            (order: BackendOrder) => ({
-              id: String(order.id),
-
-              customerName:
-                order.nguoiNhan ||
-                order.khachHang?.name ||
-                '---',
-
-              phone:
-                order.soDienThoaiNhan ||
-                '---',
-
-              email:
-                order.khachHang
-                  ?.email || '---',
-
-              address:
-                order.diaChiGiaoHang ||
-                '---',
-
-              date: new Date(
-                order.created_at
-              ).toLocaleString(
-                'vi-VN'
-              ),
-
-              paymentMethod:
-                order.thanhToan
-                  ?.method || '---',
-
-              paymentStatus:
-                order.payment_status ||
-                '---',
-
-              status:
-                mapBackendStatusToFrontend(
-                  order.status
-                ),
-
-              total: Number(
-                order.final_amount ||
-                  0
-              ),
-
-              originalAmount: Number(
-                order.total_amount ||
-                  order.final_amount ||
-                  0
-              ),
-
-              discountAmount: Number(
-                order.discount_amount ||
-                  0
-              ),
-
-              cancelReason:
-                order.cancel_reason ||
-                null,
-
-              timeline:
-                order.timeline ||
-                (order as any).shipping_address?.timeline ||
-                null,
-
-              items:
-                ((order as any).order_items || (order as any).chiTietDonHang || [])?.map(
-                  (item: any) => {
-                    const prod = item.product || item.sanPhamChiTiet?.sanPham || {};
-                    const bienThe = item.sanPhamChiTiet || {};
-                    return {
-                      id: String(item.id),
-                      name: prod.name || prod.tenSanPham || 'Sản phẩm',
-                      image: prod.image_url || prod.hinhAnh || '',
-                      sku: item.sku || prod.sku || bienThe.sku || '---',
-                      color: prod.color || bienThe.mauSac?.tenMau || '---',
-                      size: prod.size || bienThe.kichThuoc?.tenKichThuoc || '---',
-                      quantity: Number(item.quantity || 0),
-                      price: Number(item.price || item.unit_price || 0)
-                    };
-                  }
-                ) || []
-            })
-          );
-
-        setOrders(mapped);
-      } catch (error) {
-        console.log(error);
-
-        messageApi.error(
-          'Không thể tải đơn hàng'
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
+      setOrders(mapped);
+    } catch (error) {
+      console.log(error);
+      messageApi.error('Không thể tải đơn hàng');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // =========================
   // UPDATE STATUS
   // =========================
 
-  const capNhatTrangThaiDonHang =
-    async (
-      orderId: string,
-      newStatus: OrderStatus
-    ) => {
-      try {
-        setActionLoading(true);
+  const capNhatTrangThaiDonHang = async (orderId: string, newStatus: OrderStatus) => {
+    try {
+      setActionLoading(true);
+      const res = await axiosInstance.patch(`${ip}/admin/orders/${orderId}/status`, {
+        status: mapFrontendStatusToBackend(newStatus)
+      });
 
-        const res = await axiosInstance.patch(
-          `${ip}/admin/orders/${orderId}/status`,
-          {
-            status:
-              mapFrontendStatusToBackend(
-                newStatus
-              )
-          }
-        );
+      messageApi.success('Cập nhật trạng thái thành công');
 
-        messageApi.success(
-          'Cập nhật trạng thái thành công'
-        );
+      await taiDanhSachDonHang();
+      await taiThongKe();
 
-        await taiDanhSachDonHang();
-        await taiThongKe();
-
-        const updatedOrderRaw = res.data?.data;
-        if (updatedOrderRaw) {
-          const mappedItem = {
-            id: String(updatedOrderRaw.id),
-            customerName:
-              updatedOrderRaw.nguoiNhan ||
-              updatedOrderRaw.khachHang?.name ||
-              '---',
-            phone: updatedOrderRaw.soDienThoaiNhan || '---',
-            email: updatedOrderRaw.khachHang?.email || '---',
-            address: updatedOrderRaw.diaChiGiaoHang || '---',
-            date: new Date(updatedOrderRaw.created_at).toLocaleString('vi-VN'),
-            paymentMethod: updatedOrderRaw.thanhToan?.method || '---',
-            paymentStatus: updatedOrderRaw.payment_status || '---',
-            status: mapBackendStatusToFrontend(updatedOrderRaw.status),
-            total: Number(updatedOrderRaw.final_amount || 0),
-            originalAmount: Number(updatedOrderRaw.total_amount || updatedOrderRaw.final_amount || 0),
-            discountAmount: Number(updatedOrderRaw.discount_amount || 0),
-            cancelReason: updatedOrderRaw.cancel_reason || null,
-            timeline: updatedOrderRaw.timeline || updatedOrderRaw.shipping_address?.timeline || null,
-            items: ((updatedOrderRaw.order_items || updatedOrderRaw.chiTietDonHang || []) as any[])?.map(
-              (item: any) => {
-                const prod = item.product || item.sanPhamChiTiet?.sanPham || {};
-                const bienThe = item.sanPhamChiTiet || {};
-                return {
-                  id: String(item.id),
-                  name: prod.name || prod.tenSanPham || 'Sản phẩm',
-                  image: prod.image_url || prod.hinhAnh || '',
-                  sku: item.sku || prod.sku || bienThe.sku || '---',
-                  color: prod.color || bienThe.mauSac?.tenMau || '---',
-                  size: prod.size || bienThe.kichThuoc?.tenKichThuoc || '---',
-                  quantity: Number(item.quantity || 0),
-                  price: Number(item.price || item.unit_price || 0)
-                };
-              }
-            ) || []
-          };
-          setSelectedOrder(mappedItem);
-        }
-      } catch (error) {
-        console.log(error);
-
-        messageApi.error(
-          'Không thể cập nhật trạng thái'
-        );
-      } finally {
-        setActionLoading(false);
+      const updatedOrderRaw = res.data?.data;
+      if (updatedOrderRaw) {
+        const mappedItem = {
+          id: String(updatedOrderRaw.id),
+          customerName: updatedOrderRaw.nguoiNhan || updatedOrderRaw.khachHang?.name || '---',
+          phone: updatedOrderRaw.soDienThoaiNhan || '---',
+          email: updatedOrderRaw.khachHang?.email || '---',
+          address: updatedOrderRaw.diaChiGiaoHang || '---',
+          date: new Date(updatedOrderRaw.created_at).toLocaleString('vi-VN'),
+          paymentMethod: updatedOrderRaw.thanhToan?.method || '---',
+          paymentStatus: updatedOrderRaw.payment_status || '---',
+          status: mapBackendStatusToFrontend(updatedOrderRaw.status),
+          total: Number(updatedOrderRaw.final_amount || 0),
+          originalAmount: Number(updatedOrderRaw.total_amount || updatedOrderRaw.final_amount || 0),
+          discountAmount: Number(updatedOrderRaw.discount_amount || 0),
+          cancelReason: updatedOrderRaw.cancel_reason || null,
+          timeline: updatedOrderRaw.timeline || updatedOrderRaw.shipping_address?.timeline || null,
+          items: ((updatedOrderRaw.order_items || updatedOrderRaw.chiTietDonHang || []) as any[])?.map(
+            (item: any) => {
+              const prod = item.product || item.sanPhamChiTiet?.sanPham || {};
+              const bienThe = item.sanPhamChiTiet || {};
+              return {
+                id: String(item.id),
+                name: prod.name || prod.tenSanPham || 'Sản phẩm',
+                image: prod.image_url || prod.hinhAnh || '',
+                sku: item.sku || prod.sku || bienThe.sku || '---',
+                color: prod.color || bienThe.mauSac?.tenMau || '---',
+                size: prod.size || bienThe.kichThuoc?.tenKichThuoc || '---',
+                quantity: Number(item.quantity || 0),
+                price: Number(item.price || item.unit_price || 0)
+              };
+            }
+          ) || []
+        };
+        setSelectedOrder(mappedItem);
       }
-    };
+    } catch (error) {
+      console.log(error);
+      messageApi.error('Không thể cập nhật trạng thái');
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   // =========================
   // EFFECT
@@ -658,69 +459,43 @@ export default function Orders() {
   // FILTER
   // =========================
 
-  const filteredOrders =
-    useMemo(() => {
-      let result = orders;
+  const filteredOrders = useMemo(() => {
+    let result = orders;
 
-      if (filterStatus !== 'ALL') {
-        result = result.filter(
-          (o) =>
-            o.status ===
-            filterStatus
-        );
-      }
+    if (filterStatus !== 'ALL') {
+      result = result.filter(o => o.status === filterStatus);
+    }
 
-      if (searchText.trim()) {
-        const keyword =
-          searchText.toLowerCase();
+    if (searchText.trim()) {
+      const keyword = searchText.toLowerCase();
+      result = result.filter(
+        o =>
+          o.id.toLowerCase().includes(keyword) ||
+          o.customerName.toLowerCase().includes(keyword) ||
+          o.phone.toLowerCase().includes(keyword)
+      );
+    }
 
-        result = result.filter(
-          (o) =>
-            o.id
-              .toLowerCase()
-              .includes(keyword) ||
-            o.customerName
-              .toLowerCase()
-              .includes(keyword) ||
-            o.phone
-              .toLowerCase()
-              .includes(keyword)
-        );
-      }
-
-      return result;
-    }, [
-      orders,
-      filterStatus,
-      searchText
-    ]);
+    return result;
+  }, [orders, filterStatus, searchText]);
 
   // =========================
   // STEP
   // =========================
 
-  const getStepCurrent = (
-    status: OrderStatus
-  ) => {
+  const getStepCurrent = (status: OrderStatus) => {
     switch (status) {
       case 'PENDING':
         return 0;
-
       case 'CONFIRMED':
         return 1;
-
       case 'PACKING':
         return 2;
-
       case 'SHIPPING':
         return 3;
-
       case 'SUCCESS':
-        return 4;
-
       case 'FAILED':
         return 4;
-
       default:
         return 0;
     }
@@ -753,31 +528,19 @@ export default function Orders() {
               size="large"
               loading={actionLoading}
               className="rounded-xl bg-green-600 border-none"
-              onClick={() =>
-                capNhatTrangThaiDonHang(
-                  selectedOrder.id,
-                  'CONFIRMED'
-                )
-              }
+              onClick={() => capNhatTrangThaiDonHang(selectedOrder.id, 'CONFIRMED')}
             >
               Duyệt đơn hàng
             </Button>
-
             <Button
               danger
               size="large"
               loading={actionLoading}
               className="rounded-xl"
-              onClick={() =>
-                capNhatTrangThaiDonHang(
-                  selectedOrder.id,
-                  'FAILED'
-                )
-              }
+              onClick={() => capNhatTrangThaiDonHang(selectedOrder.id, 'FAILED')}
             >
               Huỷ đơn
             </Button>
-
             {selectedOrder.cancelReason && (
               <Button
                 type="dashed"
@@ -800,32 +563,20 @@ export default function Orders() {
               type="primary"
               size="large"
               loading={actionLoading}
-              className="rounded-xl border-none"
-              onClick={() =>
-                capNhatTrangThaiDonHang(
-                  selectedOrder.id,
-                  'PACKING'
-                )
-              }
+              className="rounded-xl border-none bg-blue-600 hover:bg-blue-700"
+              onClick={() => capNhatTrangThaiDonHang(selectedOrder.id, 'PACKING')}
             >
               Bắt đầu soạn hàng
             </Button>
-
             <Button
               danger
               size="large"
               loading={actionLoading}
               className="rounded-xl"
-              onClick={() =>
-                capNhatTrangThaiDonHang(
-                  selectedOrder.id,
-                  'FAILED'
-                )
-              }
+              onClick={() => capNhatTrangThaiDonHang(selectedOrder.id, 'FAILED')}
             >
               Huỷ đơn
             </Button>
-
             {selectedOrder.cancelReason && (
               <Button
                 type="dashed"
@@ -849,31 +600,19 @@ export default function Orders() {
               size="large"
               loading={actionLoading}
               className="rounded-xl bg-purple-600 border-none"
-              onClick={() =>
-                capNhatTrangThaiDonHang(
-                  selectedOrder.id,
-                  'SHIPPING'
-                )
-              }
+              onClick={() => capNhatTrangThaiDonHang(selectedOrder.id, 'SHIPPING')}
             >
               Bắt đầu vận chuyển
             </Button>
-
             <Button
               danger
               size="large"
               loading={actionLoading}
               className="rounded-xl"
-              onClick={() =>
-                capNhatTrangThaiDonHang(
-                  selectedOrder.id,
-                  'FAILED'
-                )
-              }
+              onClick={() => capNhatTrangThaiDonHang(selectedOrder.id, 'FAILED')}
             >
               Huỷ đơn
             </Button>
-
             {selectedOrder.cancelReason && (
               <Button
                 type="dashed"
@@ -897,31 +636,19 @@ export default function Orders() {
               size="large"
               loading={actionLoading}
               className="rounded-xl bg-green-600 border-none"
-              onClick={() =>
-                capNhatTrangThaiDonHang(
-                  selectedOrder.id,
-                  'SUCCESS'
-                )
-              }
+              onClick={() => capNhatTrangThaiDonHang(selectedOrder.id, 'SUCCESS')}
             >
               Giao hàng thành công
             </Button>
-
             <Button
               danger
               size="large"
               loading={actionLoading}
               className="rounded-xl"
-              onClick={() =>
-                capNhatTrangThaiDonHang(
-                  selectedOrder.id,
-                  'FAILED'
-                )
-              }
+              onClick={() => capNhatTrangThaiDonHang(selectedOrder.id, 'FAILED')}
             >
               Giao hàng thất bại
             </Button>
-
             {selectedOrder.cancelReason && (
               <Button
                 type="dashed"
@@ -950,7 +677,6 @@ export default function Orders() {
             >
               Xem yêu cầu hủy
             </Button>
-
             <Button
               size="large"
               loading={actionLoading}
@@ -964,10 +690,7 @@ export default function Orders() {
 
       case 'SUCCESS':
         return (
-          <Tag
-            color="success"
-            className="px-5 py-2 rounded-full"
-          >
+          <Tag color="success" className="px-5 py-2 rounded-full">
             Đơn hàng đã hoàn thành
           </Tag>
         );
@@ -975,10 +698,7 @@ export default function Orders() {
       case 'FAILED':
         return (
           <Space wrap align="center">
-            <Tag
-              color="error"
-              className="px-5 py-2 rounded-full m-0"
-            >
+            <Tag color="error" className="px-5 py-2 rounded-full m-0">
               Đơn hàng đã bị huỷ
             </Tag>
             {selectedOrder.cancelReason && (
@@ -1005,165 +725,82 @@ export default function Orders() {
   // TABLE
   // =========================
 
-  const columns: ColumnsType<Order> =
-    [
-      {
-        title: 'Mã Đơn',
-        dataIndex: 'id',
-
-        render: (id) => (
-          <span className="font-bold text-red-600 text-lg">
-            #{id}
-          </span>
-        )
-      },
-
-      {
-        title: 'Khách Hàng',
-
-        render: (_, record) => (
-          <div>
-            <div className="font-semibold text-[15px]">
-              {
-                record.customerName
-              }
-            </div>
-
-            <div className="text-gray-400 text-xs mt-1">
-              {record.phone}
-            </div>
+  const columns: ColumnsType<Order> = [
+    {
+      title: 'Mã Đơn',
+      dataIndex: 'id',
+      render: (id) => (
+        <span className="font-bold text-red-600 text-lg">
+          #{id}
+        </span>
+      )
+    },
+    {
+      title: 'Khách Hàng',
+      render: (_, record) => (
+        <div>
+          <div className="font-semibold text-[15px]">
+            {record.customerName}
           </div>
-        )
-      },
-
-      {
-        title: 'Ngày Đặt',
-        dataIndex: 'date'
-      },
-
-      {
-        title: 'Thanh Toán',
-
-        render: (_, record) => (
-          <Tag
-            color="geekblue"
-            className="px-3 py-1 rounded-full"
-          >
-            {
-              record.paymentMethod
-            }
-          </Tag>
-        )
-      },
-
-      {
-        title: 'Tổng Tiền',
-
-        render: (_, record) => (
-          <span className="font-bold text-green-600">
-            {dinhDangTien(
-              record.total
-            )}
-          </span>
-        )
-      },
-
-      {
-        title: 'Trạng Thái',
-
-        render: (_, record) => (
-          <Tag
-            color={
-              statusConfig[
-                record.status
-              ].color
-            }
-            icon={
-              statusConfig[
-                record.status
-              ].icon
-            }
-            className="px-3 py-1 rounded-full"
-          >
-            {
-              statusConfig[
-                record.status
-              ].label
-            }
-          </Tag>
-        )
-      },
-
-      {
-        title: 'Hành Động',
-
-        render: (_, record) => (
-          <div className="flex items-center gap-2">
-            <Button
-              className="rounded-xl"
-              icon={
-                <Eye size={16} />
-              }
-              onClick={() => {
-                setSelectedOrder(
-                  record
-                );
-
-                setIsDrawerOpen(
-                  true
-                );
-              }}
-            >
-              Xem chi tiết
-            </Button>
-            {record.status === 'CANCEL_REQUESTED' && (
-              <AntdTooltip title="Đơn hàng này có yêu cầu hủy từ khách hàng!">
-                <AlertTriangle size={20} className="text-amber-500 animate-bounce cursor-pointer" />
-              </AntdTooltip>
-            )}
+          <div className="text-gray-400 text-xs mt-1">
+            {record.phone}
           </div>
-        )
-      }
-    ];
-
-  // =========================
-  // CHART
-  // =========================
-
-  const revenueData = [
-    {
-      day: '15/05',
-      revenue: 350000
+        </div>
+      )
     },
-
     {
-      day: '16/05',
-      revenue: 420000
+      title: 'Ngày Đặt',
+      dataIndex: 'date'
     },
-
     {
-      day: '17/05',
-      revenue: 280000
+      title: 'Thanh Toán',
+      render: (_, record) => (
+        <Tag color="geekblue" className="px-3 py-1 rounded-full">
+          {record.paymentMethod}
+        </Tag>
+      )
     },
-
     {
-      day: '18/05',
-      revenue: 650000
+      title: 'Tổng Tiền',
+      render: (_, record) => (
+        <span className="font-bold text-green-600">
+          {dinhDangTien(record.total)}
+        </span>
+      )
     },
-
     {
-      day: '19/05',
-      revenue: 720000
+      title: 'Trạng Thái',
+      render: (_, record) => (
+        <Tag
+          color={statusConfig[record.status].color}
+          icon={statusConfig[record.status].icon}
+          className="px-3 py-1 rounded-full"
+        >
+          {statusConfig[record.status].label}
+        </Tag>
+      )
     },
-
     {
-      day: '20/05',
-      revenue: 900000
-    },
-
-    {
-      day: '21/05',
-      revenue: 100000
+      title: 'Hành Động',
+      render: (_, record) => (
+        <div className="flex items-center gap-2">
+          <Button
+            className="rounded-xl hover:text-red-600 hover:border-red-600"
+            icon={<Eye size={16} />}
+            onClick={() => {
+              setSelectedOrder(record);
+              setIsDrawerOpen(true);
+            }}
+          >
+            Xem chi tiết
+          </Button>
+          {record.status === 'CANCEL_REQUESTED' && (
+            <AntdTooltip title="Đơn hàng này có yêu cầu hủy từ khách hàng!">
+              <AlertTriangle size={20} className="text-amber-500 animate-bounce cursor-pointer" />
+            </AntdTooltip>
+          )}
+        </div>
+      )
     }
   ];
 
@@ -1172,46 +809,17 @@ export default function Orders() {
   // =========================
 
   const exportCSV = () => {
-    const headers = [
-      'Mã đơn',
-      'Khách hàng',
-      'SĐT',
-      'Thanh toán',
-      'Tổng tiền'
-    ].join(',');
+    const headers = ['Mã đơn', 'Khách hàng', 'SĐT', 'Thanh toán', 'Tổng tiền'].join(',');
+    const rows = filteredOrders
+      .map(o => `"${o.id}","${o.customerName}","${o.phone}","${o.paymentMethod}","${o.total}"`)
+      .join('\n');
 
-    const rows =
-      filteredOrders
-        .map(
-          (o) =>
-            `"${o.id}","${o.customerName}","${o.phone}","${o.paymentMethod}","${o.total}"`
-        )
-        .join('\n');
+    const csv = '\uFEFF' + headers + '\n' + rows;
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const link = document.createElement('a');
 
-    const csv =
-      '\uFEFF' +
-      headers +
-      '\n' +
-      rows;
-
-    const blob = new Blob(
-      [csv],
-      {
-        type: 'text/csv'
-      }
-    );
-
-    const link =
-      document.createElement(
-        'a'
-      );
-
-    link.href =
-      URL.createObjectURL(blob);
-
-    link.download =
-      'orders.csv';
-
+    link.href = URL.createObjectURL(blob);
+    link.download = 'orders.csv';
     link.click();
   };
 
@@ -1224,16 +832,14 @@ export default function Orders() {
       {contextHolder}
 
       {/* HEADER */}
-      <div className="bg-white rounded-[32px] border border-gray-200 p-8 shadow-sm mb-7">
+      <div className="bg-white rounded-[24px] border border-gray-200 p-8 shadow-sm mb-7">
         <div className="flex justify-between items-start flex-wrap gap-5">
           <div>
             <h1 className="text-5xl font-black text-[#111827]">
               Quản Lý Đơn Hàng
             </h1>
-
             <p className="text-gray-500 mt-3 text-lg">
-              Quản lý vòng đời đơn hàng,
-              kiểm duyệt và vận chuyển
+              Quản lý vòng đời đơn hàng, kiểm duyệt và vận chuyển
             </p>
           </div>
 
@@ -1241,10 +847,8 @@ export default function Orders() {
             type="primary"
             danger
             size="large"
-            className="h-[54px] px-7 rounded-2xl font-semibold"
-            icon={
-              <RefreshCw size={18} />
-            }
+            className="h-[54px] px-7 rounded-2xl font-semibold bg-red-600 hover:bg-red-700 border-none"
+            icon={<RefreshCw size={18} />}
             onClick={() => {
               taiThongKe();
               taiDanhSachDonHang();
@@ -1255,335 +859,142 @@ export default function Orders() {
         </div>
       </div>
 
-      {/* DASHBOARD */}
-      <Row gutter={[24, 24]}>
-        <Col xs={24} xl={9}>
-          <div className="grid grid-cols-2 gap-5">
-            {[
-              {
-                title:
-                  'Tổng doanh thu',
-                value:
-                  dinhDangTien(
-                    stats.tongDoanhThu
-                  ),
-                icon: (
-                  <DollarSign
-                    size={30}
-                  />
-                ),
-                color:
-                  'text-green-600',
-                bg: 'bg-green-100',
-                fullWidth: true
-              },
+      {/* DASHBOARD STATS */}
+      <div className="mb-8 space-y-6">
+        {/* Thẻ Tổng doanh thu */}
+        <Card className="bg-gradient-to-r from-red-600 to-red-500 rounded-[24px] shadow-lg border-none overflow-hidden relative">
+          <div className="absolute top-0 right-0 -mr-10 -mt-10 w-64 h-64 rounded-full bg-white opacity-10 blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 right-1/4 w-40 h-40 rounded-full bg-black opacity-10 blur-2xl pointer-events-none" />
+          
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between p-2">
+            <div className="flex items-center gap-6">
+              <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/30 shadow-inner">
+                <DollarSign size={32} className="text-white" />
+              </div>
+              <div>
+                <p className="text-red-100 text-sm font-bold mb-1 uppercase tracking-wider">
+                  Tổng doanh thu
+                </p>
+                <h2 className="text-4xl md:text-5xl font-black text-white drop-shadow-sm tracking-tight">
+                  {dinhDangTien(stats.tongDoanhThu)}
+                </h2>
+              </div>
+            </div>
+          </div>
+        </Card>
 
-              {
-                title:
-                  'Tổng đơn',
-                value:
-                  stats.tongSoDon,
-                icon: (
-                  <ShoppingCart
-                    size={30}
-                  />
-                ),
-                color:
-                  'text-blue-600',
-                bg: 'bg-blue-100'
-              },
-
-              {
-                title:
-                  'Chờ duyệt',
-                value:
-                  stats.donChoDuyet,
-                icon: (
-                  <Clock3
-                    size={30}
-                  />
-                ),
-                color:
-                  'text-orange-500',
-                bg: 'bg-orange-100'
-              },
-
-              {
-                title:
-                  'Yêu cầu huỷ',
-                value:
-                  stats.donYeuCauHuy,
-                icon: (
-                  <AlertTriangle
-                    size={30}
-                  />
-                ),
-                color:
-                  'text-amber-600',
-                bg: 'bg-amber-100'
-              },
-
-              {
-                title:
-                  'Đóng gói',
-                value:
-                  stats.donDangDongGoi,
-                icon: (
-                  <Package
-                    size={30}
-                  />
-                ),
-                color:
-                  'text-purple-500',
-                bg: 'bg-purple-100'
-              },
-
-              {
-                title:
-                  'Đang giao',
-                value:
-                  stats.donDangGiao,
-                icon: (
-                  <Truck
-                    size={30}
-                  />
-                ),
-                color:
-                  'text-cyan-500',
-                bg: 'bg-cyan-100'
-              },
-
-              {
-                title:
-                  'Đã huỷ',
-                value:
-                  stats.donDaHuy,
-                icon: (
-                  <Ban
-                    size={30}
-                  />
-                ),
-                color:
-                  'text-red-500',
-                bg: 'bg-red-100'
-              }
-            ].map((item, index) => (
-              <Card
-                key={index}
-                bordered={false}
-                className={`rounded-[28px] shadow-sm border border-gray-100 ${item.fullWidth ? 'col-span-2' : ''}`}
-              >
-                <div className="flex flex-col gap-4">
-                  <div
-                    className={`w-14 h-14 rounded-2xl flex items-center justify-center ${item.bg}`}
-                  >
-                    <div
-                      className={
-                        item.color
-                      }
-                    >
+        {/* Các thẻ thống kê phụ trợ */}
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-6">
+          {[
+            {
+              title: 'Tổng số đơn',
+              value: stats.tongSoDon,
+              icon: <ShoppingCart size={22} />,
+              color: 'text-blue-600',
+              bg: 'bg-blue-50',
+            },
+            {
+              title: 'Chờ duyệt',
+              value: stats.donChoDuyet,
+              icon: <Clock3 size={22} />,
+              color: 'text-orange-500',
+              bg: 'bg-orange-50',
+            },
+            {
+              title: 'Đóng gói',
+              value: stats.donDangDongGoi,
+              icon: <Package size={22} />,
+              color: 'text-purple-600',
+              bg: 'bg-purple-50',
+            },
+            {
+              title: 'Đang giao',
+              value: stats.donDangGiao,
+              icon: <Truck size={22} />,
+              color: 'text-cyan-600',
+              bg: 'bg-cyan-50',
+            },
+            {
+              title: 'Yêu cầu huỷ',
+              value: stats.donYeuCauHuy,
+              icon: <AlertTriangle size={22} />,
+              color: 'text-amber-500',
+              bg: 'bg-amber-50',
+            },
+            {
+              title: 'Đã huỷ',
+              value: stats.donDaHuy,
+              icon: <Ban size={22} />,
+              color: 'text-red-500',
+              bg: 'bg-red-50',
+            }
+          ].map((item, index) => (
+            <Card
+              key={index}
+              bordered={false}
+              className="rounded-[24px] shadow-sm hover:shadow-md border border-gray-100 bg-white transition-all duration-300 hover:-translate-y-1"
+              bodyStyle={{ padding: '24px' }}
+            >
+              <div className="flex flex-col gap-4">
+                <div className="flex justify-between items-center">
+                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${item.bg}`}>
+                    <div className={item.color}>
                       {item.icon}
                     </div>
                   </div>
-
-                  <div>
-                    <p className="text-gray-500">
-                      {item.title}
-                    </p>
-
-                    <h2
-                      className={`text-3xl font-black mt-2 ${item.color}`}
-                    >
-                      {item.value}
-                    </h2>
-                  </div>
                 </div>
-              </Card>
-            ))}
-          </div>
-        </Col>
-
-        {/* CHART */}
-        <Col xs={24} xl={15}>
-          <Card
-            bordered={false}
-            className="rounded-[32px] shadow-sm border border-gray-100 h-full"
-          >
-            <div className="flex justify-between items-center mb-8">
-              <div>
-                <p className="uppercase tracking-[4px] text-red-500 font-bold text-sm">
-                  Revenue Graph
-                </p>
-
-                <h2 className="text-4xl font-black mt-2 text-[#111827]">
-                  Biểu đồ doanh thu
-                </h2>
+                <div>
+                  <h3 className={`text-3xl font-black ${item.color} mb-1`}>
+                    {item.value}
+                  </h3>
+                  <p className="text-gray-500 text-sm font-medium">
+                    {item.title}
+                  </p>
+                </div>
               </div>
-
-              <div className="bg-red-50 text-red-500 px-5 py-3 rounded-2xl font-bold text-lg">
-                +18.2%
-              </div>
-            </div>
-
-            <ResponsiveContainer
-              width="100%"
-              height={500}
-            >
-              <AreaChart
-                data={revenueData}
-              >
-                <defs>
-                  <linearGradient
-                    id="colorRevenue"
-                    x1="0"
-                    y1="0"
-                    x2="0"
-                    y2="1"
-                  >
-                    <stop
-                      offset="5%"
-                      stopColor="#ef4444"
-                      stopOpacity={0.4}
-                    />
-
-                    <stop
-                      offset="95%"
-                      stopColor="#ef4444"
-                      stopOpacity={0}
-                    />
-                  </linearGradient>
-                </defs>
-
-                <CartesianGrid
-                  strokeDasharray="4 4"
-                  vertical={false}
-                  stroke="#e5e7eb"
-                />
-
-                <XAxis
-                  dataKey="day"
-                  tickLine={false}
-                  axisLine={false}
-                />
-
-                <YAxis
-                  tickLine={false}
-                  axisLine={false}
-                />
-
-                <Tooltip />
-
-                <Area
-                  type="monotone"
-                  dataKey="revenue"
-                  stroke="#dc2626"
-                  fillOpacity={1}
-                  fill="url(#colorRevenue)"
-                  strokeWidth={5}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </Card>
-        </Col>
-      </Row>
+            </Card>
+          ))}
+        </div>
+      </div>
 
       {/* FILTER */}
       <Card
         bordered={false}
-        className="rounded-[32px] shadow-sm border border-gray-100 mt-8"
+        className="rounded-[24px] shadow-sm border border-gray-100"
       >
         <div className="flex flex-wrap gap-4 items-center">
           <Input
             size="large"
             placeholder="Tìm kiếm mã đơn, khách hàng..."
-            prefix={
-              <Search size={18} />
-            }
+            prefix={<Search size={18} className="text-red-500" />}
             value={searchText}
-            onChange={(e) =>
-              setSearchText(
-                e.target.value
-              )
-            }
-            className="rounded-2xl h-[54px] flex-1 min-w-[300px]"
+            onChange={(e) => setSearchText(e.target.value)}
+            className="rounded-2xl h-[54px] flex-1 min-w-[300px] border-gray-200 hover:border-red-400 focus:border-red-500 focus:ring-red-500"
           />
 
           <Select
             size="large"
             value={filterStatus}
-            style={{
-              width: 240
-            }}
-            onChange={(value) =>
-              setFilterStatus(
-                value
-              )
-            }
+            style={{ width: 240 }}
+            onChange={(value) => setFilterStatus(value)}
+            className="h-[54px]"
             options={[
-              {
-                label:
-                  'Tất cả trạng thái',
-                value: 'ALL'
-              },
-
-              {
-                label:
-                  'Chờ duyệt',
-                value:
-                  'PENDING'
-              },
-
-              {
-                label:
-                  'Yêu cầu huỷ',
-                value:
-                  'CANCEL_REQUESTED'
-              },
-
-              {
-                label:
-                  'Đã xác nhận',
-                value:
-                  'CONFIRMED'
-              },
-
-              {
-                label:
-                  'Đóng gói',
-                value:
-                  'PACKING'
-              },
-
-              {
-                label:
-                  'Đang giao',
-                value:
-                  'SHIPPING'
-              },
-
-              {
-                label:
-                  'Hoàn thành',
-                value:
-                  'SUCCESS'
-              },
-
-              {
-                label:
-                  'Đã huỷ',
-                value:
-                  'FAILED'
-              }
+              { label: 'Tất cả trạng thái', value: 'ALL' },
+              { label: 'Chờ duyệt', value: 'PENDING' },
+              { label: 'Yêu cầu huỷ', value: 'CANCEL_REQUESTED' },
+              { label: 'Đã xác nhận', value: 'CONFIRMED' },
+              { label: 'Đóng gói', value: 'PACKING' },
+              { label: 'Đang giao', value: 'SHIPPING' },
+              { label: 'Hoàn thành', value: 'SUCCESS' },
+              { label: 'Đã huỷ', value: 'FAILED' }
             ]}
           />
 
           <Button
             size="large"
-            icon={
-              <Download size={18} />
-            }
+            icon={<Download size={18} />}
             onClick={exportCSV}
-            className="rounded-2xl h-[54px] px-6 font-semibold"
+            className="rounded-2xl h-[54px] px-6 font-semibold border-gray-200 hover:text-red-600 hover:border-red-600"
           >
             Export CSV
           </Button>
@@ -1593,39 +1004,32 @@ export default function Orders() {
       {/* TABLE */}
       <Card
         bordered={false}
-        className="rounded-[32px] shadow-sm border border-gray-100 mt-8 overflow-hidden"
+        className="rounded-[24px] shadow-sm border border-gray-100 mt-8 overflow-hidden"
       >
         <Table
           rowKey="id"
           loading={loading}
           columns={columns}
-          dataSource={
-            filteredOrders
-          }
+          dataSource={filteredOrders}
           pagination={{
-            pageSize: 10
+            pageSize: 10,
+            showSizeChanger: true
           }}
           locale={{
-            emptyText: (
-              <Empty description="Không có đơn hàng" />
-            )
+            emptyText: <Empty description="Không có đơn hàng" />
           }}
         />
       </Card>
 
       {/* DRAWER */}
       <Drawer
-        title={`Chi tiết đơn hàng #${
-          selectedOrder?.id || ''
-        }`}
+        title={<span className="text-lg font-bold text-gray-800">Chi tiết đơn hàng #{selectedOrder?.id || ''}</span>}
         open={isDrawerOpen}
         width={750}
-        onClose={() =>
-          setIsDrawerOpen(false)
-        }
+        onClose={() => setIsDrawerOpen(false)}
       >
         {!selectedOrder ? (
-          <Spin />
+          <Spin className="flex justify-center mt-20" />
         ) : (
           <div className="space-y-7">
             {/* CANCEL PROOF IF APPLICABLE */}
@@ -1709,52 +1113,33 @@ export default function Orders() {
             )}
 
             {/* CUSTOMER */}
-            <Card className="rounded-2xl">
+            <Card className="rounded-2xl border-gray-100 shadow-sm">
               <div className="flex items-start gap-4">
                 <Avatar
                   size={64}
-                  className="bg-blue-500"
+                  className="bg-red-500"
                   icon={<User size={28} />}
                 />
-
                 <div className="flex-1">
-                  <h2 className="text-2xl font-bold">
-                    {
-                      selectedOrder.customerName
-                    }
+                  <h2 className="text-2xl font-bold text-gray-800">
+                    {selectedOrder.customerName}
                   </h2>
-
                   <div className="mt-4 space-y-3">
                     <div className="flex items-center gap-3 text-gray-600">
-                      <Phone size={16} />
-
-                      {
-                        selectedOrder.phone
-                      }
+                      <Phone size={16} className="text-red-400" />
+                      {selectedOrder.phone}
                     </div>
-
                     <div className="flex items-center gap-3 text-gray-600">
-                      <Mail size={16} />
-
-                      {
-                        selectedOrder.email
-                      }
+                      <Mail size={16} className="text-red-400" />
+                      {selectedOrder.email}
                     </div>
-
                     <div className="flex items-center gap-3 text-gray-600">
-                      <MapPin size={16} />
-
-                      {
-                        selectedOrder.address
-                      }
+                      <MapPin size={16} className="text-red-400" />
+                      {selectedOrder.address}
                     </div>
-
                     <div className="flex items-center gap-3 text-gray-600">
-                      <CreditCard size={16} />
-
-                      {
-                        selectedOrder.paymentMethod
-                      } ({selectedOrder.paymentStatus})
+                      <CreditCard size={16} className="text-red-400" />
+                      {selectedOrder.paymentMethod} ({selectedOrder.paymentStatus})
                     </div>
                   </div>
                 </div>
@@ -1762,84 +1147,54 @@ export default function Orders() {
             </Card>
 
             {/* PRODUCTS */}
-            <Card className="rounded-2xl">
+            <Card className="rounded-2xl border-gray-100 shadow-sm">
               <div className="flex justify-between items-center mb-5">
-                <h2 className="text-xl font-bold">
+                <h2 className="text-xl font-bold text-gray-800">
                   Danh sách sản phẩm
                 </h2>
-
                 <div className="text-2xl font-black text-red-600">
-                  {dinhDangTien(
-                    selectedOrder.total
-                  )}
+                  {dinhDangTien(selectedOrder.total)}
                 </div>
               </div>
 
               <div className="space-y-4 mb-6">
-                {selectedOrder.items
-                  .length === 0 && (
+                {selectedOrder.items.length === 0 && (
                   <Empty description="Không có sản phẩm" />
                 )}
 
-                {selectedOrder.items.map(
-                  (item) => (
-                    <div
-                      key={item.id}
-                      className="flex items-center gap-4 border border-gray-100 rounded-2xl p-4"
-                    >
-                      <Image
-                        width={90}
-                        height={90}
-                        className="rounded-xl object-cover"
-                        src={item.image}
-                        fallback="https://placehold.co/100x100"
-                      />
-
-                      <div className="flex-1">
-                        <h3 className="font-bold text-lg">
-                          {item.name}
-                        </h3>
-
-                        <div className="grid grid-cols-2 gap-3 mt-3 text-sm text-gray-500">
-                          <div>
-                            SKU:
-                            {' '}
-                            {item.sku}
-                          </div>
-
-                          <div>
-                            Màu:
-                            {' '}
-                            {item.color}
-                          </div>
-
-                          <div>
-                            Size:
-                            {' '}
-                            {item.size}
-                          </div>
-
-                          <div>
-                            SL:
-                            {' '}
-                            {item.quantity}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="text-right">
-                        <div className="text-xl font-bold text-gray-800">
-                          {dinhDangTien(
-                            item.price
-                          )}
-                        </div>
+                {selectedOrder.items.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center gap-4 border border-gray-100 rounded-2xl p-4 bg-gray-50/50"
+                  >
+                    <Image
+                      width={90}
+                      height={90}
+                      className="rounded-xl object-cover"
+                      src={item.image}
+                      fallback="https://placehold.co/100x100"
+                    />
+                    <div className="flex-1">
+                      <h3 className="font-bold text-lg text-gray-800">
+                        {item.name}
+                      </h3>
+                      <div className="grid grid-cols-2 gap-3 mt-3 text-sm text-gray-500">
+                        <div>SKU: <span className="font-medium text-gray-700">{item.sku}</span></div>
+                        <div>Màu: <span className="font-medium text-gray-700">{item.color}</span></div>
+                        <div>Size: <span className="font-medium text-gray-700">{item.size}</span></div>
+                        <div>SL: <span className="font-medium text-gray-700">{item.quantity}</span></div>
                       </div>
                     </div>
-                  )
-                )}
+                    <div className="text-right">
+                      <div className="text-xl font-bold text-red-600">
+                        {dinhDangTien(item.price)}
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
 
-              <Divider />
+              <Divider className="my-4" />
 
               {/* PAYMENT BREAKDOWN */}
               <div className="space-y-3 text-right">
@@ -1853,19 +1208,18 @@ export default function Orders() {
                     <span className="font-medium">-{dinhDangTien(selectedOrder.discountAmount)}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-[16px] font-black border-t border-gray-100 pt-3">
+                <div className="flex justify-between items-center text-[16px] font-black border-t border-gray-100 pt-3 mt-3">
                   <span>Tổng cộng:</span>
-                  <span className="text-red-600">{dinhDangTien(selectedOrder.total)}</span>
+                  <span className="text-red-600 text-2xl">{dinhDangTien(selectedOrder.total)}</span>
                 </div>
               </div>
             </Card>
 
             {/* STEPS */}
-            <Card className="rounded-2xl">
-              <h2 className="text-xl font-bold mb-6">
+            <Card className="rounded-2xl border-gray-100 shadow-sm">
+              <h2 className="text-xl font-bold mb-6 text-gray-800">
                 Tiến trình đơn hàng
               </h2>
-
               {(() => {
                 const timeline = selectedOrder.timeline || {};
                 const formatTimelineTime = (isoString?: string) => {
@@ -1882,12 +1236,9 @@ export default function Orders() {
                 
                 return (
                   <Steps
-                    current={getStepCurrent(
-                      selectedOrder.status
-                    )}
+                    current={getStepCurrent(selectedOrder.status)}
                     status={
-                      selectedOrder.status ===
-                      'FAILED'
+                      selectedOrder.status === 'FAILED'
                         ? 'error'
                         : selectedOrder.status === 'CANCEL_REQUESTED'
                         ? 'error'
@@ -1923,11 +1274,10 @@ export default function Orders() {
             </Card>
 
             {/* ACTIONS */}
-            <Card className="rounded-2xl">
-              <h2 className="text-xl font-bold mb-5">
+            <Card className="rounded-2xl border-gray-100 shadow-sm bg-gray-50/50">
+              <h2 className="text-xl font-bold mb-5 text-gray-800">
                 Điều hướng nghiệp vụ
               </h2>
-
               {renderActionButtons()}
             </Card>
           </div>
@@ -1965,12 +1315,12 @@ export default function Orders() {
             danger
             size="large"
             loading={actionLoading}
-            className="rounded-xl bg-red-600 border-none"
+            className="rounded-xl bg-red-600 hover:bg-red-700 border-none"
             onClick={async () => {
               if (selectedOrder) {
                 await capNhatTrangThaiDonHang(selectedOrder.id, 'FAILED');
                 setCancelRequestModalVisible(false);
-                setIsDrawerOpen(false); // Also close the drawer
+                setIsDrawerOpen(false); 
               }
             }}
           >
@@ -2016,7 +1366,7 @@ export default function Orders() {
 
               <div>
                 <h3 className="text-gray-500 text-sm font-semibold mb-2">LÝ DO YÊU CẦU HỦY ĐƠN:</h3>
-                <div className="bg-gray-50 border border-gray-100 p-4 rounded-2xl text-gray-800 text-base italic leading-relaxed shadow-inner">
+                <div className="bg-white border border-gray-200 p-4 rounded-2xl text-gray-800 text-base italic leading-relaxed shadow-sm">
                   "{info.reason}"
                 </div>
               </div>
@@ -2024,12 +1374,12 @@ export default function Orders() {
               {info.image && (
                 <div>
                   <h3 className="text-gray-500 text-sm font-semibold mb-2">HÌNH ẢNH MINH CHỨNG ĐÍNH KÈM:</h3>
-                  <div className="flex justify-center border border-dashed border-gray-200 p-4 rounded-2xl bg-gray-50">
+                  <div className="flex justify-center border border-dashed border-red-200 p-4 rounded-2xl bg-white shadow-sm">
                     <Image
                       src={info.image}
                       alt="Proof of Cancellation"
-                      style={{ maxHeight: 300, objectFit: 'contain', borderRadius: 8 }}
-                      className="shadow-sm max-w-full"
+                      style={{ maxHeight: 300, objectFit: 'contain', borderRadius: 12 }}
+                      className="max-w-full"
                     />
                   </div>
                 </div>
