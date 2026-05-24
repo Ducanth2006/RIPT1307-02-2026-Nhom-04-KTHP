@@ -57,6 +57,14 @@ h3.ant-typography, .ant-typography h3 { font-size: 20px !important; }
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: #8f6f6c;
   }
+  
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 }
 
 .help-collapse .ant-collapse-item {

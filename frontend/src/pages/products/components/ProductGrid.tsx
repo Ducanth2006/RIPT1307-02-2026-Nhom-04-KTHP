@@ -1,4 +1,4 @@
-import { Typography, Row, Col, Spin, Empty, Card, Collapse } from "antd";
+import { Typography, Row, Col, Spin, Empty, Card, Collapse, InputNumber, Button, Select, Divider } from "antd";
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -19,11 +19,27 @@ const ProductGrid = () => {
   const categoryId = categoryIdStr ? Number(categoryIdStr) : undefined;
   const pageSize = 12;
 
+  const minPriceStr = searchParams.get("min_price");
+  const maxPriceStr = searchParams.get("max_price");
+  const minPrice = minPriceStr ? Number(minPriceStr) : undefined;
+  const maxPrice = maxPriceStr ? Number(maxPriceStr) : undefined;
+  const sortBy = searchParams.get("sortBy") || undefined;
+  const order = searchParams.get("order") || undefined;
+
   // Lấy dữ liệu từ API dùng useQuery để clean và tối ưu cache
   const { data, isLoading } = useQuery({
-    queryKey: ["products-grid", currentPage, search, categoryId],
+    queryKey: ["products-grid", currentPage, search, categoryId, minPrice, maxPrice, sortBy, order],
     queryFn: () =>
-      getProducts({ page: currentPage, limit: pageSize, search, category_id: categoryId }).then((res) => res.data),
+      getProducts({ 
+        page: currentPage, 
+        limit: pageSize, 
+        search, 
+        category_id: categoryId,
+        min_price: minPrice,
+        max_price: maxPrice,
+        sortBy,
+        order
+      }).then((res) => res.data),
   });
 
   // Lấy danh mục sản phẩm phục vụ bộ lọc tìm kiếm
@@ -69,6 +85,44 @@ const ProductGrid = () => {
       searchParams.delete("category_id");
     } else {
       searchParams.set("category_id", id.toString());
+    }
+    searchParams.set("page", "1");
+    setSearchParams(searchParams);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const [localMinPrice, setLocalMinPrice] = useState<number | null>(minPrice || null);
+  const [localMaxPrice, setLocalMaxPrice] = useState<number | null>(maxPrice || null);
+
+  useEffect(() => {
+    setLocalMinPrice(minPrice || null);
+    setLocalMaxPrice(maxPrice || null);
+  }, [minPrice, maxPrice]);
+
+  const handlePriceApply = () => {
+    if (localMinPrice !== null) {
+      searchParams.set("min_price", localMinPrice.toString());
+    } else {
+      searchParams.delete("min_price");
+    }
+    if (localMaxPrice !== null) {
+      searchParams.set("max_price", localMaxPrice.toString());
+    } else {
+      searchParams.delete("max_price");
+    }
+    searchParams.set("page", "1");
+    setSearchParams(searchParams);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleSortChange = (value: string) => {
+    if (!value) {
+      searchParams.delete("sortBy");
+      searchParams.delete("order");
+    } else {
+      const [sort, orderVal] = value.split("-");
+      searchParams.set("sortBy", sort);
+      searchParams.set("order", orderVal);
     }
     searchParams.set("page", "1");
     setSearchParams(searchParams);
@@ -193,12 +247,64 @@ const ProductGrid = () => {
                   );
                 })}
               </Collapse>
+              
+              <Divider style={{ margin: "16px 0" }} />
+              
+              <div style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 8, padding: "0 8px" }}>
+                <Text strong style={{ fontSize: 16 }}>
+                  Khoảng giá
+                </Text>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "0 8px", marginBottom: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <InputNumber 
+                    placeholder="Từ" 
+                    value={localMinPrice} 
+                    onChange={setLocalMinPrice} 
+                    style={{ width: "100%" }}
+                    formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                    parser={(value) => value!.replace(/\$\s?|(,*)/g, '') as unknown as number}
+                    min={0}
+                  />
+                  <Text>-</Text>
+                  <InputNumber 
+                    placeholder="Đến" 
+                    value={localMaxPrice} 
+                    onChange={setLocalMaxPrice} 
+                    style={{ width: "100%" }}
+                    formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                    parser={(value) => value!.replace(/\$\s?|(,*)/g, '') as unknown as number}
+                    min={0}
+                  />
+                </div>
+                <Button type="primary" onClick={handlePriceApply} block style={{ background: "#ee4d2d" }}>
+                  Áp dụng
+                </Button>
+              </div>
             </div>
           </Card>
         </Col>
 
         {/* Products Grid */}
         <Col xs={24} md={18}>
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 20 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <Text strong>Sắp xếp theo:</Text>
+              <Select
+                value={sortBy && order ? `${sortBy}-${order}` : ""}
+                onChange={handleSortChange}
+                style={{ width: 180 }}
+                options={[
+                  { value: "", label: "Mặc định" },
+                  { value: "created_at-desc", label: "Mới nhất" },
+                  { value: "base_price-asc", label: "Giá tăng dần" },
+                  { value: "base_price-desc", label: "Giá giảm dần" },
+                  { value: "name-asc", label: "Tên A-Z" },
+                  { value: "name-desc", label: "Tên Z-A" },
+                ]}
+              />
+            </div>
+          </div>
           <Spin spinning={isLoading} size="large">
             <Row gutter={[20, 20]} style={{ minHeight: 400 }}>
               {products.length > 0

@@ -25,7 +25,7 @@ const ProductPagination = ({ current, total, pageSize, onChange }: Props) => {
       style={{
         display: "flex",
         justifyContent: "center",
-        marginTop: "48px",
+        marginTop: "4px",
         padding: "20px 0",
       }}
     >
