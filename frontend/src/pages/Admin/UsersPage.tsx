@@ -31,7 +31,7 @@ import {
   Edit,
   Shield,
   Search,
-  Key
+  Trash2
 } from 'lucide-react';
 
 import type { ColumnsType } from 'antd/es/table';
@@ -41,7 +41,7 @@ import {
   createAdminUser,
   updateAdminUser,
   toggleAdminUserLock,
-  revokeAdminUserTokens
+  deleteAdminUser
 } from '../../services/adminUserService';
 
 const { RangePicker } =
@@ -162,7 +162,7 @@ export default function UsersPage() {
             const lowerSearch =
               searchText.toLowerCase();
 
-            const matchSearch =
+            matchSearch =
               item.name
                 .toLowerCase()
                 .includes(
@@ -411,10 +411,6 @@ export default function UsersPage() {
       form.setFieldsValue({
         name: user.name,
         email: user.email,
-        username:
-          user.username || '',
-        phone:
-          user.phone || '',
         role: user.role,
         newPassword: ''
       });
@@ -456,10 +452,6 @@ export default function UsersPage() {
           const payload: any = {
             name: values.name,
             email: values.email,
-            username:
-              values.username,
-            phone:
-              values.phone,
             role: values.role
           };
 
@@ -492,10 +484,6 @@ export default function UsersPage() {
           const payload = {
             name: values.name,
             email: values.email,
-            username:
-              values.username,
-            phone:
-              values.phone,
             password:
               values.password,
             role: values.role
@@ -533,32 +521,33 @@ export default function UsersPage() {
       }
     };
 
+
+
   // =========================
-  // REVOKE TOKENS
+  // DELETE USER
   // =========================
 
-  const handleRevokeTokens =
+  const handleDeleteUser =
     async (
       userId: string,
       userName?: string
     ) => {
       try {
-        const res =
-          await revokeAdminUserTokens(
-            userId
-          );
+        await deleteAdminUser(userId);
 
         message.success(
-          res.message ||
-            `Đã thu hồi phiên đăng nhập thành công! ${
-              userName || ''
-            } sẽ bị đăng xuất ngay lập tức.`
+          `Đã xóa tài khoản ${
+            userName || ''
+          } thành công!`
         );
+
+        await loadUsers();
       } catch (err: any) {
         message.error(
-          err.response?.data
-            ?.message ||
-            'Không thể thu hồi phiên đăng nhập.'
+          'Không thể xóa tài khoản: ' +
+            (err.response?.data
+              ?.message ||
+              err.message)
         );
       }
     };
@@ -746,18 +735,18 @@ export default function UsersPage() {
               />
             </Tooltip>
 
-            {/* REVOKE */}
-            <Tooltip title="Thu hồi đăng nhập">
+            {/* DELETE */}
+            <Tooltip title="Xóa tài khoản">
               <Popconfirm
-                title="Bạn có chắc chắn muốn đăng xuất thiết bị của người dùng này?"
-                description="Phiên làm việc của họ sẽ bị thu hồi ngay lập tức."
+                title="Bạn có chắc chắn muốn xóa tài khoản này?"
+                description="Tài khoản sẽ bị xóa mềm khỏi hệ thống."
                 okText="Đồng ý"
                 cancelText="Hủy"
                 okButtonProps={{
                   danger: true
                 }}
                 onConfirm={() =>
-                  handleRevokeTokens(
+                  handleDeleteUser(
                     record.id,
                     record.name
                   )
@@ -767,11 +756,11 @@ export default function UsersPage() {
                   type="text"
                   danger
                   icon={
-                    <Key
+                    <Trash2
                       size={16}
                     />
                   }
-                  className="hover:bg-red-50"
+                  className="hover:bg-red-50 text-[#af101a]"
                 />
               </Popconfirm>
             </Tooltip>
@@ -1114,51 +1103,7 @@ export default function UsersPage() {
             />
           </Form.Item>
 
-          {/* USERNAME */}
-          <Form.Item
-            name="username"
-            label="Tên đăng nhập (Username)"
-            rules={[
-              {
-                required:
-                  true,
-                message:
-                  'Vui lòng nhập username'
-              },
 
-              {
-                pattern:
-                  /^[a-zA-Z0-9_]+$/,
-                message:
-                  'Username không được chứa ký tự đặc biệt'
-              }
-            ]}
-          >
-            <Input placeholder="nguyenvana" />
-          </Form.Item>
-
-          {/* PHONE */}
-          <Form.Item
-            name="phone"
-            label="Số điện thoại liên hệ"
-            rules={[
-              {
-                required:
-                  true,
-                message:
-                  'Vui lòng nhập số điện thoại'
-              },
-
-              {
-                pattern:
-                  /^(0[3|5|7|8|9])+([0-9]{8})$/,
-                message:
-                  'Số điện thoại Việt Nam không hợp lệ'
-              }
-            ]}
-          >
-            <Input placeholder="0912345678" />
-          </Form.Item>
 
           {/* PASSWORD */}
           {!editingUser ? (
