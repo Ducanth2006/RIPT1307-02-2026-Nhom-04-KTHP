@@ -3,7 +3,7 @@ import { createComplaint, getComplaintsByUserId, getComplaintById } from '../ser
 
 export const postComplaint = async (req: Request, res: Response): Promise<any> => {
     try {
-        const { userId, orderId, subject, content } = req.body;
+        const { userId, orderId, subject, content, images } = req.body;
 
         if (!userId) return res.status(401).json({ message: 'Vui lòng cung cấp userId.' });
         if (!orderId || !subject || !content) {
@@ -14,7 +14,8 @@ export const postComplaint = async (req: Request, res: Response): Promise<any> =
             userId: Number(userId),
             orderId: Number(orderId),
             subject,
-            content
+            content,
+            images: Array.isArray(images) ? images : []
         });
 
         return res.status(201).json({ message: 'Gửi khiếu nại thành công', data });
