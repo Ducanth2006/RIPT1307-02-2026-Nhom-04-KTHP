@@ -18,6 +18,7 @@ import {
   Row,
   Col,
   Select,
+  Image,
 } from 'antd';
 
 import type { ColumnsType } from 'antd/es/table';
@@ -63,6 +64,7 @@ interface Complaint {
   };
 
   reply?: string;
+  images?: string[];
 }
 
 export default function ComplaintsPage() {
@@ -517,6 +519,28 @@ export default function ComplaintsPage() {
                   }
                 </Paragraph>
               </div>
+
+              {selectedComplaint.images && selectedComplaint.images.length > 0 && (
+                <div>
+                  <Text strong>
+                    Hình ảnh minh chứng ({selectedComplaint.images.length}):
+                  </Text>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Image.PreviewGroup>
+                      {selectedComplaint.images.map((imgUrl, idx) => (
+                        <Image
+                          key={idx}
+                          src={imgUrl}
+                          alt={`complaint-image-${idx}`}
+                          width={100}
+                          height={100}
+                          className="object-cover rounded border border-gray-200 cursor-pointer hover:opacity-85 transition-opacity"
+                        />
+                      ))}
+                    </Image.PreviewGroup>
+                  </div>
+                </div>
+              )}
 
               <div>
                 <Text strong>
