@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { getActiveVouchers, getVoucherDetailsByCode } from '../services/clientVoucherService';
+import { getActiveVouchers, getVoucherDetailsByCode, validateVoucherForOrder } from '../services/clientVoucherService';
 
 /**
  * Controller lấy danh sách voucher khả dụng cho khách hàng
@@ -40,6 +40,41 @@ export const getVoucherByCode = async (req: Request, res: Response): Promise<any
         console.error('Lỗi getVoucherByCode:', error);
         return res.status(400).json({
             message: error.message || 'Lỗi khi tra cứu mã giảm giá.'
+        });
+    }
+};
+
+/**
+ * Controller validate voucher trước khi áp dụng checkout
+ * POST /api/vouchers/validate
+ * Body: { code: string, orderTotal: number }
+ */
+export const validateVoucher = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { code, orderTotal } = req.body;
+
+        if (!code) {
+            return res.status(400).json({
+                message: 'Vui lòng cung cấp mã giảm giá.'
+            });
+        }
+
+        if (orderTotal === undefined || orderTotal === null || orderTotal < 0) {
+            return res.status(400).json({
+                message: 'Vui lòng cung cấp tổng giá trị đơn hàng (orderTotal).'
+            });
+        }
+
+        const result = await validateVoucherForOrder(String(code), Number(orderTotal));
+        return res.status(200).json({
+            message: result.message,
+            data: result
+        });
+    } catch (error: any) {
+        console.error('Lỗi validateVoucher:', error);
+        return res.status(400).json({
+            valid: false,
+            message: error.message || 'Mã giảm giá không hợp lệ.'
         });
     }
 };
