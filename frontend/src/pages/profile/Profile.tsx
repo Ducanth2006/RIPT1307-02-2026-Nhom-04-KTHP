@@ -17,6 +17,7 @@ import {
   Empty,
   Select,
   Tooltip,
+  Space,
 } from "antd";
 import {
   UserOutlined,
@@ -585,8 +586,8 @@ const AddressesList = ({ userId }: { userId: number }) => {
 // ─── Complaints Section ───────────────────────────────────────────────────────
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
-  New: { label: "Mới", color: "blue", icon: <ClockCircleOutlined /> },
-  "In Progress": { label: "Đang xử lý", color: "orange", icon: <SyncOutlined spin /> },
+  New: { label: "Chờ xử lý", color: "blue", icon: <ClockCircleOutlined /> },
+  "In Progress": { label: "Đã xác nhận", color: "orange", icon: <SyncOutlined spin /> },
   Resolved: { label: "Đã giải quyết", color: "green", icon: <CheckCircleOutlined /> },
   Closed: { label: "Đã đóng", color: "default", icon: <CloseCircleOutlined /> },
 };
@@ -792,16 +793,31 @@ const ComplaintsSection = ({ userId }: { userId: number }) => {
                   )}
                 </div>
 
-                {/* Nút xem chi tiết */}
-                <Tooltip title="Xem chi tiết">
-                  <Button
-                    icon={<EyeOutlined />}
-                    onClick={() => handleViewDetail(c)}
-                    style={{ flexShrink: 0 }}
-                  >
-                    Xem
-                  </Button>
-                </Tooltip>
+                {/* Nút thao tác */}
+                <Space direction="vertical" size={8} style={{ flexShrink: 0, width: 100 }}>
+                  <Tooltip title="Xem chi tiết đơn khiếu nại">
+                    <Button
+                      block
+                      icon={<EyeOutlined />}
+                      onClick={() => handleViewDetail(c)}
+                    >
+                      Xem
+                    </Button>
+                  </Tooltip>
+                  <Tooltip title={c.admin_response ? "Xem phản hồi giải quyết từ Shop" : "Chưa có kết quả phản hồi"}>
+                    <Button
+                      block
+                      type={c.admin_response ? "primary" : "default"}
+                      danger={!!c.admin_response}
+                      disabled={!c.admin_response}
+                      icon={<MessageOutlined />}
+                      onClick={() => handleViewDetail(c)}
+                      style={c.admin_response ? { backgroundColor: "#ee4d2d", borderColor: "#ee4d2d" } : undefined}
+                    >
+                      Kết quả
+                    </Button>
+                  </Tooltip>
+                </Space>
               </div>
             );
           })}

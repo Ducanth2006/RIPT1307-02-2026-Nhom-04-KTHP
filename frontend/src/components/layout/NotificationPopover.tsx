@@ -33,7 +33,7 @@ const NotificationPopover = ({ children }: NotificationPopoverProps) => {
 
   const rawNotifications = data?.data || [];
   const notifications = rawNotifications.filter((item: any) => {
-    const adminTitles = ["Đơn hàng mới chờ duyệt", "Yêu cầu hủy đơn hàng mới"];
+    const adminTitles = ["Đơn hàng mới chờ duyệt", "Yêu cầu hủy đơn hàng mới", "Có khiếu nại mới cần xử lý"];
     return !adminTitles.includes(item.title);
   });
   const unreadCount = notifications.filter((n: any) => !n.is_read).length;
@@ -86,6 +86,10 @@ const NotificationPopover = ({ children }: NotificationPopoverProps) => {
       } else {
         navigate(`/orders?openOrderId=${item.reference_id}`);
       }
+    } else if (item.reference_type === "complaint") {
+      setVisible(false);
+      setSelectedNotif(null);
+      navigate("/profile");
     }
   };
 

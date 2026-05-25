@@ -35,7 +35,7 @@ export default function NotificationPanel() {
       const res = await getNotificationsApi(userId);
       const dataList = res.data?.data || (res.data as any)?.data || [];
       
-      const adminTitles = ["Đơn hàng mới chờ duyệt", "Yêu cầu hủy đơn hàng mới"];
+      const adminTitles = ["Đơn hàng mới chờ duyệt", "Yêu cầu hủy đơn hàng mới", "Có khiếu nại mới cần xử lý"];
       const filteredList = dataList.filter((n: any) => adminTitles.includes(n.title));
       
       const uiList: UINotification[] = filteredList.map((n: any) => {
@@ -128,6 +128,8 @@ export default function NotificationPanel() {
 
     if (item.referenceType === 'order' && item.referenceId) {
       navigate(`/admin/orders?openOrderId=${item.referenceId}`);
+    } else if (item.referenceType === 'complaint') {
+      navigate('/admin/complaints');
     }
   };
   

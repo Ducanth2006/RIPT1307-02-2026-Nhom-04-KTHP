@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getActiveVouchersList, getVoucherByCode } from '../controllers/clientVoucherController';
+import { getActiveVouchersList, getVoucherByCode, validateVoucher } from '../controllers/clientVoucherController';
 
 const router = Router();
 
@@ -63,6 +63,71 @@ const router = Router();
  *         description: Lỗi hệ thống
  */
 router.get('/', getActiveVouchersList);
+
+/**
+ * @swagger
+ * /vouchers/validate:
+ *   post:
+ *     summary: Validate mã giảm giá trước khi checkout
+ *     description: Kiểm tra tính hợp lệ của voucher và tính toán số tiền giảm. Dùng để hiển thị preview giá trước khi đặt hàng.
+ *     tags: [Client Vouchers]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - code
+ *               - orderTotal
+ *             properties:
+ *               code:
+ *                 type: string
+ *                 description: Mã voucher cần kiểm tra
+ *                 example: "WELCOME10"
+ *               orderTotal:
+ *                 type: number
+ *                 description: Tổng giá trị đơn hàng (VNĐ)
+ *                 example: 1500000
+ *     responses:
+ *       200:
+ *         description: Voucher hợp lệ
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     valid:
+ *                       type: boolean
+ *                       example: true
+ *                     voucher:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: integer
+ *                         code:
+ *                           type: string
+ *                         discount_type:
+ *                           type: string
+ *                         discount_value:
+ *                           type: number
+ *                     discount_amount:
+ *                       type: number
+ *                       description: Số tiền được giảm
+ *                       example: 100000
+ *                     final_amount:
+ *                       type: number
+ *                       description: Số tiền sau khi giảm
+ *                       example: 1400000
+ *       400:
+ *         description: Voucher không hợp lệ (hết hạn, hết lượt, không đủ điều kiện, v.v.)
+ */
+router.post('/validate', validateVoucher);
 
 /**
  * @swagger
