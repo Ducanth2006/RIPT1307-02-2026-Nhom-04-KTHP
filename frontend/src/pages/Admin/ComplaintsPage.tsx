@@ -1,6 +1,7 @@
 import React, {
   useEffect,
   useState,
+  useMemo,
 } from 'react';
 
 import {
@@ -16,6 +17,8 @@ import {
   Card,
   Row,
   Col,
+  Select,
+  Image,
 } from 'antd';
 
 import type { ColumnsType } from 'antd/es/table';
@@ -25,6 +28,7 @@ import {
   CheckCircle,
   Send,
   AlertTriangle,
+  Search,
 } from 'lucide-react';
 
 import {
@@ -60,6 +64,7 @@ interface Complaint {
   };
 
   reply?: string;
+  images?: string[];
 }
 
 export default function ComplaintsPage() {
@@ -81,6 +86,27 @@ export default function ComplaintsPage() {
 
   const [replyText, setReplyText] =
     useState('');
+
+  const [searchText, setSearchText] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
+
+  const filteredComplaints = useMemo(() => {
+    return complaints.filter((c) => {
+      const matchesStatus = statusFilter === 'All' || c.status === statusFilter;
+      
+      const searchLower = searchText.trim().toLowerCase();
+      if (!searchLower) return matchesStatus;
+
+      const matchesSearch = 
+        String(c.id).toLowerCase().includes(searchLower) ||
+        String(c.order_id).toLowerCase().includes(searchLower) ||
+        (c.users?.full_name && c.users.full_name.toLowerCase().includes(searchLower)) ||
+        (c.users?.email && c.users.email.toLowerCase().includes(searchLower)) ||
+        (c.content && c.content.toLowerCase().includes(searchLower));
+
+      return matchesStatus && matchesSearch;
+    });
+  }, [complaints, searchText, statusFilter]);
 
   // ================= FETCH =================
   const fetchComplaints = async () => {
@@ -127,13 +153,6 @@ export default function ComplaintsPage() {
         return (
           <Tag color="green">
             Đã giải quyết
-          </Tag>
-        );
-
-      case 'Closed':
-        return (
-          <Tag color="default">
-            Đã đóng
           </Tag>
         );
 
@@ -273,12 +292,6 @@ export default function ComplaintsPage() {
       },
 
       {
-        title: 'Tiêu đề',
-        dataIndex: 'title',
-        key: 'title',
-      },
-
-      {
         title: 'Trạng thái',
         dataIndex: 'status',
         key: 'status',
@@ -400,13 +413,43 @@ export default function ComplaintsPage() {
         </Col>
       </Row>
 
+      {/* FILTER BAR */}
+      <Card className="!mb-2">
+        <Row gutter={[16, 16]} align="middle">
+          <Col xs={24} md={16}>
+            <Input
+              placeholder="Tìm kiếm theo mã khiếu nại, mã đơn hàng, tên hoặc email khách hàng, nội dung..."
+              prefix={<Search size={18} className="text-gray-400 mr-2" />}
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              allowClear
+              size="large"
+            />
+          </Col>
+          <Col xs={24} md={8}>
+            <Select
+              className="w-full"
+              size="large"
+              value={statusFilter}
+              onChange={(value) => setStatusFilter(value)}
+              options={[
+                { value: 'All', label: 'Tất cả trạng thái' },
+                { value: 'New', label: 'Chờ xử lý' },
+                { value: 'In Progress', label: 'Đang xử lý' },
+                { value: 'Resolved', label: 'Đã giải quyết' },
+              ]}
+            />
+          </Col>
+        </Row>
+      </Card>
+
       {/* TABLE */}
       <Card>
         <Table
           rowKey="id"
           loading={loading}
           columns={columns}
-          dataSource={complaints}
+          dataSource={filteredComplaints}
           pagination={{
             pageSize: 10,
           }}
@@ -467,18 +510,6 @@ export default function ComplaintsPage() {
 
               <div>
                 <Text strong>
-                  Tiêu đề:
-                </Text>
-
-                <div>
-                  {
-                    selectedComplaint.title
-                  }
-                </div>
-              </div>
-
-              <div>
-                <Text strong>
                   Nội dung:
                 </Text>
 
@@ -488,6 +519,28 @@ export default function ComplaintsPage() {
                   }
                 </Paragraph>
               </div>
+
+              {selectedComplaint.images && selectedComplaint.images.length > 0 && (
+                <div>
+                  <Text strong>
+                    Hình ảnh minh chứng ({selectedComplaint.images.length}):
+                  </Text>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Image.PreviewGroup>
+                      {selectedComplaint.images.map((imgUrl, idx) => (
+                        <Image
+                          key={idx}
+                          src={imgUrl}
+                          alt={`complaint-image-${idx}`}
+                          width={100}
+                          height={100}
+                          className="object-cover rounded border border-gray-200 cursor-pointer hover:opacity-85 transition-opacity"
+                        />
+                      ))}
+                    </Image.PreviewGroup>
+                  </div>
+                </div>
+              )}
 
               <div>
                 <Text strong>

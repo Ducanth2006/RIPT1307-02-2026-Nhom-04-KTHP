@@ -125,5 +125,6 @@ router.patch('/:id/confirm', confirmComplaintHandler);
  *         description: Khiếu nại không tồn tại
  */
 router.put('/:id/reply', replyComplaintHandler);
+router.patch('/:id/reply', replyComplaintHandler);
 
 export default router;

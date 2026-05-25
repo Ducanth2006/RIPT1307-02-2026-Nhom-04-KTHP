@@ -42,7 +42,9 @@ export default function AppLayout() {
   });
 
   const notificationsList = notificationsRes?.data || [];
-  const unreadCount = notificationsList.filter((n: any) => !n.is_read).length;
+  const adminTitles = ["Đơn hàng mới chờ duyệt", "Yêu cầu hủy đơn hàng mới", "Có khiếu nại mới cần xử lý"];
+  const adminNotifications = notificationsList.filter((n: any) => adminTitles.includes(n.title));
+  const unreadCount = adminNotifications.filter((n: any) => !n.is_read).length;
 
   if (!token) {
     return <Navigate to="/login" replace />;

@@ -256,11 +256,11 @@ export const checkoutOrder = async (data: CheckoutRequest) => {
             reference_type: 'order'
         });
 
-        // 8b. Thông báo cho Admins
+        // 8b. Thông báo cho Admins & Staff
         const { data: admins } = await supabaseClient
             .from('users')
             .select('id')
-            .eq('role', 'Admin');
+            .in('role', ['Admin', 'Staff']);
 
         if (admins && admins.length > 0) {
             admins.forEach((admin: any) => {
