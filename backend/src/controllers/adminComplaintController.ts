@@ -80,13 +80,13 @@ export const confirmComplaintHandler = async (req: Request, res: Response): Prom
 export const replyComplaintHandler = async (req: Request, res: Response): Promise<any> => {
     try {
         const { id } = req.params;
-        const { replyText } = req.body;
+        const replyText = req.body.replyText || req.body.reply;
 
         if (!id) {
             return res.status(400).json({ message: "Vui lòng cung cấp ID khiếu nại." });
         }
 
-        if (!replyText || replyText.trim() === '') {
+        if (!replyText || String(replyText).trim() === '') {
             return res.status(400).json({ message: "Vui lòng cung cấp nội dung phản hồi." });
         }
 
