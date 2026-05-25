@@ -173,12 +173,12 @@ export default function UsersPage() {
                 .includes(
                   lowerSearch
                 ) ||
-              item.username
+              !!item.username
                 ?.toLowerCase()
                 .includes(
                   lowerSearch
                 ) ||
-              item.phone
+              !!item.phone
                 ?.toLowerCase()
                 .includes(
                   lowerSearch

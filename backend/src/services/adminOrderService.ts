@@ -393,6 +393,7 @@ export const capNhatTrangThaiDonHang = async (
             payment_status,
             shipping_address,
             cancel_reason,
+            voucher_id,
             order_items (
                 quantity,
                 cost_price,
@@ -628,6 +629,29 @@ export const capNhatTrangThaiDonHang = async (
 
                 if (loiThemLog) {
                     throw loiThemLog;
+                }
+            }
+
+            // 2b. Hoàn lại lượt sử dụng voucher (nếu đơn hàng có dùng voucher)
+            if (donHang.voucher_id) {
+                try {
+                    const { data: voucherHienTai } = await supabaseClient
+                        .from('vouchers')
+                        .select('id, quantity')
+                        .eq('id', donHang.voucher_id)
+                        .maybeSingle();
+
+                    if (voucherHienTai && voucherHienTai.quantity !== null) {
+                        await supabaseClient
+                            .from('vouchers')
+                            .update({ quantity: voucherHienTai.quantity + 1 })
+                            .eq('id', donHang.voucher_id);
+
+                        console.log(`✅ Đã hoàn lại 1 lượt sử dụng cho voucher ID: ${donHang.voucher_id}`);
+                    }
+                } catch (voucherErr) {
+                    console.error('⚠️ Lỗi khi hoàn voucher quantity:', voucherErr);
+                    // Không throw - hoàn voucher là best-effort, không nên block việc hủy đơn
                 }
             }
         }
