@@ -9,7 +9,7 @@ export interface IComplaint {
   id: number;
   subject: string;
   content: string;
-  status: "New" | "In Progress" | "Resolved" | "Closed";
+  status: "New" | "Confirmed" | "In Progress" | "Resolved" | "Closed";
   admin_response: string | null;
   images: string[];
   created_at: string;
