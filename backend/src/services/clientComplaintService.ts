@@ -20,6 +20,7 @@ export const createComplaint = async (payload: {
 
     if (orderErr || !order) throw new Error('Đơn hàng không tồn tại hoặc không thuộc về bạn.');
 
+    // 1. Lưu khiếu nại vào bảng complaints
     const { data, error } = await supabaseClient
         .from('complaints')
         .insert([{
@@ -34,6 +35,51 @@ export const createComplaint = async (payload: {
         .single();
 
     if (error) throw new Error('Lỗi khi tạo khiếu nại: ' + error.message);
+
+    const complaintId = data.id;
+
+    // 2. Tạo thông báo (song song)
+    try {
+        const notificationsList = [];
+
+        // 2a. Thông báo cho chính Client (Khách hàng)
+        notificationsList.push({
+            user_id: userId,
+            title: 'Gửi khiếu nại thành công',
+            message: `Yêu cầu khiếu nại #${complaintId} về đơn hàng #${orderId} đã được gửi thành công và đang chờ giải quyết.`,
+            type: 'info',
+            is_read: false,
+            reference_id: String(complaintId),
+            reference_type: 'complaint'
+        });
+
+        // 2b. Tìm các tài khoản Admin để bắn thông báo cho Admin
+        const { data: admins } = await supabaseClient
+            .from('users')
+            .select('id')
+            .eq('role', 'Admin');
+
+        if (admins && admins.length > 0) {
+            admins.forEach((admin: any) => {
+                notificationsList.push({
+                    user_id: admin.id,
+                    title: 'Có khiếu nại mới cần xử lý',
+                    message: `Khách hàng vừa gửi khiếu nại mới #${complaintId} cho đơn hàng #${orderId}.`,
+                    type: 'warning',
+                    is_read: false,
+                    reference_id: String(complaintId),
+                    reference_type: 'complaint'
+                });
+            });
+        }
+
+        if (notificationsList.length > 0) {
+            await supabaseClient.from('notifications').insert(notificationsList);
+        }
+    } catch (notifErr) {
+        console.error("Lỗi khi bắn thông báo khiếu nại:", notifErr);
+    }
+
     return data;
 };
 
