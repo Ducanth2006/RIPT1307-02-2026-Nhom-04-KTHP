@@ -794,7 +794,7 @@ const ComplaintsSection = ({ userId }: { userId: number }) => {
                 </div>
 
                 {/* Nút thao tác */}
-                <Space direction="vertical" size={8} style={{ flexShrink: 0, width: 100 }}>
+                <div style={{ flexShrink: 0, width: 100 }}>
                   <Tooltip title="Xem chi tiết đơn khiếu nại">
                     <Button
                       block
@@ -804,20 +804,7 @@ const ComplaintsSection = ({ userId }: { userId: number }) => {
                       Xem
                     </Button>
                   </Tooltip>
-                  <Tooltip title={c.admin_response ? "Xem phản hồi giải quyết từ Shop" : "Chưa có kết quả phản hồi"}>
-                    <Button
-                      block
-                      type={c.admin_response ? "primary" : "default"}
-                      danger={!!c.admin_response}
-                      disabled={!c.admin_response}
-                      icon={<MessageOutlined />}
-                      onClick={() => handleViewDetail(c)}
-                      style={c.admin_response ? { backgroundColor: "#ee4d2d", borderColor: "#ee4d2d" } : undefined}
-                    >
-                      Kết quả
-                    </Button>
-                  </Tooltip>
-                </Space>
+                </div>
               </div>
             );
           })}
