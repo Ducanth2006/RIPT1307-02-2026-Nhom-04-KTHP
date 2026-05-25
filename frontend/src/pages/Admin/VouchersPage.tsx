@@ -1,422 +1,1315 @@
-import React, { useState } from 'react';
-import { 
-  Table, 
-  Button, 
-  Input, 
-  Tag, 
-  Space, 
-  Modal, 
-  Form, 
-  InputNumber, 
-  Select, 
-  DatePicker, 
-  Switch, 
-  message, 
-  Tooltip, 
-  Popconfirm 
+import React, {
+  useEffect,
+  useMemo,
+  useState
+} from 'react';
+
+import dayjs from 'dayjs';
+
+import {
+  Table,
+  Button,
+  Input,
+  Tag,
+  Space,
+  Modal,
+  Form,
+  InputNumber,
+  Select,
+  DatePicker,
+  Switch,
+  message,
+  Tooltip,
+  Popconfirm,
+  Progress,
+  Alert,
+  Card,
+  Statistic,
+  Row,
+  Col,
+  Empty
 } from 'antd';
-import { ColumnsType } from 'antd/es/table';
-import { 
-  Ticket, 
-  Search, 
-  Plus, 
-  Edit, 
-  Ban, 
+
+import type { ColumnsType } from 'antd/es/table';
+
+import {
+  Ticket,
+  Search,
+  Plus,
+  Edit,
+  Trash2,
   CheckCircle,
   Clock,
-  BarChart
+  Ban,
+  RefreshCw
 } from 'lucide-react';
-import dayjs from 'dayjs';
+
+import axiosInstance from '../../utils/axiosConfig';
+import ip from '../../utils/ip';
+
+const { RangePicker } = DatePicker;
 
 interface Voucher {
   id: string;
   code: string;
   description: string;
-  discountType: 'percentage' | 'fixed';
+
+  discountType:
+    | 'percentage'
+    | 'fixed';
+
   discountValue: number;
+
   maxDiscount?: number;
+
   minOrderValue: number;
-  startDate: string;
-  endDate: string;
-  status: 'active' | 'expired' | 'disabled';
-  usageCount: number;
+
   usageLimit: number;
+
+  usedCount: number;
+
+  quantityRemaining: number;
+
+  startDate: string;
+
+  endDate: string;
+
+  isActive: boolean;
 }
 
-const mockVouchers: Voucher[] = [
-  {
-    id: '1',
-    code: 'WELCOME20',
-    description: 'Welcome discount for new members',
-    discountType: 'percentage',
-    discountValue: 20,
-    maxDiscount: 50,
-    minOrderValue: 100,
-    startDate: '2023-01-01',
-    endDate: '2023-12-31',
-    status: 'active',
-    usageCount: 1540,
-    usageLimit: 5000,
-  },
-  {
-    id: '2',
-    code: 'FREESHIP',
-    description: 'Free shipping up to $15',
-    discountType: 'fixed',
-    discountValue: 15,
-    minOrderValue: 50,
-    startDate: '2023-06-01',
-    endDate: '2023-11-30',
-    status: 'expired',
-    usageCount: 890,
-    usageLimit: 1000,
-  },
-  {
-    id: '3',
-    code: 'FLASH50',
-    description: 'Flash sale 50% max $100',
-    discountType: 'percentage',
-    discountValue: 50,
-    maxDiscount: 100,
-    minOrderValue: 200,
-    startDate: '2023-11-20',
-    endDate: '2023-11-25',
-    status: 'active',
-    usageCount: 120,
-    usageLimit: 200,
-  },
-  {
-    id: '4',
-    code: 'ERROR15',
-    description: '15$ off for delayed shipping',
-    discountType: 'fixed',
-    discountValue: 15,
-    minOrderValue: 0,
-    startDate: '2023-10-01',
-    endDate: '2023-10-31',
-    status: 'disabled',
-    usageCount: 45,
-    usageLimit: 100,
-  }
-];
-
 export default function VouchersPage() {
-  const [vouchers, setVouchers] = useState<Voucher[]>(mockVouchers);
-  const [searchText, setSearchText] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingVoucher, setEditingVoucher] = useState<Voucher | null>(null);
+  const [messageApi, contextHolder] =
+    message.useMessage();
+
+  const [vouchers, setVouchers] =
+    useState<Voucher[]>([]);
+
+  const [loading, setLoading] =
+    useState(false);
+
+  const [searchText, setSearchText] =
+    useState('');
+
+  const [statusFilter, setStatusFilter] =
+    useState('all');
+
+  const [isModalOpen, setIsModalOpen] =
+    useState(false);
+
+  const [editingVoucher, setEditingVoucher] =
+    useState<Voucher | null>(
+      null
+    );
+
+  const [discountType, setDiscountType] =
+    useState<
+      'percentage' | 'fixed'
+    >('percentage');
+
   const [form] = Form.useForm();
-  
-  const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('percentage');
 
-  const filteredVouchers = vouchers.filter(v => {
-    const matchesSearch = v.code.toLowerCase().includes(searchText.toLowerCase()) || 
-                          v.description.toLowerCase().includes(searchText.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || v.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  // =========================
+  // FORMAT
+  // =========================
 
-  const showModal = (voucher?: Voucher) => {
-    setEditingVoucher(voucher || null);
+  const formatDate = (
+    value?: string
+  ) => {
+    if (!value) return '---';
+
+    const date = new Date(value);
+
+    if (isNaN(date.getTime())) {
+      return '---';
+    }
+
+    return dayjs(date).format(
+      'DD/MM/YYYY'
+    );
+  };
+
+  // =========================
+  // API
+  // =========================
+
+  const taiDanhSachVoucher =
+    async () => {
+      try {
+        setLoading(true);
+
+        const response =
+          await axiosInstance.get(
+            `${ip}/admin/vouchers`
+          );
+
+        const data =
+          response.data?.data || [];
+
+        const normalizedData =
+          data.map((item: any) => ({
+            id: String(item.id),
+
+            code:
+              item.code || '',
+
+            description:
+              item.description || '',
+
+            discountType:
+              item.discount_type ===
+              'fixed'
+                ? 'fixed'
+                : 'percentage',
+
+            discountValue: Number(
+              item.discount_value || 0
+            ),
+
+            maxDiscount: Number(
+              item.max_discount || 0
+            ),
+
+            minOrderValue: Number(
+              item.min_order_value || 0
+            ),
+
+            usageLimit: Number(
+              item.quantity || 0
+            ),
+
+            usedCount: Number(
+              item.used_count || 0
+            ),
+
+            quantityRemaining:
+              Number(item.quantity || 0) -
+              Number(
+                item.used_count || 0
+              ),
+
+            startDate:
+              item.start_date || '',
+
+            endDate:
+              item.end_date || '',
+
+            isActive:
+              item.is_active ??
+              true
+          }));
+
+        setVouchers(
+          normalizedData
+        );
+      } catch (error: any) {
+        console.log(error);
+
+        messageApi.error(
+          error.response?.data
+            ?.message ||
+            'Không thể tải danh sách voucher!'
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+  useEffect(() => {
+    taiDanhSachVoucher();
+  }, []);
+
+  // =========================
+  // STATS
+  // =========================
+
+  const stats = useMemo(() => {
+    const totalVouchers =
+      vouchers.length;
+
+    const activeVouchers =
+      vouchers.filter(
+        (v) =>
+          v.isActive &&
+          dayjs().isBefore(
+            dayjs(v.endDate)
+          )
+      ).length;
+
+    const totalUsed =
+      vouchers.reduce(
+        (sum, item) =>
+          sum + item.usedCount,
+        0
+      );
+
+    const totalQuantityRemaining =
+      vouchers.reduce(
+        (sum, item) =>
+          sum +
+          item.quantityRemaining,
+        0
+      );
+
+    const expiringSoon =
+      vouchers.filter((v) => {
+        const diff =
+          dayjs(
+            v.endDate
+          ).diff(
+            dayjs(),
+            'day'
+          );
+
+        return (
+          diff >= 0 &&
+          diff <= 7
+        );
+      });
+
+    return {
+      totalVouchers,
+      activeVouchers,
+      totalUsed,
+      totalQuantityRemaining,
+      expiringSoon
+    };
+  }, [vouchers]);
+
+  // =========================
+  // FILTER
+  // =========================
+
+  const filteredVouchers =
+    useMemo(() => {
+      return vouchers.filter(
+        (v) => {
+          const matchSearch =
+            v.code
+              .toLowerCase()
+              .includes(
+                searchText.toLowerCase()
+              );
+
+          let currentStatus =
+            'active';
+
+          if (
+            dayjs().isAfter(
+              dayjs(v.endDate)
+            )
+          ) {
+            currentStatus =
+              'expired';
+          } else if (
+            !v.isActive
+          ) {
+            currentStatus =
+              'disabled';
+          }
+
+          const matchStatus =
+            statusFilter ===
+              'all' ||
+            currentStatus ===
+              statusFilter;
+
+          return (
+            matchSearch &&
+            matchStatus
+          );
+        }
+      );
+    }, [
+      vouchers,
+      searchText,
+      statusFilter
+    ]);
+
+  // =========================
+  // MODAL
+  // =========================
+
+  const showModal = (
+    voucher?: Voucher
+  ) => {
     if (voucher) {
-      setDiscountType(voucher.discountType);
+      setEditingVoucher(
+        voucher
+      );
+
+      setDiscountType(
+        voucher.discountType
+      );
+
       form.setFieldsValue({
         code: voucher.code,
-        description: voucher.description,
-        discountType: voucher.discountType,
-        discountValue: voucher.discountValue,
-        maxDiscount: voucher.maxDiscount,
-        minOrderValue: voucher.minOrderValue,
-        usageLimit: voucher.usageLimit,
-        dates: [dayjs(voucher.startDate), dayjs(voucher.endDate)],
-        isActive: voucher.status === 'active'
+
+        description:
+          voucher.description,
+
+        discountType:
+          voucher.discountType,
+
+        discountValue:
+          voucher.discountValue,
+
+        maxDiscount:
+          voucher.maxDiscount,
+
+        minOrderValue:
+          voucher.minOrderValue,
+
+        usageLimit:
+          voucher.usageLimit,
+
+        isActive:
+          voucher.isActive,
+
+        dates: [
+          dayjs(
+            voucher.startDate
+          ),
+
+          dayjs(
+            voucher.endDate
+          )
+        ]
       });
     } else {
-      setDiscountType('percentage');
+      setEditingVoucher(
+        null
+      );
+
+      setDiscountType(
+        'percentage'
+      );
+
       form.resetFields();
+
       form.setFieldsValue({
-        discountType: 'percentage',
-        isActive: true,
+        discountType:
+          'percentage',
+
+        isActive: true
       });
     }
+
     setIsModalOpen(true);
   };
 
-  const handleModalSave = async () => {
-    try {
-      const values = await form.validateFields();
-      const newStatus = values.isActive ? 'active' : 'disabled';
-      
-      if (editingVoucher) {
-        setVouchers(prev => prev.map(v => 
-          v.id === editingVoucher.id ? { 
-            ...v, 
-            ...values, 
-            startDate: values.dates[0].format('YYYY-MM-DD'),
-            endDate: values.dates[1].format('YYYY-MM-DD'),
-            status: newStatus 
-          } : v
-        ));
-        message.success(`Voucher ${values.code} updated successfully`);
-      } else {
-        const newVoucher: Voucher = {
-          id: Date.now().toString(),
-          ...values,
-          startDate: values.dates[0].format('YYYY-MM-DD'),
-          endDate: values.dates[1].format('YYYY-MM-DD'),
-          status: newStatus,
-          usageCount: 0
+  // =========================
+  // CREATE / UPDATE
+  // =========================
+
+  const handleSave =
+    async () => {
+      try {
+        const values =
+          await form.validateFields();
+
+        setLoading(true);
+
+        const payload = {
+          code: values.code,
+
+          description:
+            values.description,
+
+          discount_type:
+            values.discountType,
+
+          discount_value:
+            Number(
+              values.discountValue
+            ),
+
+          max_discount:
+            values.discountType ===
+            'percentage'
+              ? Number(
+                  values.maxDiscount || 0
+                )
+              : null,
+
+          min_order_value:
+            Number(
+              values.minOrderValue
+            ),
+
+          quantity: Number(
+            values.usageLimit
+          ),
+
+          start_date:
+            values.dates[0].format(
+              'YYYY-MM-DD'
+            ),
+
+          end_date:
+            values.dates[1].format(
+              'YYYY-MM-DD'
+            ),
+
+          is_active:
+            values.isActive
         };
-        setVouchers([newVoucher, ...vouchers]);
-        message.success(`New voucher ${values.code} created successfully`);
-      }
-      setIsModalOpen(false);
-    } catch (error) {
-      // Validate Failed
-    }
-  };
 
-  const toggleVoucherStatus = (disabled: boolean, id: string) => {
-    setVouchers(prev => prev.map(v => {
-      if (v.id === id) {
-        const newStatus = disabled ? 'disabled' : 'active';
-        message.info(`Voucher ${v.code} has been ${disabled ? 'disabled' : 'activated'}.`);
-        return { ...v, status: newStatus };
-      }
-      return v;
-    }));
-  };
+        if (editingVoucher) {
+          await axiosInstance.put(
+            `${ip}/admin/vouchers/${editingVoucher.id}`,
+            payload
+          );
 
-  const columns: ColumnsType<Voucher> = [
-    {
-      title: 'Voucher Code',
-      dataIndex: 'code',
-      key: 'code',
-      render: (text, record) => (
-        <div>
-          <div className="font-bold font-mono text-[#af101a] text-base">{text}</div>
-          <div className="text-xs text-gray-500 mt-1">{record.description}</div>
-        </div>
-      ),
-    },
-    {
-      title: 'Discount Value',
-      key: 'value',
-      render: (_, record) => {
-        if (record.discountType === 'percentage') {
+          messageApi.success(
+            'Cập nhật voucher thành công!'
+          );
+        } else {
+          await axiosInstance.post(
+            `${ip}/admin/vouchers`,
+            payload
+          );
+
+          messageApi.success(
+            'Tạo voucher thành công!'
+          );
+        }
+
+        setIsModalOpen(false);
+
+        form.resetFields();
+
+        await taiDanhSachVoucher();
+      } catch (error: any) {
+        console.log(error);
+
+        messageApi.error(
+          error.response?.data
+            ?.message ||
+            'Có lỗi xảy ra!'
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+  // =========================
+  // TOGGLE
+  // =========================
+
+  const handleToggle =
+    async (
+      checked: boolean,
+      record: Voucher
+    ) => {
+      try {
+        await axiosInstance.patch(
+          `${ip}/admin/vouchers/${record.id}/toggle`,
+          {
+            is_active:
+              checked
+          }
+        );
+
+        messageApi.success(
+          checked
+            ? `Đã kích hoạt voucher ${record.code}`
+            : `Đã vô hiệu hóa voucher ${record.code}`
+        );
+
+        await taiDanhSachVoucher();
+      } catch (error: any) {
+        console.log(error);
+
+        messageApi.error(
+          error.response?.data
+            ?.message ||
+            'Không thể cập nhật trạng thái!'
+        );
+      }
+    };
+
+  // =========================
+  // DELETE
+  // =========================
+
+  const handleDelete =
+    async (
+      record: Voucher
+    ) => {
+      try {
+        await axiosInstance.delete(
+          `${ip}/admin/vouchers/${record.id}`
+        );
+
+        messageApi.success(
+          'Xóa voucher thành công!'
+        );
+
+        await taiDanhSachVoucher();
+      } catch (error: any) {
+        console.log(error);
+
+        messageApi.error(
+          error.response?.data
+            ?.message ||
+            'Không thể xóa voucher!'
+        );
+      }
+    };
+
+  // =========================
+  // TABLE
+  // =========================
+
+  const columns: ColumnsType<Voucher> =
+    [
+      {
+        title: 'Mã Voucher',
+
+        dataIndex: 'code',
+
+        render: (
+          text,
+          record
+        ) => (
+          <div>
+            <div className="font-bold text-[#af101a] text-base font-mono">
+              {text}
+            </div>
+
+            <div className="text-xs text-gray-500 mt-1">
+              {
+                record.description
+              }
+            </div>
+          </div>
+        )
+      },
+
+      {
+        title:
+          'Giảm giá',
+
+        render: (
+          _,
+          record
+        ) => {
+          if (
+            record.discountType ===
+            'percentage'
+          ) {
+            return (
+              <div>
+                <div className="font-semibold">
+                  {
+                    record.discountValue
+                  }
+                  %
+                </div>
+
+                {record.maxDiscount ? (
+                  <div className="text-xs text-gray-500">
+                    Tối đa:{' '}
+                    {record.maxDiscount.toLocaleString()}
+                    đ
+                  </div>
+                ) : null}
+              </div>
+            );
+          }
+
           return (
-            <div>
-              <span className="font-semibold">{record.discountValue}%</span>
-              {record.maxDiscount && <div className="text-xs text-gray-500 mt-1">Cap: ${record.maxDiscount}</div>}
+            <div className="font-semibold text-green-600">
+              {record.discountValue.toLocaleString()}
+              đ
             </div>
           );
         }
-        return <span className="font-semibold text-green-600">${record.discountValue}</span>;
-      }
-    },
-    {
-      title: 'Min Order',
-      dataIndex: 'minOrderValue',
-      key: 'minOrderValue',
-      render: (val) => <span className="text-gray-600">${val}</span>,
-    },
-    {
-      title: 'Duration',
-      key: 'duration',
-      render: (_, record) => (
-        <div className="text-sm">
-          <div><span className="text-gray-400">Start:</span> {record.startDate}</div>
-          <div><span className="text-gray-400">End:</span> {record.endDate}</div>
-        </div>
-      ),
-    },
-    {
-      title: 'Usage',
-      key: 'usage',
-      render: (_, record) => (
-        <div className="w-32">
-          <div className="flex justify-between text-xs mb-1">
-            <span className="text-gray-500">Used:</span>
-            <span className="font-semibold">{record.usageCount} / {record.usageLimit}</span>
+      },
+
+      {
+        title:
+          'Đơn tối thiểu',
+
+        dataIndex:
+          'minOrderValue',
+
+        render: (
+          value
+        ) => (
+          <span>
+            {value.toLocaleString()}
+            đ
+          </span>
+        )
+      },
+
+      // ======================
+      // FIX CỘT THỜI GIAN
+      // ======================
+
+      {
+        title:
+          'Thời gian',
+
+        width: 260,
+
+        render: (
+          _,
+          record
+        ) => (
+          <div className="text-sm leading-6">
+            <div>
+              <span className="text-gray-400">
+                Bắt đầu:
+              </span>{' '}
+              <span className="font-medium">
+                {formatDate(
+                  record.startDate
+                )}
+              </span>
+            </div>
+
+            <div>
+              <span className="text-gray-400">
+                Kết thúc:
+              </span>{' '}
+              <span className="font-medium">
+                {formatDate(
+                  record.endDate
+                )}
+              </span>
+            </div>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-1.5">
-            <div 
-              className="bg-[#af101a] h-1.5 rounded-full" 
-              style={{ width: `${Math.min(100, (record.usageCount / record.usageLimit) * 100)}%` }}
-            ></div>
-          </div>
-        </div>
-      )
-    },
-    {
-      title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
-      render: (status: string) => {
-        let color = 'default';
-        let icon = <Ban size={12} />;
-        if (status === 'active') { color = 'success'; icon = <CheckCircle size={12} />; }
-        if (status === 'expired') { color = 'warning'; icon = <Clock size={12} />; }
-        
-        return (
-          <Tag color={color} className="flex items-center gap-1 w-max capitalize">
-            {icon} {status}
-          </Tag>
-        );
-      }
-    },
-    {
-      title: 'Actions',
-      key: 'action',
-      align: 'right',
-      render: (_, record) => (
-        <Space size="middle">
-          <Tooltip title="View Stats">
-            <Button type="text" icon={<BarChart size={16} />} className="text-blue-600 hover:bg-blue-50" />
-          </Tooltip>
-          <Tooltip title="Edit Voucher">
-            <Button type="text" icon={<Edit size={16} />} onClick={() => showModal(record)} className="text-[#00799c] hover:bg-[#e0f2fe]" />
-          </Tooltip>
-          {record.status !== 'expired' && (
-            <Popconfirm 
-              title={record.status === 'active' ? "Disable this voucher?" : "Re-activate voucher?"} 
-              onConfirm={() => toggleVoucherStatus(record.status === 'active', record.id)}
+        )
+      },
+
+      {
+        title:
+          'Lượt dùng',
+
+        render: (
+          _,
+          record
+        ) => {
+          const total =
+            record.usedCount +
+            record.quantityRemaining;
+
+          const percent =
+            total > 0
+              ? (record.usedCount /
+                  total) *
+                100
+              : 0;
+
+          return (
+            <div className="min-w-[180px]">
+              <div className="flex justify-between text-xs mb-1">
+                <span>
+                  {
+                    record.usedCount
+                  }{' '}
+                  / {total}
+                </span>
+
+                <span className="font-medium">
+                  {percent.toFixed(
+                    0
+                  )}
+                  %
+                </span>
+              </div>
+
+              <Progress
+                percent={
+                  percent
+                }
+                showInfo={
+                  false
+                }
+                strokeColor="#af101a"
+              />
+            </div>
+          );
+        }
+      },
+
+      {
+        title:
+          'Trạng thái',
+
+        render: (
+          _,
+          record
+        ) => {
+          const expired =
+            dayjs().isAfter(
+              dayjs(
+                record.endDate
+              )
+            );
+
+          if (expired) {
+            return (
+              <Tag
+                color="warning"
+                className="flex items-center gap-1 w-max"
+              >
+                <Clock
+                  size={
+                    12
+                  }
+                />
+                Hết hạn
+              </Tag>
+            );
+          }
+
+          if (
+            !record.isActive
+          ) {
+            return (
+              <Tag
+                color="default"
+                className="flex items-center gap-1 w-max"
+              >
+                <Ban
+                  size={
+                    12
+                  }
+                />
+                Vô hiệu hóa
+              </Tag>
+            );
+          }
+
+          return (
+            <Tag
+              color="success"
+              className="flex items-center gap-1 w-max"
             >
-              <Tooltip title={record.status === 'active' ? "Disable Voucher" : "Activate Voucher"}>
-                <Button type="text" danger={record.status === 'active'} icon={<Ban size={16} />} />
+              <CheckCircle
+                size={
+                  12
+                }
+              />
+              Hoạt động
+            </Tag>
+          );
+        }
+      },
+
+      {
+        title:
+          'Bật / Tắt',
+
+        render: (
+          _,
+          record
+        ) => (
+          <Switch
+            checked={
+              record.isActive
+            }
+            disabled={dayjs().isAfter(
+              dayjs(
+                record.endDate
+              )
+            )}
+            onChange={(
+              checked
+            ) =>
+              handleToggle(
+                checked,
+                record
+              )
+            }
+          />
+        )
+      },
+
+      // ======================
+      // ĐÃ XOÁ NÚT THỐNG KÊ
+      // ======================
+
+      {
+        title:
+          'Thao tác',
+
+        key: 'action',
+
+        align: 'right',
+
+        render: (
+          _,
+          record
+        ) => (
+          <Space>
+            <Tooltip title="Chỉnh sửa">
+              <Button
+                type="text"
+                icon={
+                  <Edit
+                    size={
+                      16
+                    }
+                  />
+                }
+                onClick={() =>
+                  showModal(
+                    record
+                  )
+                }
+              />
+            </Tooltip>
+
+            <Popconfirm
+              title="Bạn có chắc muốn xóa voucher này?"
+              okText="Xóa"
+              cancelText="Hủy"
+              okButtonProps={{
+                danger: true
+              }}
+              onConfirm={() =>
+                handleDelete(
+                  record
+                )
+              }
+            >
+              <Tooltip title="Xóa voucher">
+                <Button
+                  danger
+                  type="text"
+                  icon={
+                    <Trash2
+                      size={
+                        16
+                      }
+                    />
+                  }
+                />
               </Tooltip>
             </Popconfirm>
-          )}
-        </Space>
-      ),
-    },
-  ];
+          </Space>
+        )
+      }
+    ];
 
   return (
-    <div className="p-4 md:p-6 space-y-6 max-w-[1600px] mx-auto">
-      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-[#191c1e] flex items-center gap-2">
-            <Ticket className="text-[#af101a]" size={28} />
-            Voucher Management
-          </h1>
-          <p className="text-[#5b403d] mt-1 text-sm">Create, monitor and track discount campaigns.</p>
+    <div className="p-6">
+      {contextHolder}
+
+      <Card
+        className="shadow-sm border-2 border-gray-300"
+        title={
+          <div>
+            <h1 className="text-2xl font-bold flex items-center gap-2">
+              <Ticket
+                size={24}
+                className="text-[#af101a]"
+              />
+              Quản Lý Voucher
+            </h1>
+
+            <p className="text-gray-500 text-sm mt-1">
+              Quản lý mã giảm giá và chương trình khuyến mãi
+            </p>
+          </div>
+        }
+        extra={
+          <Space>
+            <Button
+              onClick={
+                taiDanhSachVoucher
+              }
+              icon={
+                <RefreshCw size={16} />
+              }
+            >
+              Làm mới
+            </Button>
+
+            <Button
+              type="primary"
+              icon={
+                <Plus
+                  size={16}
+                />
+              }
+              onClick={() =>
+                showModal()
+              }
+            >
+              Thêm Voucher
+            </Button>
+          </Space>
+        }
+      >
+        <Row gutter={[16, 16]}>
+          <Col xs={24} md={6}>
+            <Card bordered>
+              <Statistic
+                title="Tổng Voucher"
+                value={
+                  stats.totalVouchers
+                }
+              />
+            </Card>
+          </Col>
+
+          <Col xs={24} md={6}>
+            <Card bordered>
+              <Statistic
+                title="Đang hoạt động"
+                value={
+                  stats.activeVouchers
+                }
+                valueStyle={{
+                  color:
+                    '#16a34a'
+                }}
+              />
+            </Card>
+          </Col>
+
+          <Col xs={24} md={6}>
+            <Card bordered>
+              <Statistic
+                title="Đã sử dụng"
+                value={
+                  stats.totalUsed
+                }
+                valueStyle={{
+                  color:
+                    '#2563eb'
+                }}
+              />
+            </Card>
+          </Col>
+
+          <Col xs={24} md={6}>
+            <Card bordered>
+              <Statistic
+                title="Lượt còn lại"
+                value={
+                  stats.totalQuantityRemaining
+                }
+                valueStyle={{
+                  color:
+                    '#ea580c'
+                }}
+              />
+            </Card>
+          </Col>
+        </Row>
+
+        <div className="mt-5">
+          {stats.expiringSoon
+            .length > 0 && (
+            <Alert
+              type="warning"
+              showIcon
+              message={`Có ${stats.expiringSoon.length} voucher sắp hết hạn trong vòng 7 ngày`}
+            />
+          )}
         </div>
-        <Button 
-          type="primary" 
-          size="large"
-          icon={<Plus size={18} />} 
-          className="bg-[#af101a] hover:bg-[#930010] font-semibold" 
-          onClick={() => showModal()}
-        >
-          Create New Voucher
-        </Button>
-      </div>
 
-      {/* Filter Bar */}
-      <div className="bg-white border border-[#d8dadc] p-4 rounded-xl shadow-sm flex flex-col sm:flex-row gap-4">
-        <Input 
-          prefix={<Search size={16} className="text-gray-400" />} 
-          placeholder="Search by voucher code or description..." 
-          className="w-full sm:max-w-md rounded-lg"
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
-          allowClear
-        />
-        <Select
-          value={statusFilter}
-          onChange={setStatusFilter}
-          className="w-full sm:w-48"
-          options={[
-            { value: 'all', label: 'All Statuses' },
-            { value: 'active', label: 'Active Only' },
-            { value: 'expired', label: 'Expired Only' },
-            { value: 'disabled', label: 'Disabled Only' },
-          ]}
-        />
-      </div>
+        <div className="bg-white rounded-xl border p-5 mt-5">
+          <div className="flex flex-col md:flex-row gap-4">
+            <Input
+              prefix={
+                <Search
+                  size={16}
+                />
+              }
+              placeholder="Tìm mã voucher..."
+              value={
+                searchText
+              }
+              onChange={(
+                e
+              ) =>
+                setSearchText(
+                  e.target.value
+                )
+              }
+              allowClear
+              className="max-w-md"
+            />
 
-      <div className="bg-white rounded-xl shadow-sm border border-[#d8dadc] overflow-hidden">
-        <Table 
-          columns={columns} 
-          dataSource={filteredVouchers} 
-          rowKey="id"
-          pagination={{ pageSize: 10, showSizeChanger: true }}
-          scroll={{ x: 1000 }}
-        />
-      </div>
+            <Select
+              value={
+                statusFilter
+              }
+              onChange={
+                setStatusFilter
+              }
+              className="w-[220px]"
+              options={[
+                {
+                  value:
+                    'all',
+                  label:
+                    'Tất cả trạng thái'
+                },
+
+                {
+                  value:
+                    'active',
+                  label:
+                    'Hoạt động'
+                },
+
+                {
+                  value:
+                    'disabled',
+                  label:
+                    'Vô hiệu hóa'
+                },
+
+                {
+                  value:
+                    'expired',
+                  label:
+                    'Hết hạn'
+                }
+              ]}
+            />
+          </div>
+        </div>
+
+        <div className="mt-5">
+          <Table<Voucher>
+            rowKey="id"
+            columns={
+              columns
+            }
+            dataSource={
+              filteredVouchers
+            }
+            loading={
+              loading
+            }
+            bordered
+            scroll={{
+              x: 1200
+            }}
+            pagination={{
+              pageSize: 10
+            }}
+            locale={{
+              emptyText:
+                (
+                  <Empty description="Không có dữ liệu voucher" />
+                )
+            }}
+          />
+        </div>
+      </Card>
 
       <Modal
-        title={<span className="text-lg font-bold flex items-center gap-2"><Ticket size={20} className="text-[#af101a]"/> {editingVoucher ? "Edit Voucher Details" : "Create New Voucher"}</span>}
-        open={isModalOpen}
-        onOk={handleModalSave}
-        onCancel={() => setIsModalOpen(false)}
-        okText={editingVoucher ? "Update Voucher" : "Create Voucher"}
-        cancelText="Cancel"
-        okButtonProps={{ className: "bg-[#af101a] hover:bg-[#930010]" }}
-        width={700}
+        title={
+          editingVoucher
+            ? 'Chỉnh sửa Voucher'
+            : 'Thêm Voucher'
+        }
+        open={
+          isModalOpen
+        }
+        onCancel={() =>
+          setIsModalOpen(
+            false
+          )
+        }
+        onOk={handleSave}
+        okText={
+          editingVoucher
+            ? 'Cập nhật'
+            : 'Tạo Voucher'
+        }
+        cancelText="Hủy"
+        confirmLoading={
+          loading
+        }
+        width={750}
       >
-        <Form form={form} layout="vertical" className="mt-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
-            <Form.Item name="code" label="Voucher Code" rules={[{ required: true, message: 'Code is required' }]}>
-              <Input placeholder="e.g. SUMMER2024" className="font-mono uppercase text-lg" />
-            </Form.Item>
-            
-            <Form.Item name="isActive" label="Status" valuePropName="checked">
-              <Switch checkedChildren="Active" unCheckedChildren="Disabled" />
-            </Form.Item>
-            
-            <Form.Item name="description" label="Description" className="md:col-span-2">
-              <Input.TextArea rows={2} placeholder="Internal note or customer facing description..." />
-            </Form.Item>
-
-            <div className="md:col-span-2 mt-4 mb-2 border-b pb-2">
-              <h4 className="font-bold text-[#191c1e] uppercase text-xs tracking-wider">Discount Configuration</h4>
-            </div>
-
-            <Form.Item name="discountType" label="Discount Type" rules={[{ required: true }]}>
-              <Select 
-                onChange={(val: 'percentage' | 'fixed') => setDiscountType(val)}
-                options={[
-                  { value: 'percentage', label: 'Percentage (%)' },
-                  { value: 'fixed', label: 'Fixed Amount ($)' }
+        <Form
+          form={form}
+          layout="vertical"
+          className="mt-5"
+        >
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="code"
+                label="Mã Voucher"
+                rules={[
+                  {
+                    required:
+                      true,
+                    message:
+                      'Vui lòng nhập mã voucher'
+                  }
                 ]}
-              />
-            </Form.Item>
-
-            <Form.Item name="discountValue" label="Discount Value" rules={[{ required: true, message: 'Required' }]}>
-              <InputNumber 
-                className="w-full"
-                min={1} 
-                max={discountType === 'percentage' ? 100 : undefined} 
-                addonAfter={discountType === 'percentage' ? '%' : '$'} 
-              />
-            </Form.Item>
-
-            {discountType === 'percentage' && (
-              <Form.Item name="maxDiscount" label="Maximum Cap Amount (Optional)" tooltip="Maximum discount amount allowed for percentage discounts.">
-                <InputNumber className="w-full" min={0} addonBefore="$" placeholder="e.g. 50" />
+              >
+                <Input placeholder="SUMMER2026" />
               </Form.Item>
+            </Col>
+
+            <Col span={12}>
+              <Form.Item
+                name="isActive"
+                label="Kích hoạt"
+                valuePropName="checked"
+              >
+                <Switch />
+              </Form.Item>
+            </Col>
+
+            <Col span={24}>
+              <Form.Item
+                name="description"
+                label="Mô tả"
+              >
+                <Input.TextArea
+                  rows={3}
+                />
+              </Form.Item>
+            </Col>
+
+            <Col span={12}>
+              <Form.Item
+                name="discountType"
+                label="Loại giảm giá"
+                rules={[
+                  {
+                    required:
+                      true
+                  }
+                ]}
+              >
+                <Select
+                  onChange={(
+                    value
+                  ) =>
+                    setDiscountType(
+                      value
+                    )
+                  }
+                  options={[
+                    {
+                      value:
+                        'percentage',
+                      label:
+                        'Phần trăm (%)'
+                    },
+
+                    {
+                      value:
+                        'fixed',
+                      label:
+                        'Tiền mặt'
+                    }
+                  ]}
+                />
+              </Form.Item>
+            </Col>
+
+            <Col span={12}>
+              <Form.Item
+                name="discountValue"
+                label="Giá trị giảm"
+                rules={[
+                  {
+                    required:
+                      true
+                  }
+                ]}
+              >
+                <InputNumber
+                  className="w-full"
+                  min={1}
+                  addonAfter={
+                    discountType ===
+                    'percentage'
+                      ? '%'
+                      : 'đ'
+                  }
+                />
+              </Form.Item>
+            </Col>
+
+            {discountType ===
+              'percentage' && (
+              <Col span={12}>
+                <Form.Item
+                  name="maxDiscount"
+                  label="Giảm tối đa"
+                >
+                  <InputNumber
+                    className="w-full"
+                    min={0}
+                    addonAfter="đ"
+                  />
+                </Form.Item>
+              </Col>
             )}
 
-            <Form.Item name="minOrderValue" label="Minimum Order Value ($)" rules={[{ required: true }]}>
-              <InputNumber className="w-full" min={0} placeholder="0 for no minimum" />
-            </Form.Item>
+            <Col span={12}>
+              <Form.Item
+                name="minOrderValue"
+                label="Đơn tối thiểu"
+                rules={[
+                  {
+                    required:
+                      true
+                  }
+                ]}
+              >
+                <InputNumber
+                  className="w-full"
+                  min={0}
+                  addonAfter="đ"
+                />
+              </Form.Item>
+            </Col>
 
-            <div className="md:col-span-2 mt-4 mb-2 border-b pb-2">
-              <h4 className="font-bold text-[#191c1e] uppercase text-xs tracking-wider">Usage & Duration</h4>
-            </div>
+            <Col span={12}>
+              <Form.Item
+                name="usageLimit"
+                label="Giới hạn lượt dùng"
+                rules={[
+                  {
+                    required:
+                      true
+                  }
+                ]}
+              >
+                <InputNumber
+                  className="w-full"
+                  min={1}
+                />
+              </Form.Item>
+            </Col>
 
-            <Form.Item name="usageLimit" label="Total Usage Limit" rules={[{ required: true }]}>
-              <InputNumber className="w-full" min={1} placeholder="Max number of times this code can be used" />
-            </Form.Item>
-
-            <Form.Item name="dates" label="Validity Period" rules={[{ required: true, message: 'Please select duration' }]}>
-              <DatePicker.RangePicker className="w-full" />
-            </Form.Item>
-          </div>
+            <Col span={24}>
+              <Form.Item
+                name="dates"
+                label="Thời gian áp dụng"
+                rules={[
+                  {
+                    required:
+                      true,
+                    message:
+                      'Vui lòng chọn thời gian'
+                  }
+                ]}
+              >
+                <RangePicker className="w-full" />
+              </Form.Item>
+            </Col>
+          </Row>
         </Form>
       </Modal>
     </div>

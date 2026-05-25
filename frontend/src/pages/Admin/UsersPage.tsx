@@ -162,7 +162,7 @@ export default function UsersPage() {
             const lowerSearch =
               searchText.toLowerCase();
 
-            matchSearch =
+            const matchSearch =
               item.name
                 .toLowerCase()
                 .includes(
