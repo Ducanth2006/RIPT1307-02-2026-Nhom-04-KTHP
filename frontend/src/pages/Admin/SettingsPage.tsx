@@ -50,14 +50,14 @@ export default function SettingsPage() {
 
       <div>
         <h3 className="text-lg font-semibold flex items-center gap-2 mb-4">
-           Display Configuration
+          Display Configuration
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Form.Item name="bannerAds" label="Banner Ads Notice">
             <Input.TextArea rows={2} placeholder="Enter homepage banner text..." defaultValue="Winter sale - Up to 50% off on all football shoes!" />
           </Form.Item>
           <Form.Item name="generalNotification" label="General Notification">
-             <Input.TextArea rows={2} placeholder="Enter general notice..." defaultValue="Free shipping for orders over $100." />
+            <Input.TextArea rows={2} placeholder="Enter general notice..." defaultValue="Free shipping for orders over $100." />
           </Form.Item>
         </div>
       </div>
@@ -66,14 +66,14 @@ export default function SettingsPage() {
 
       <div>
         <h3 className="text-lg font-semibold flex items-center gap-2 mb-4">
-           Operational Parameters
+          Operational Parameters
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Form.Item name="defaultShippingFee" label="Default Shipping Fee (USD)" initialValue="15.00">
-             <Input prefix={<span className="text-[#5b403d] font-mono">$</span>} size="large" className="font-mono" />
+            <Input prefix={<span className="text-[#5b403d] font-mono">$</span>} size="large" className="font-mono" />
           </Form.Item>
           <Form.Item name="freeShippingThreshold" label="Free Shipping Threshold (USD)" initialValue="100.00">
-             <Input prefix={<span className="text-[#5b403d] font-mono">$</span>} size="large" className="font-mono" />
+            <Input prefix={<span className="text-[#5b403d] font-mono">$</span>} size="large" className="font-mono" />
           </Form.Item>
         </div>
       </div>
@@ -120,7 +120,7 @@ export default function SettingsPage() {
       </div>
 
       <Divider />
-      
+
       <div>
         <h3 className="text-lg font-semibold flex items-center gap-2 mb-4">
           <Code className="text-[#d32f2f]" size={20} /> Initialization Information
@@ -135,19 +135,19 @@ export default function SettingsPage() {
 
   const performanceContent = (
     <div className="space-y-6">
-       <div className="bg-[#eceef0] p-6 rounded-lg border border-[#d8dadc]">
-          <h3 className="text-lg font-semibold flex items-center gap-2 mb-2">
-            <RefreshCw className="text-[#d32f2f]" size={20} /> Synchronization & Cache Management
-          </h3>
-          <p className="text-sm text-[#5b403d] mb-4">
-            The system automatically updates the Redis cache whenever settings are saved. However, you can manually clear the cache here to resolve displaying issues.
-          </p>
-          <div className="flex gap-4">
-             <Button type="primary" size="large" className="bg-[#d32f2f] hover:bg-[#ba1a20]" onClick={handleClearCache}>
-                Flush Redis Cache
-             </Button>
-          </div>
-       </div>
+      <div className="bg-[#eceef0] p-6 rounded-lg border border-[#d8dadc]">
+        <h3 className="text-lg font-semibold flex items-center gap-2 mb-2">
+          <RefreshCw className="text-[#d32f2f]" size={20} /> Synchronization & Cache Management
+        </h3>
+        <p className="text-sm text-[#5b403d] mb-4">
+          The system automatically updates the Redis cache whenever settings are saved. However, you can manually clear the cache here to resolve displaying issues.
+        </p>
+        <div className="flex gap-4">
+          <Button type="primary" size="large" className="bg-[#d32f2f] hover:bg-[#ba1a20]" onClick={handleClearCache}>
+            Flush Redis Cache
+          </Button>
+        </div>
+      </div>
     </div>
   );
 
@@ -178,10 +178,10 @@ export default function SettingsPage() {
           <p className="text-sm text-[#5b403d]">Manage global configuration, security keys, and cache.</p>
         </div>
         <div className="flex shadow-sm rounded-lg">
-          <Button 
-            type="primary" 
+          <Button
+            type="primary"
             size="large"
-            className="bg-[#d32f2f] hover:bg-[#ba1a20] flex items-center gap-2 font-semibold" 
+            className="bg-[#d32f2f] hover:bg-[#ba1a20] flex items-center gap-2 font-semibold"
             onClick={handleSave}
           >
             <Save size={18} /> Save & Update System
@@ -190,14 +190,14 @@ export default function SettingsPage() {
       </div>
 
       <div className="bg-white border border-[#d8dadc] rounded-xl shadow-sm p-2">
-         <Form form={form} layout="vertical">
-            <Tabs 
-               defaultActiveKey="1" 
-               items={tabItems} 
-               className="px-4 py-2"
-               tabBarStyle={{ color: '#5b403d' }}
-            />
-         </Form>
+        <Form form={form} layout="vertical">
+          <Tabs
+            defaultActiveKey="1"
+            items={tabItems}
+            className="px-4 py-2"
+            tabBarStyle={{ color: '#5b403d' }}
+          />
+        </Form>
       </div>
 
       <Modal
@@ -211,7 +211,7 @@ export default function SettingsPage() {
       >
         <div className="bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-sm overflow-auto max-h-[60vh]">
           <pre>
-{`{
+            {`{
   "system": {
     "version": "v2.5.0",
     "environment": "PRODUCTION",
