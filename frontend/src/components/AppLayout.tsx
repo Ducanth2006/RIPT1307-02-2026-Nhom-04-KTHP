@@ -1,7 +1,7 @@
 import React from "react";
 import { Outlet, Link, useLocation, useNavigate, Navigate } from "react-router-dom";
 import {
-  LayoutDashboard,
+  Home,
   Package2,
   ShoppingCart,
   Users,
@@ -9,7 +9,6 @@ import {
   Settings as SettingsIcon,
   Bell,
   HelpCircle,
-  Search,
   Menu,
   FolderTree,
   User,
@@ -62,16 +61,16 @@ export default function AppLayout() {
   };
 
   const navItems = [
-    { name: "Dashboard", path: "/admin/dashboard", icon: LayoutDashboard },
-    { name: "Products", path: "/admin/products", icon: Package2 },
-    { name: "Categories", path: "/admin/categories", icon: FolderTree },
-    { name: "Inventory", path:"/admin/inventory", icon: Boxes },
-    { name: "Orders", path: "/admin/orders", icon: ShoppingCart },
-    ...(userObj?.role === "Admin" ? [{ name: "Users", path: "/admin/users", icon: Users }] : []),
-    { name: "Vouchers", path: "/admin/vouchers", icon: Ticket },
-    { name: "Reports", path: "/admin/reports", icon: BarChart2 },
-    { name: "Complaints", path: "/admin/complaints", icon: Headset },
-    ...(userObj?.role === "Admin" ? [{ name: "Settings", path: "/admin/settings", icon: SettingsIcon }] : []),
+    { name: "Trang chủ", path: "/admin/dashboard", icon: Home },
+    { name: "Sản phẩm", path: "/admin/products", icon: Package2 },
+    { name: "Danh mục", path: "/admin/categories", icon: FolderTree },
+    { name: "Kho hàng", path:"/admin/inventory", icon: Boxes },
+    { name: "Đơn hàng", path: "/admin/orders", icon: ShoppingCart },
+    ...(userObj?.role === "Admin" ? [{ name: "Người dùng", path: "/admin/users", icon: Users }] : []),
+    { name: "Voucher", path: "/admin/vouchers", icon: Ticket },
+    { name: "Báo cáo", path: "/admin/reports", icon: BarChart2 },
+    { name: "Khiếu nại", path: "/admin/complaints", icon: Headset },
+    ...(userObj?.role === "Admin" ? [{ name: "Cài đặt", path: "/admin/settings", icon: SettingsIcon }] : []),
   ];
 
   return (
@@ -117,14 +116,6 @@ export default function AppLayout() {
             <button className="md:hidden text-[#5b403d]">
               <Menu size={24} />
             </button>
-            <div className="hidden md:block relative w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#5b403d]" size={18} />
-              <input
-                type="text"
-                placeholder="Search..."
-                className="w-full bg-[#f7f9fb] border border-[#e4beba] rounded-md py-1.5 pl-10 pr-3 text-sm focus:outline-none focus:border-[#af101a] focus:ring-1 focus:ring-[#af101a]/20"
-              />
-            </div>
           </div>
 
           <div className="flex items-center gap-4">

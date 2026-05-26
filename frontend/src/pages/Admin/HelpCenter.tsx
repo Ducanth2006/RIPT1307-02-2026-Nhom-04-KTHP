@@ -30,7 +30,7 @@ export default function HelpCenter() {
     {
       key: '1',
       question: 'How do I add a new product?',
-      answer: 'To add a new product, navigate to the Products page and click the "New Entry" button in the sidebar or "Add Product" Action in the dashboard. Fill in the required details such as name, category, price, and upload product images before saving.'
+      answer: 'To add a new product, navigate to the Products page and click the "New Entry" button in the sidebar or "Add Product" Action in the Trang chủ. Fill in the required details such as name, category, price, and upload product images before saving.'
     },
     {
       key: '2',

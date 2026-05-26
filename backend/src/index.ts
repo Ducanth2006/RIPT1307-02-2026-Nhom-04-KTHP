@@ -38,6 +38,7 @@ const port = process.env.PORT || 5001;
 app.use(cors({
     origin: [
         'http://localhost:5173',  // Vite dev server (Frontend)
+        'http://localhost:5174',  // Vite fallback port
         'http://localhost:3000',  // Fallback nếu dùng CRA
         'https://clothingstore-backend-oa20.onrender.com'// deploy render
     ],
