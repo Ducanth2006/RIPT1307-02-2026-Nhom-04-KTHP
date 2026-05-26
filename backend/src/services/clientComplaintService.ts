@@ -53,11 +53,11 @@ export const createComplaint = async (payload: {
             reference_type: 'complaint'
         });
 
-        // 2b. Tìm các tài khoản Admin để bắn thông báo cho Admin
+        // 2b. Tìm các tài khoản Admin & Staff để bắn thông báo
         const { data: admins } = await supabaseClient
             .from('users')
             .select('id')
-            .eq('role', 'Admin');
+            .in('role', ['Admin', 'Staff']);
 
         if (admins && admins.length > 0) {
             admins.forEach((admin: any) => {

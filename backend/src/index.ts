@@ -15,6 +15,7 @@ import adminCategoryRoutes from './routes/adminCategoryRoutes';
 import adminInventoryRoutes from './routes/adminInventoryRoutes';
 import adminUserRoutes from './routes/adminUserRoutes';
 import adminComplaintRoutes from './routes/adminComplaintRoutes';
+import adminSettingRoutes from './routes/adminSettingRoutes';
 
 // ── Client Routes (Khách mua hàng) ────────────────────────────
 import clientProductRoutes from './routes/clientProductRoutes';
@@ -37,6 +38,7 @@ const port = process.env.PORT || 5001;
 app.use(cors({
     origin: [
         'http://localhost:5173',  // Vite dev server (Frontend)
+        'http://localhost:5174',  // Vite fallback port
         'http://localhost:3000',  // Fallback nếu dùng CRA
         'https://clothingstore-backend-oa20.onrender.com'// deploy render
     ],
@@ -90,6 +92,7 @@ app.use('/api/admin/categories', adminCategoryRoutes);
 app.use('/api/admin/inventory', adminInventoryRoutes);
 app.use('/api/admin/users', adminUserRoutes);
 app.use('/api/admin/complaints', adminComplaintRoutes);
+app.use('/api/admin/settings', adminSettingRoutes);
 
 // =============================================================
 // 🛍️ CLIENT APIs - Dành cho giao diện Khách mua hàng
