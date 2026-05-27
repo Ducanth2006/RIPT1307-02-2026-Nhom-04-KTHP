@@ -76,7 +76,7 @@ export const fetchReportData = async (
         // 1. Đơn hàng kỳ hiện tại
         supabaseClient
             .from('orders')
-            .select('id, final_amount, status, created_at')
+            .select('id, final_amount, status, created_at, discount_amount, vouchers ( code )')
             .gte('created_at', start)
             .lte('created_at', end),
 
@@ -117,7 +117,7 @@ export const fetchReportData = async (
                         product_images ( image_url, is_main )
                     )
                 ),
-                orders!inner ( status, created_at )
+                orders!inner ( status, created_at, total_amount, discount_amount, final_amount )
             `)
             .eq('orders.status', 'Completed')
             .gte('orders.created_at', start)
@@ -127,10 +127,10 @@ export const fetchReportData = async (
         supabaseClient
             .from('orders')
             .select(`
-                id, status, payment_method, final_amount, shipping_fee, discount_amount,
-                created_at, updated_at,
-                users ( full_name, phone, email ),
-                addresses ( full_address )
+                id, status, total_amount, discount_amount, final_amount,
+                created_at, shipping_address,
+                users ( full_name, email ),
+                payments ( method )
             `)
             .gte('created_at', start)
             .lte('created_at', end)
@@ -172,30 +172,53 @@ export const fetchReportData = async (
     // ═══════════════════════════════════════════════════════════
     // 2. Biểu đồ doanh thu & đơn hàng theo ngày
     // ═══════════════════════════════════════════════════════════
-    const dailyMap: Record<string, { revenue: number; orders: number }> = {};
+    const dailyMap: Record<string, { revenue: number; cost: number; profit: number; orders: number }> = {};
     
     // Tạo danh sách ngày
     const startDate = new Date(start);
     const endDate = new Date(end);
     for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
         const key = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
-        dailyMap[key] = { revenue: 0, orders: 0 };
+        dailyMap[key] = { revenue: 0, cost: 0, profit: 0, orders: 0 };
     }
 
+    // Đếm số lượng đơn hàng
     currentOrders.forEach((o: any) => {
         const d = new Date(o.created_at);
         const key = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
         if (dailyMap[key]) {
             dailyMap[key].orders += 1;
-            if (o.status === 'Completed') {
-                dailyMap[key].revenue += Number(o.final_amount || 0);
-            }
+        }
+    });
+
+    // Tính toán doanh thu, giá vốn, lợi nhuận chi tiết theo từng đơn hàng hoàn tất
+    orderItems.forEach((item: any) => {
+        const order = item.orders;
+        if (!order) return;
+
+        const d = new Date(order.created_at);
+        const key = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+
+        if (dailyMap[key]) {
+            const total = Number(order.total_amount || 0);
+            const final = Number(order.final_amount || 0);
+            const ratio = total > 0 ? (final / total) : 1;
+            
+            const itemRevenue = Number(item.quantity || 0) * Number(item.unit_price || 0) * ratio;
+            const itemCost = Number(item.quantity || 0) * Number(item.cost_price || 0);
+            const itemProfit = itemRevenue - itemCost;
+
+            dailyMap[key].revenue += itemRevenue;
+            dailyMap[key].cost += itemCost;
+            dailyMap[key].profit += itemProfit;
         }
     });
 
     const dailyChart = Object.entries(dailyMap).map(([name, data]) => ({
         name,
         revenue: Math.round(data.revenue),
+        cost: Math.round(data.cost),
+        profit: Math.round(data.profit),
         orders: data.orders
     }));
 
@@ -210,7 +233,14 @@ export const fetchReportData = async (
 
         const product = variant.products;
         const catName = product.categories?.name || 'Khác';
-        const revenue = Number(item.quantity || 0) * Number(item.unit_price || 0);
+        
+        // Tính toán tỷ lệ giảm giá từ voucher áp dụng trên đơn hàng
+        const order = item.orders;
+        const total = Number(order?.total_amount || 0);
+        const final = Number(order?.final_amount || 0);
+        const ratio = total > 0 ? (final / total) : 1;
+        const rawRevenue = Number(item.quantity || 0) * Number(item.unit_price || 0);
+        const revenue = rawRevenue * ratio;
 
         if (!categoryMap[catName]) {
             categoryMap[catName] = { name: catName, value: 0 };
@@ -241,7 +271,14 @@ export const fetchReportData = async (
         const product = variant.products;
         const pid = product.id;
         const qty = Number(item.quantity || 0);
-        const rev = qty * Number(item.unit_price || 0);
+
+        // Áp dụng tỷ lệ voucher discount của đơn hàng vào doanh thu sản phẩm
+        const order = item.orders;
+        const total = Number(order?.total_amount || 0);
+        const final = Number(order?.final_amount || 0);
+        const ratio = total > 0 ? (final / total) : 1;
+        const rawRev = qty * Number(item.unit_price || 0);
+        const rev = rawRev * ratio;
 
         let imageUrl: string | null = null;
         if (product.product_images?.length > 0) {
@@ -264,7 +301,7 @@ export const fetchReportData = async (
     });
 
     const topProducts = Object.values(productMap)
-        .sort((a, b) => b.volume - a.volume)
+        .sort((a, b) => b.revenue - a.revenue)
         .slice(0, 5)
         .map((p, i) => ({
             key: String(i + 1),
@@ -274,22 +311,60 @@ export const fetchReportData = async (
         }));
 
     // ═══════════════════════════════════════════════════════════
+    // 4b. Phân tích sử dụng Voucher
+    // ═══════════════════════════════════════════════════════════
+    const voucherMap: Record<string, { name: string; value: number; count: number; discount: number }> = {};
+
+    completedCurrent.forEach((o: any) => {
+        // o.vouchers có thể là object hoặc array tuỳ thuộc vào PostgREST join mapping
+        const vObj = Array.isArray(o.vouchers) ? o.vouchers[0] : o.vouchers;
+        const vCode = vObj?.code || 'Không dùng Voucher';
+
+        if (!voucherMap[vCode]) {
+            voucherMap[vCode] = { name: vCode, value: 0, count: 0, discount: 0 };
+        }
+        voucherMap[vCode].count += 1;
+        voucherMap[vCode].value += Number(o.final_amount || 0); // Doanh thu mang lại
+        voucherMap[vCode].discount += Number(o.discount_amount || 0); // Tiền chiết khấu
+    });
+
+    const voucherData = Object.values(voucherMap)
+        .sort((a, b) => b.count - a.count);
+
+    // ═══════════════════════════════════════════════════════════
     // 5. Dữ liệu xuất CSV
     // ═══════════════════════════════════════════════════════════
-    const exportOrders = (allOrdersForExportResult.data ?? []).map((o: any) => ({
-        id: o.id,
-        customerName: o.users?.full_name || '',
-        phone: o.users?.phone || '',
-        email: o.users?.email || '',
-        address: o.addresses?.full_address || '',
-        total: o.final_amount,
-        shippingFee: o.shipping_fee,
-        discount: o.discount_amount,
-        status: o.status,
-        paymentMethod: o.payment_method,
-        createdAt: o.created_at,
-        updatedAt: o.updated_at
-    }));
+    const exportOrders = (allOrdersForExportResult.data ?? []).map((o: any) => {
+        let fullAddress = '';
+        let shippingPhone = '';
+        if (o.shipping_address) {
+            try {
+                const parsed = typeof o.shipping_address === 'string' ? JSON.parse(o.shipping_address) : o.shipping_address;
+                fullAddress = parsed.address || '';
+                shippingPhone = parsed.phone || '';
+            } catch (e) {
+                fullAddress = String(o.shipping_address);
+            }
+        }
+        const payList = o.payments;
+        const paymentObj = Array.isArray(payList) ? payList[0] : payList;
+        const method = paymentObj?.method || 'N/A';
+
+        return {
+            id: o.id,
+            customerName: o.users?.full_name || '',
+            phone: shippingPhone,
+            email: o.users?.email || '',
+            address: fullAddress,
+            total: o.final_amount,
+            shippingFee: 0,
+            discount: o.discount_amount,
+            status: o.status,
+            paymentMethod: method,
+            createdAt: o.created_at,
+            updatedAt: o.created_at
+        };
+    });
 
     // ═══════════════════════════════════════════════════════════
     // Trả về kết quả
@@ -307,6 +382,7 @@ export const fetchReportData = async (
         },
         dailyChart,
         categoryData,
+        voucherData,
         topProducts,
         exportOrders
     };
