@@ -158,6 +158,7 @@ interface DashboardStats {
   donDangGiao: number;
   donDaHuy: number;
   donYeuCauHuy: number;
+  donHoanThanh: number;
 }
 
 // =========================
@@ -280,7 +281,8 @@ export default function Orders() {
     donDangDongGoi: 0,
     donDangGiao: 0,
     donDaHuy: 0,
-    donYeuCauHuy: 0
+    donYeuCauHuy: 0,
+    donHoanThanh: 0
   });
 
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -316,7 +318,8 @@ export default function Orders() {
         donDangDongGoi: data.donDangDongGoi || 0,
         donDangGiao: data.donDangGiao || 0,
         donDaHuy: data.donDaHuy || 0,
-        donYeuCauHuy: data.donYeuCauHuy || 0
+        donYeuCauHuy: data.donYeuCauHuy || 0,
+        donHoanThanh: data.donHoanThanh || 0
       });
     } catch (error) {
       console.log(error);
@@ -814,70 +817,145 @@ export default function Orders() {
 
       {/* STATS */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-        <Card className="rounded-2xl border border-[#ead0d0] shadow-sm">
-          <Statistic
-            title="Tổng doanh thu"
-            value={stats.tongDoanhThu}
-            formatter={(val) => dinhDangTien(Number(val))}
-            prefix={<DollarSign size={18} className="text-[#af101a]" />}
-            valueStyle={{ color: '#af101a', fontWeight: 'bold' }}
-          />
-        </Card>
+        {/* Tổng doanh thu */}
+        <div className="bg-white border border-[#e4beba] border-t-2 border-t-[#af101a] rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-[11px] font-bold text-[#5b403d] uppercase tracking-wider">
+              Tổng doanh thu
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-[#fff2f0] flex items-center justify-center">
+              <DollarSign size={16} className="text-[#af101a]" />
+            </div>
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <h2 className="text-2xl font-black text-[#191c1e]">
+              {dinhDangTien(stats.tongDoanhThu)}
+            </h2>
+          </div>
+        </div>
 
-        <Card className="rounded-2xl border border-[#ead0d0] shadow-sm">
-          <Statistic
-            title="Tổng số đơn"
-            value={stats.tongSoDon}
-            prefix={<ShoppingCart size={18} className="text-blue-600" />}
-          />
-        </Card>
+        {/* Tổng số đơn */}
+        <div className="bg-white border border-[#e4beba] rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-[11px] font-bold text-[#5b403d] uppercase tracking-wider">
+              Tổng số đơn
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-[#eff6ff] flex items-center justify-center">
+              <ShoppingCart size={16} className="text-blue-600" />
+            </div>
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <h2 className="text-2xl font-black text-[#191c1e]">
+              {stats.tongSoDon}
+            </h2>
+          </div>
+        </div>
 
-        <Card className="rounded-2xl border border-[#ead0d0] shadow-sm">
-          <Statistic
-            title="Chờ duyệt"
-            value={stats.donChoDuyet}
-            prefix={<Clock3 size={18} className="text-orange-500" />}
-            valueStyle={{ color: '#f97316' }}
-          />
-        </Card>
+        {/* Chờ duyệt */}
+        <div className="bg-white border border-[#e4beba] rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-[11px] font-bold text-[#5b403d] uppercase tracking-wider">
+              Chờ duyệt
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-[#fff7ed] flex items-center justify-center">
+              <Clock3 size={16} className="text-orange-500" />
+            </div>
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <h2 className="text-2xl font-black text-[#191c1e]">
+              {stats.donChoDuyet}
+            </h2>
+          </div>
+        </div>
 
-        <Card className="rounded-2xl border border-[#ead0d0] shadow-sm">
-          <Statistic
-            title="Đang đóng gói"
-            value={stats.donDangDongGoi}
-            prefix={<Package size={18} className="text-purple-600" />}
-          />
-        </Card>
+        {/* Đang đóng gói */}
+        <div className="bg-white border border-[#e4beba] rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-[11px] font-bold text-[#5b403d] uppercase tracking-wider">
+              Đang đóng gói
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-[#f5f3ff] flex items-center justify-center">
+              <Package size={16} className="text-purple-600" />
+            </div>
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <h2 className="text-2xl font-black text-[#191c1e]">
+              {stats.donDangDongGoi}
+            </h2>
+          </div>
+        </div>
 
-        <Card className="rounded-2xl border border-[#ead0d0] shadow-sm">
-          <Statistic
-            title="Đang giao"
-            value={stats.donDangGiao}
-            prefix={<Truck size={18} className="text-cyan-600" />}
-          />
-        </Card>
+        {/* Đang giao */}
+        <div className="bg-white border border-[#e4beba] rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-[11px] font-bold text-[#5b403d] uppercase tracking-wider">
+              Đang giao
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-[#ecfeff] flex items-center justify-center">
+              <Truck size={16} className="text-cyan-600" />
+            </div>
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <h2 className="text-2xl font-black text-[#191c1e]">
+              {stats.donDangGiao}
+            </h2>
+          </div>
+        </div>
 
-        <Card className="rounded-2xl border border-[#ead0d0] shadow-sm">
-          <Statistic
-            title="Yêu cầu huỷ"
-            value={stats.donYeuCauHuy}
-            prefix={<AlertTriangle size={18} className="text-amber-500" />}
-            valueStyle={{ color: '#f59e0b' }}
-          />
-        </Card>
+        {/* Yêu cầu huỷ */}
+        <div className="bg-white border border-[#e4beba] rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-[11px] font-bold text-[#5b403d] uppercase tracking-wider">
+              Yêu cầu huỷ
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-[#fffbeb] flex items-center justify-center">
+              <AlertTriangle size={16} className="text-amber-500" />
+            </div>
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <h2 className="text-2xl font-black text-[#191c1e]">
+              {stats.donYeuCauHuy}
+            </h2>
+          </div>
+        </div>
 
-        <Card className="rounded-2xl border border-[#ead0d0] shadow-sm">
-          <Statistic
-            title="Đã huỷ"
-            value={stats.donDaHuy}
-            prefix={<Ban size={18} className="text-red-500" />}
-            valueStyle={{ color: '#ef4444' }}
-          />
-        </Card>
+        {/* Đã huỷ */}
+        <div className="bg-white border border-[#e4beba] rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-[11px] font-bold text-[#5b403d] uppercase tracking-wider">
+              Đã huỷ
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-[#fef2f2] flex items-center justify-center">
+              <Ban size={16} className="text-red-500" />
+            </div>
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <h2 className="text-2xl font-black text-[#191c1e]">
+              {stats.donDaHuy}
+            </h2>
+          </div>
+        </div>
+
+        {/* Đã hoàn thành */}
+        <div className="bg-white border border-[#e4beba] rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-[11px] font-bold text-[#5b403d] uppercase tracking-wider">
+              Đã hoàn thành
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-[#f0fdf4] flex items-center justify-center">
+              <CheckCircle size={16} className="text-[#16a34a]" />
+            </div>
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <h2 className="text-2xl font-black text-[#191c1e]">
+              {stats.donHoanThanh}
+            </h2>
+          </div>
+        </div>
       </div>
 
       {/* MAIN */}
-      <div className="bg-white border border-[#ead0d0] rounded-3xl shadow-sm overflow-hidden">
+      <div className="bg-white border border-[#e4beba] rounded-xl shadow-sm overflow-hidden">
         
         {/* FILTER */}
         <div className="p-5 border-b border-[#f1dede]">
