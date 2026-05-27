@@ -1,46 +1,57 @@
 import axiosInstance from '../utils/axiosConfig';
-import ip from '../utils/ip';
 
-const BASE_URL = `${ip}/admin/settings`;
-
-// ============================
-// Lấy cấu hình hệ thống
-// ============================
+// ==========================================
+// GET SETTINGS
+// ==========================================
 export const layCauHinh = async () => {
-  const response = await axiosInstance.get(BASE_URL);
+  const response = await axiosInstance.get(
+    '/admin/settings',
+  );
+
   return response.data;
 };
 
-// ============================
-// Cập nhật cấu hình hệ thống
-// ============================
-export const capNhatCauHinh = async (data: any) => {
+// ==========================================
+// UPDATE SETTINGS
+// ==========================================
+export const capNhatCauHinh = async (
+  data: any,
+) => {
   const response = await axiosInstance.put(
-    BASE_URL,
+    '/admin/settings',
     data,
   );
 
   return response.data;
 };
 
-// ============================
-// Kiểm tra SMTP
-// ============================
-export const kiemTraSMTP = async () => {
+// ==========================================
+// TEST SMTP
+// ==========================================
+export const kiemTraSMTP = async (
+  data: {
+    smtpHost: string;
+    smtpPort: string;
+    smtpUser?: string;
+  },
+) => {
   const response = await axiosInstance.post(
-    `${BASE_URL}/test-smtp`,
+    '/admin/settings/test-smtp',
+    data,
   );
 
   return response.data;
 };
 
-// ============================
-// Flush Redis Cache
-// ============================
-export const flushRedisCache = async () => {
-  const response = await axiosInstance.post(
-    `${BASE_URL}/clear-cache`,
-  );
+// ==========================================
+// CLEAR CACHE
+// ==========================================
+export const flushRedisCache =
+  async () => {
+    const response =
+      await axiosInstance.post(
+        '/admin/settings/clear-cache',
+      );
 
-  return response.data;
-};
+    return response.data;
+  };
