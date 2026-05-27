@@ -990,7 +990,7 @@ export default function Inventory() {
       </div>
 
       {/* TABS & MAIN CONTENT */}
-      <div className="bg-white border border-[#ead0d0] rounded-3xl shadow-sm overflow-hidden">
+      <div className="bg-white border border-[#e4beba] rounded-xl shadow-sm overflow-hidden">
         <Tabs
           defaultActiveKey="1"
           className="px-5 pt-3"
@@ -1002,24 +1002,39 @@ export default function Inventory() {
                 <div className="pb-5 space-y-6 mt-2">
                   {/* STATS */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <Card className="rounded-2xl border border-[#ead0d0] shadow-sm">
-                      <Statistic
-                        title="Tổng giá trị kho"
-                        value={statsKho.tongGiaTriKho}
-                        formatter={(value) => dinhDangTien(Number(value))}
-                        prefix={<DollarSign size={18} className="text-[#af101a]" />}
-                        valueStyle={{ color: '#af101a', fontWeight: 'bold' }}
-                      />
-                    </Card>
+                    {/* Tổng giá trị kho */}
+                    <div className="bg-white border border-[#e4beba] border-t-2 border-t-[#af101a] rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="text-[11px] font-bold text-[#5b403d] uppercase tracking-wider">
+                          Tổng giá trị kho
+                        </span>
+                        <div className="w-8 h-8 rounded-lg bg-[#fff2f0] flex items-center justify-center">
+                          <DollarSign size={16} className="text-[#af101a]" />
+                        </div>
+                      </div>
+                      <div className="flex items-baseline gap-1.5">
+                        <h2 className="text-2xl font-black text-[#191c1e]">
+                          {dinhDangTien(statsKho.tongGiaTriKho)}
+                        </h2>
+                      </div>
+                    </div>
 
-                    <Card className="rounded-2xl border border-[#ead0d0] shadow-sm">
-                      <Statistic
-                        title="Sản phẩm sắp hết hàng"
-                        value={statsKho.soLuongSapHet}
-                        prefix={<AlertTriangle size={18} className="text-[#f97316]" />}
-                        valueStyle={{ color: '#f97316' }}
-                      />
-                    </Card>
+                    {/* Sản phẩm sắp hết hàng */}
+                    <div className="bg-white border border-[#e4beba] rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="text-[11px] font-bold text-[#5b403d] uppercase tracking-wider">
+                          Sản phẩm sắp hết hàng
+                        </span>
+                        <div className="w-8 h-8 rounded-lg bg-[#fff7ed] flex items-center justify-center">
+                          <AlertTriangle size={16} className="text-[#f97316]" />
+                        </div>
+                      </div>
+                      <div className="flex items-baseline gap-1.5">
+                        <h2 className="text-2xl font-black text-[#191c1e]">
+                          {statsKho.soLuongSapHet}
+                        </h2>
+                      </div>
+                    </div>
                   </div>
 
                   {/* FILTER */}

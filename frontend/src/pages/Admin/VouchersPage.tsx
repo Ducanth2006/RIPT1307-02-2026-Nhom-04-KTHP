@@ -454,47 +454,78 @@ export default function VouchersPage() {
       {/* STATS */}
       {stats && (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
-          <Card className="rounded-2xl border border-[#ead0d0] shadow-sm">
-            <Statistic
-              title="Tổng Voucher"
-              value={stats.totalVouchers}
-              prefix={<Ticket size={18} className="text-[#af101a]" />}
-              valueStyle={{ color: '#191c1e', fontWeight: 'bold' }}
-            />
-          </Card>
+          {/* Tổng Voucher */}
+          <div className="bg-white border border-[#e4beba] border-t-2 border-t-[#af101a] rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+            <div className="flex justify-between items-start mb-2">
+              <span className="text-[11px] font-bold text-[#5b403d] uppercase tracking-wider">
+                Tổng Voucher
+              </span>
+              <div className="w-8 h-8 rounded-lg bg-[#fff2f0] flex items-center justify-center">
+                <Ticket size={16} className="text-[#af101a]" />
+              </div>
+            </div>
+            <div className="flex items-baseline gap-1.5">
+              <h2 className="text-2xl font-black text-[#191c1e]">
+                {stats.totalVouchers}
+              </h2>
+            </div>
+          </div>
 
-          <Card className="rounded-2xl border border-[#ead0d0] shadow-sm">
-            <Statistic
-              title="Đang hoạt động"
-              value={stats.activeVouchers}
-              prefix={<CheckCircle size={18} className="text-[#16a34a]" />}
-              valueStyle={{ color: '#16a34a', fontWeight: 'bold' }}
-            />
-          </Card>
+          {/* Đang hoạt động */}
+          <div className="bg-white border border-[#e4beba] rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+            <div className="flex justify-between items-start mb-2">
+              <span className="text-[11px] font-bold text-[#5b403d] uppercase tracking-wider">
+                Đang hoạt động
+              </span>
+              <div className="w-8 h-8 rounded-lg bg-[#f0fdf4] flex items-center justify-center">
+                <CheckCircle size={16} className="text-[#16a34a]" />
+              </div>
+            </div>
+            <div className="flex items-baseline gap-1.5">
+              <h2 className="text-2xl font-black text-[#191c1e]">
+                {stats.activeVouchers}
+              </h2>
+            </div>
+          </div>
 
-          <Card className="rounded-2xl border border-[#ead0d0] shadow-sm">
-            <Statistic
-              title="Tổng lượt sử dụng"
-              value={stats.totalUsed}
-              prefix={<Activity size={18} className="text-blue-600" />}
-              valueStyle={{ color: '#2563eb', fontWeight: 'bold' }}
-            />
-          </Card>
+          {/* Tổng lượt sử dụng */}
+          <div className="bg-white border border-[#e4beba] rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+            <div className="flex justify-between items-start mb-2">
+              <span className="text-[11px] font-bold text-[#5b403d] uppercase tracking-wider">
+                Tổng lượt sử dụng
+              </span>
+              <div className="w-8 h-8 rounded-lg bg-[#eff6ff] flex items-center justify-center">
+                <Activity size={16} className="text-blue-600" />
+              </div>
+            </div>
+            <div className="flex items-baseline gap-1.5">
+              <h2 className="text-2xl font-black text-[#191c1e]">
+                {stats.totalUsed}
+              </h2>
+            </div>
+          </div>
 
-          <Card className="rounded-2xl border border-[#ead0d0] shadow-sm">
-            <Statistic
-              title="Tổng tiền giảm giá"
-              value={stats.totalDiscountGiven}
-              prefix={<DollarSign size={18} className="text-[#af101a]" />}
-              valueStyle={{ color: '#af101a', fontWeight: 'bold' }}
-              formatter={(value) => formatPrice(Number(value))}
-            />
-          </Card>
+          {/* Tổng tiền giảm giá */}
+          <div className="bg-white border border-[#e4beba] rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+            <div className="flex justify-between items-start mb-2">
+              <span className="text-[11px] font-bold text-[#5b403d] uppercase tracking-wider">
+                Tổng tiền giảm giá
+              </span>
+              <div className="w-8 h-8 rounded-lg bg-[#fff2f0] flex items-center justify-center">
+                <DollarSign size={16} className="text-[#af101a]" />
+              </div>
+            </div>
+            <div className="flex items-baseline gap-1.5">
+              <h2 className="text-2xl font-black text-[#191c1e]">
+                {formatPrice(stats.totalDiscountGiven)}
+              </h2>
+            </div>
+          </div>
         </div>
       )}
 
       {/* MAIN CONTENT */}
-      <div className="bg-white border border-[#ead0d0] rounded-3xl shadow-sm overflow-hidden">
+      <div className="bg-white border border-[#e4beba] rounded-xl shadow-sm overflow-hidden">
         
         {/* FILTER */}
         <div className="p-5 border-b border-[#f1dede]">

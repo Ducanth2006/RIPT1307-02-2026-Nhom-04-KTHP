@@ -452,34 +452,60 @@ export default function UsersPage() {
 
       {/* STATS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        <Card className="rounded-2xl border border-[#ead0d0] shadow-sm">
-          <Statistic
-            title="Tổng số tài khoản"
-            value={users.length}
-            prefix={<Users size={18} className="text-[#af101a]" />}
-          />
-        </Card>
+        {/* Tổng số tài khoản */}
+        <div className="bg-white border border-[#e4beba] border-t-2 border-t-[#af101a] rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-[11px] font-bold text-[#5b403d] uppercase tracking-wider">
+              Tổng số tài khoản
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-[#fff2f0] flex items-center justify-center">
+              <Users size={16} className="text-[#af101a]" />
+            </div>
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <h2 className="text-2xl font-black text-[#191c1e]">
+              {users.length}
+            </h2>
+          </div>
+        </div>
 
-        <Card className="rounded-2xl border border-[#ead0d0] shadow-sm">
-          <Statistic
-            title="Nhân viên & Quản trị"
-            value={users.filter((u) => u.role === 'Admin' || u.role === 'Staff').length}
-            prefix={<Shield size={18} className="text-blue-600" />}
-          />
-        </Card>
+        {/* Nhân viên & Quản trị */}
+        <div className="bg-white border border-[#e4beba] rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-[11px] font-bold text-[#5b403d] uppercase tracking-wider">
+              Nhân viên & Quản trị
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-[#eff6ff] flex items-center justify-center">
+              <Shield size={16} className="text-blue-600" />
+            </div>
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <h2 className="text-2xl font-black text-[#191c1e]">
+              {users.filter((u) => u.role === 'Admin' || u.role === 'Staff').length}
+            </h2>
+          </div>
+        </div>
 
-        <Card className="rounded-2xl border border-[#ead0d0] shadow-sm">
-          <Statistic
-            title="Tài khoản bị khóa"
-            value={users.filter((u) => u.status === 'Locked').length}
-            prefix={<Lock size={18} className="text-red-500" />}
-            valueStyle={{ color: '#ef4444' }}
-          />
-        </Card>
+        {/* Tài khoản bị khóa */}
+        <div className="bg-white border border-[#e4beba] rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-[11px] font-bold text-[#5b403d] uppercase tracking-wider">
+              Tài khoản bị khóa
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-[#fef2f2] flex items-center justify-center">
+              <Lock size={16} className="text-red-500" />
+            </div>
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <h2 className="text-2xl font-black text-[#191c1e]">
+              {users.filter((u) => u.status === 'Locked').length}
+            </h2>
+          </div>
+        </div>
       </div>
 
       {/* MAIN CONTENT */}
-      <div className="bg-white border border-[#ead0d0] rounded-3xl shadow-sm overflow-hidden">
+      <div className="bg-white border border-[#e4beba] rounded-xl shadow-sm overflow-hidden">
         
         {/* FILTER */}
         <div className="p-5 border-b border-[#f1dede]">

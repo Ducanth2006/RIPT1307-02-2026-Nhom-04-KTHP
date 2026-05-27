@@ -151,55 +151,75 @@ export default function ReportsPage() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white border border-[#d8dadc] shadow-sm rounded-xl p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[#5b403d] font-medium text-sm">Total Revenue</span>
-            <div className="p-2 bg-[#e0f2fe] rounded-lg text-[#00799c]">
-              <DollarSign size={18} />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+        {/* Total Revenue */}
+        <div className="bg-white border border-[#e4beba] border-t-2 border-t-[#af101a] rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-[11px] font-bold text-[#5b403d] uppercase tracking-wider">
+              Total Revenue
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-[#fff2f0] flex items-center justify-center">
+              <DollarSign size={16} className="text-[#af101a]" />
             </div>
           </div>
-          <div className="flex items-end mt-2">
-            <span className="text-2xl font-bold text-[#191c1e]">$24,560</span>
+          <div className="flex items-baseline gap-1.5 mt-2">
+            <h2 className="text-2xl font-black text-[#191c1e]">
+              $24,560
+            </h2>
             {getPercentageChange(true, '12.5')}
           </div>
         </div>
         
-        <div className="bg-white border border-[#d8dadc] shadow-sm rounded-xl p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[#5b403d] font-medium text-sm">Total Orders</span>
-            <div className="p-2 bg-[#fff2f0] rounded-lg text-[#af101a]">
-              <ShoppingBag size={18} />
+        {/* Total Orders */}
+        <div className="bg-white border border-[#e4beba] rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-[11px] font-bold text-[#5b403d] uppercase tracking-wider">
+              Total Orders
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-[#fff2f0] flex items-center justify-center">
+              <ShoppingBag size={16} className="text-[#af101a]" />
             </div>
           </div>
-          <div className="flex items-end mt-2">
-            <span className="text-2xl font-bold text-[#191c1e]">1,245</span>
+          <div className="flex items-baseline gap-1.5 mt-2">
+            <h2 className="text-2xl font-black text-[#191c1e]">
+              1,245
+            </h2>
             {getPercentageChange(true, '8.2')}
           </div>
         </div>
 
-        <div className="bg-white border border-[#d8dadc] shadow-sm rounded-xl p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[#5b403d] font-medium text-sm">Conversion Rate</span>
-            <div className="p-2 bg-[#d5fcde] rounded-lg text-[#2a7a40]">
-              <TrendingUp size={18} />
+        {/* Conversion Rate */}
+        <div className="bg-white border border-[#e4beba] rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-[11px] font-bold text-[#5b403d] uppercase tracking-wider">
+              Conversion Rate
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-[#f0fdf4] flex items-center justify-center">
+              <TrendingUp size={16} className="text-[#16a34a]" />
             </div>
           </div>
-          <div className="flex items-end mt-2">
-            <span className="text-2xl font-bold text-[#191c1e]">3.4%</span>
+          <div className="flex items-baseline gap-1.5 mt-2">
+            <h2 className="text-2xl font-black text-[#191c1e]">
+              3.4%
+            </h2>
             {getPercentageChange(false, '1.1')}
           </div>
         </div>
 
-        <div className="bg-white border border-[#d8dadc] shadow-sm rounded-xl p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[#5b403d] font-medium text-sm">New Customers</span>
-            <div className="p-2 bg-[#f4ebff] rounded-lg text-[#7c3aed]">
-              <UsersIcon size={18} />
+        {/* New Customers */}
+        <div className="bg-white border border-[#e4beba] rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-[11px] font-bold text-[#5b403d] uppercase tracking-wider">
+              New Customers
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-[#eff6ff] flex items-center justify-center">
+              <UsersIcon size={16} className="text-blue-600" />
             </div>
           </div>
-          <div className="flex items-end mt-2">
-            <span className="text-2xl font-bold text-[#191c1e]">342</span>
+          <div className="flex items-baseline gap-1.5 mt-2">
+            <h2 className="text-2xl font-black text-[#191c1e]">
+              342
+            </h2>
             {getPercentageChange(true, '14.5')}
           </div>
         </div>
@@ -207,7 +227,7 @@ export default function ReportsPage() {
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white border border-[#d8dadc] shadow-sm rounded-xl p-6">
+        <div className="lg:col-span-2 bg-white border border-[#e4beba] shadow-sm rounded-xl p-6">
           <h3 className="font-bold text-[#191c1e] mb-4">Revenue Overview</h3>
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
@@ -226,7 +246,7 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        <div className="bg-white border border-[#d8dadc] shadow-sm rounded-xl p-6">
+        <div className="bg-white border border-[#e4beba] shadow-sm rounded-xl p-6">
           <h3 className="font-bold text-[#191c1e] mb-4">Sales by Category</h3>
           <div className="h-[300px]">
              <ResponsiveContainer width="100%" height="100%">
@@ -253,7 +273,7 @@ export default function ReportsPage() {
       </div>
 
       {/* Top Products Table */}
-      <div className="bg-white border border-[#d8dadc] shadow-sm rounded-xl p-6">
+      <div className="bg-white border border-[#e4beba] shadow-sm rounded-xl p-6">
         <h3 className="font-bold text-[#191c1e] mb-4">Top Selling Products</h3>
         <Table 
           dataSource={topProductsData} 

@@ -265,7 +265,7 @@ export default function SettingsPage() {
   // =========================================
   const noiDungHieuNang = (
     <div className="pb-4 pt-4">
-      <Card className="border border-[#ead0d0] bg-[#f9f9f9] shadow-sm rounded-2xl">
+      <Card className="border border-[#e4beba] bg-white shadow-sm rounded-xl">
         <div className="space-y-4">
           <div>
             <h3 className="text-[16px] font-bold text-[#191c1e] flex items-center gap-2">
@@ -340,7 +340,7 @@ export default function SettingsPage() {
 
       {/* CONTENT */}
       <Spin spinning={dangTai}>
-        <div className="bg-white border border-[#ead0d0] rounded-3xl shadow-sm overflow-hidden p-2">
+        <div className="bg-white border border-[#e4beba] rounded-xl shadow-sm overflow-hidden p-2">
           <Form form={form} layout="vertical">
             <Tabs defaultActiveKey="1" items={tabItems} className="px-5 pt-2 pb-4" />
           </Form>

@@ -254,45 +254,77 @@ export default function ComplaintsPage() {
 
       {/* STATS */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
-        <Card className="rounded-2xl border border-[#ead0d0] shadow-sm">
-          <Statistic
-            title="Tổng khiếu nại"
-            value={complaints.length}
-            prefix={<AlertTriangle size={18} className="text-[#af101a]" />}
-            valueStyle={{ color: '#191c1e', fontWeight: 'bold' }}
-          />
-        </Card>
+        {/* Tổng khiếu nại */}
+        <div className="bg-white border border-[#e4beba] border-t-2 border-t-[#af101a] rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-[11px] font-bold text-[#5b403d] uppercase tracking-wider">
+              Tổng khiếu nại
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-[#fff2f0] flex items-center justify-center">
+              <AlertTriangle size={16} className="text-[#af101a]" />
+            </div>
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <h2 className="text-2xl font-black text-[#191c1e]">
+              {complaints.length}
+            </h2>
+          </div>
+        </div>
 
-        <Card className="rounded-2xl border border-[#ead0d0] shadow-sm">
-          <Statistic
-            title="Chờ xử lý"
-            value={complaints.filter((c) => c.status === 'New').length}
-            prefix={<Clock size={18} className="text-[#f97316]" />}
-            valueStyle={{ color: '#f97316', fontWeight: 'bold' }}
-          />
-        </Card>
+        {/* Chờ xử lý */}
+        <div className="bg-white border border-[#e4beba] rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-[11px] font-bold text-[#5b403d] uppercase tracking-wider">
+              Chờ xử lý
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-[#fff7ed] flex items-center justify-center">
+              <Clock size={16} className="text-[#f97316]" />
+            </div>
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <h2 className="text-2xl font-black text-[#191c1e]">
+              {complaints.filter((c) => c.status === 'New').length}
+            </h2>
+          </div>
+        </div>
 
-        <Card className="rounded-2xl border border-[#ead0d0] shadow-sm">
-          <Statistic
-            title="Đang xử lý"
-            value={complaints.filter((c) => c.status === 'In Progress').length}
-            prefix={<Settings size={18} className="text-blue-600" />}
-            valueStyle={{ color: '#2563eb', fontWeight: 'bold' }}
-          />
-        </Card>
+        {/* Đang xử lý */}
+        <div className="bg-white border border-[#e4beba] rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-[11px] font-bold text-[#5b403d] uppercase tracking-wider">
+              Đang xử lý
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-[#eff6ff] flex items-center justify-center">
+              <Settings size={16} className="text-blue-600" />
+            </div>
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <h2 className="text-2xl font-black text-[#191c1e]">
+              {complaints.filter((c) => c.status === 'In Progress').length}
+            </h2>
+          </div>
+        </div>
 
-        <Card className="rounded-2xl border border-[#ead0d0] shadow-sm">
-          <Statistic
-            title="Đã giải quyết"
-            value={complaints.filter((c) => c.status === 'Resolved').length}
-            prefix={<CheckCircle size={18} className="text-green-600" />}
-            valueStyle={{ color: '#16a34a', fontWeight: 'bold' }}
-          />
-        </Card>
+        {/* Đã giải quyết */}
+        <div className="bg-white border border-[#e4beba] rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-[11px] font-bold text-[#5b403d] uppercase tracking-wider">
+              Đã giải quyết
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-[#f0fdf4] flex items-center justify-center">
+              <CheckCircle size={16} className="text-[#16a34a]" />
+            </div>
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <h2 className="text-2xl font-black text-[#191c1e]">
+              {complaints.filter((c) => c.status === 'Resolved').length}
+            </h2>
+          </div>
+        </div>
       </div>
 
       {/* MAIN CONTENT */}
-      <div className="bg-white border border-[#ead0d0] rounded-3xl shadow-sm overflow-hidden">
+      <div className="bg-white border border-[#e4beba] rounded-xl shadow-sm overflow-hidden">
         
         {/* FILTER BAR */}
         <div className="p-5 border-b border-[#f1dede]">
