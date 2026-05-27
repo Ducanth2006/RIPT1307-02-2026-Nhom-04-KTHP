@@ -16,15 +16,15 @@ import {
   message,
   Tag,
   Image,
-  Card,
-  Statistic,
   Empty,
   Select,
   Space,
   Alert,
   Switch,
   Popconfirm,
-  Dropdown
+  Dropdown,
+  Card,
+  Statistic
 } from 'antd';
 
 import type {
@@ -46,7 +46,9 @@ import {
   CheckCircle,
   Edit2,
   Trash2,
-  Image as ImageIcon
+  ShoppingBag,
+  Layers3,
+  CircleDollarSign
 } from 'lucide-react';
 
 import {
@@ -73,6 +75,7 @@ interface ProductItem {
   status: string;
   category_id: number;
   main_image?: string;
+
   categories?: {
     id: number;
     name: string;
@@ -617,7 +620,7 @@ export default function Products() {
 
           if (!anh) {
             return (
-              <div className="w-[50px] h-[50px] rounded bg-gray-100 flex items-center justify-center">
+              <div className="w-[54px] h-[54px] rounded-xl bg-gray-100 flex items-center justify-center">
                 <Package2 size={18} />
               </div>
             );
@@ -626,9 +629,9 @@ export default function Products() {
           return (
             <Image
               src={anh}
-              width={50}
-              height={50}
-              className="rounded object-cover"
+              width={54}
+              height={54}
+              className="rounded-xl object-cover"
               preview={false}
             />
           );
@@ -637,7 +640,7 @@ export default function Products() {
 
       {
         title:
-          'Tên Sản Phẩm',
+          'Tên sản phẩm',
 
         key: 'product',
 
@@ -646,14 +649,14 @@ export default function Products() {
           record
         ) => (
           <div>
-            <div className="font-semibold text-[15px]">
+            <div className="font-semibold text-[15px] text-[#191c1e]">
               {record.name}
             </div>
 
-            <div className="text-gray-500 text-sm">
+            <div className="text-[#5b403d] text-sm mt-1">
               ID: PRD-
               {record.id}
-              {' | '}
+              {' • '}
               {record.brand ||
                 'No Brand'}
             </div>
@@ -668,9 +671,15 @@ export default function Products() {
         render: (
           _: any,
           record
-        ) =>
-          record.categories
-            ?.name || '-'
+        ) => (
+          <Tag
+            className="rounded-full px-3 py-1"
+            color="processing"
+          >
+            {record.categories
+              ?.name || '-'}
+          </Tag>
+        )
       },
 
       {
@@ -679,7 +688,7 @@ export default function Products() {
         key: 'base_price',
 
         render: (v) => (
-          <span className="font-semibold text-red-500">
+          <span className="font-bold text-[#15803d]">
             {dinhDangTien(v)}
           </span>
         )
@@ -704,16 +713,14 @@ export default function Products() {
           if (stock <= 10) {
             return (
               <Tag color="orange">
-                Sắp hết (
-                {stock})
+                Sắp hết ({stock})
               </Tag>
             );
           }
 
           return (
             <Tag color="green">
-              Còn hàng (
-              {stock})
+              Còn hàng ({stock})
             </Tag>
           );
         }
@@ -807,255 +814,277 @@ export default function Products() {
       }
     ];
 
-  // =========================
-  // RENDER
-  // =========================
-
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6 max-w-[1600px] mx-auto space-y-6">
       {contextHolder}
 
-      <Card
-        className="shadow-sm border-2 border-gray-300"
-        title={
-          <div>
-            <h1 className="text-2xl font-bold">
-              Quản Lý Sản Phẩm
-            </h1>
+      {/* HEADER */}
 
-            <p className="text-gray-500 text-sm mt-1">
-              Theo dõi kho hàng,
-              giá bán và trạng thái
-              sản phẩm
-            </p>
-          </div>
-        }
-        extra={
-          <Space>
-            <Button
-              onClick={fetchData}
-              icon={
-                <RefreshCw size={16} />
-              }
-            >
-              Làm mới
-            </Button>
-
-            <Button
-              type="primary"
-              size="large"
-              icon={<Plus size={18} />}
-              onClick={() =>
-                navigate(
-                  '/admin/products/new'
-                )
-              }
-            >
-              Tạo Sản Phẩm
-            </Button>
-          </Space>
-        }
-      >
-        <div className="space-y-5">
-          {/* STATS */}
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card bordered>
-              <Statistic
-                title="Tổng sản phẩm"
-                value={
-                  stats.totalProducts
-                }
-                prefix={
-                  <Box size={18} />
-                }
-              />
-            </Card>
-
-            <Card bordered>
-              <Statistic
-                title="Sản phẩm hoạt động"
-                value={
-                  stats.activeProducts
-                }
-                prefix={
-                  <CheckCircle size={18} />
-                }
-                valueStyle={{
-                  color: '#16a34a'
-                }}
-              />
-            </Card>
-
-            <Card bordered>
-              <Statistic
-                title="Tổng tồn kho"
-                value={
-                  stats.totalStock
-                }
-                prefix={
-                  <Activity size={18} />
-                }
-              />
-            </Card>
-
-            <Card bordered>
-              <Statistic
-                title="Sắp hết hàng"
-                value={
-                  stats.lowStockAlerts
-                }
-                prefix={
-                  <AlertTriangle size={18} />
-                }
-                valueStyle={{
-                  color: '#ef4444'
-                }}
-              />
-            </Card>
-          </div>
-
-          {/* FILTER */}
-
-          <div className="bg-white rounded-xl border p-5">
-            <div className="flex flex-wrap gap-3 mb-4">
-              <Input
-                placeholder="Tìm ID hoặc tên sản phẩm..."
-                prefix={
-                  <Search size={16} />
-                }
-                value={searchText}
-                onChange={(e) =>
-                  setSearchText(
-                    e.target.value
-                  )
-                }
-                allowClear
-                className="max-w-md"
-              />
-
-              <Select
-                value={
-                  selectedParent
-                }
-                onChange={(val) => {
-                  setSelectedParent(
-                    val
-                  );
-
-                  setSelectedChild(
-                    'Tất cả'
-                  );
-                }}
-                style={{
-                  width: 220
-                }}
-                options={
-                  parentCategoryOptions
-                }
-              />
-
-              <Select
-                value={
-                  selectedChild
-                }
-                onChange={
-                  setSelectedChild
-                }
-                style={{
-                  width: 220
-                }}
-                options={
-                  childCategoryOptions
-                }
-              />
-
-              <Select
-                value={priceRange}
-                onChange={
-                  setPriceRange
-                }
-                style={{
-                  width: 180
-                }}
-                options={[
-                  {
-                    value:
-                      'Tất cả mức giá'
-                  },
-
-                  {
-                    value:
-                      'Dưới 500k'
-                  },
-
-                  {
-                    value:
-                      '500k - 1 Triệu'
-                  },
-
-                  {
-                    value:
-                      'Trên 1 Triệu'
-                  }
-                ]}
-              />
-
-              {selectedRowKeys.length >
-                0 && (
-                <Dropdown
-                  menu={{
-                    items:
-                      bulkMenuItems,
-                    onClick:
-                      handleBulkAction
-                  }}
-                >
-                  <Button type="primary">
-                    Thao tác (
-                    {
-                      selectedRowKeys.length
-                    }
-                    )
-                  </Button>
-                </Dropdown>
-              )}
-            </div>
-
-            {/* TABLE */}
-
-            <Table<ProductItem>
-              rowKey="id"
-              columns={columns}
-              dataSource={
-                filteredData
-              }
-              loading={loading}
-              bordered
-              rowSelection={{
-                selectedRowKeys,
-                onChange: (
-                  keys
-                ) =>
-                  setSelectedRowKeys(
-                    keys
-                  )
-              }}
-              scroll={{
-                x: 1300
-              }}
-              pagination={{
-                pageSize: 10
-              }}
-              locale={{
-                emptyText: (
-                  <Empty description="Không có dữ liệu sản phẩm" />
-                )
-              }}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-[#191c1e] flex items-center gap-3">
+            <ShoppingBag
+              size={30}
+              className="text-[#af101a]"
             />
+            Quản Lý Sản Phẩm
+          </h1>
+
+          <p className="text-[#5b403d] mt-2">
+            Theo dõi sản phẩm, tồn kho và trạng
+            thái hoạt động trong hệ thống.
+          </p>
+        </div>
+
+        <Space wrap>
+          <Button
+            size="large"
+            onClick={fetchData}
+            icon={
+              <RefreshCw size={16} />
+            }
+          >
+            Làm mới
+          </Button>
+
+          <Button
+            type="primary"
+            size="large"
+            icon={<Plus size={18} />}
+            className="bg-[#af101a] hover:!bg-[#930010] border-none"
+            onClick={() =>
+              navigate(
+                '/admin/products/new'
+              )
+            }
+          >
+            Tạo Sản Phẩm
+          </Button>
+        </Space>
+      </div>
+
+      {/* STATS */}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+        <Card className="rounded-2xl border border-[#ead0d0] shadow-sm">
+          <Statistic
+            title="Tổng sản phẩm"
+            value={
+              stats.totalProducts
+            }
+            prefix={
+              <Box
+                size={18}
+                className="text-[#af101a]"
+              />
+            }
+          />
+        </Card>
+
+        <Card className="rounded-2xl border border-[#ead0d0] shadow-sm">
+          <Statistic
+            title="Đang hoạt động"
+            value={
+              stats.activeProducts
+            }
+            prefix={
+              <CheckCircle
+                size={18}
+                className="text-[#16a34a]"
+              />
+            }
+            valueStyle={{
+              color: '#16a34a'
+            }}
+          />
+        </Card>
+
+        <Card className="rounded-2xl border border-[#ead0d0] shadow-sm">
+          <Statistic
+            title="Tổng tồn kho"
+            value={
+              stats.totalStock
+            }
+            prefix={
+              <Layers3
+                size={18}
+                className="text-[#2563eb]"
+              />
+            }
+          />
+        </Card>
+
+        <Card className="rounded-2xl border border-[#ead0d0] shadow-sm">
+          <Statistic
+            title="Sắp hết hàng"
+            value={
+              stats.lowStockAlerts
+            }
+            prefix={
+              <AlertTriangle
+                size={18}
+                className="text-[#f97316]"
+              />
+            }
+            valueStyle={{
+              color: '#f97316'
+            }}
+          />
+        </Card>
+      </div>
+
+      {/* MAIN */}
+
+      <div className="bg-white border border-[#ead0d0] rounded-3xl shadow-sm overflow-hidden">
+        {/* FILTER */}
+
+        <div className="p-5 border-b border-[#f1dede]">
+          <div className="flex flex-wrap gap-3">
+            <Input
+              placeholder="Tìm ID hoặc tên sản phẩm..."
+              prefix={
+                <Search size={16} />
+              }
+              value={searchText}
+              onChange={(e) =>
+                setSearchText(
+                  e.target.value
+                )
+              }
+              allowClear
+              size="large"
+              className="max-w-md"
+            />
+
+            <Select
+              size="large"
+              value={
+                selectedParent
+              }
+              onChange={(val) => {
+                setSelectedParent(
+                  val
+                );
+
+                setSelectedChild(
+                  'Tất cả'
+                );
+              }}
+              style={{
+                width: 220
+              }}
+              options={
+                parentCategoryOptions
+              }
+            />
+
+            <Select
+              size="large"
+              value={
+                selectedChild
+              }
+              onChange={
+                setSelectedChild
+              }
+              style={{
+                width: 220
+              }}
+              options={
+                childCategoryOptions
+              }
+            />
+
+            <Select
+              size="large"
+              value={priceRange}
+              onChange={
+                setPriceRange
+              }
+              style={{
+                width: 190
+              }}
+              options={[
+                {
+                  value:
+                    'Tất cả mức giá'
+                },
+
+                {
+                  value:
+                    'Dưới 500k'
+                },
+
+                {
+                  value:
+                    '500k - 1 Triệu'
+                },
+
+                {
+                  value:
+                    'Trên 1 Triệu'
+                }
+              ]}
+            />
+
+            {selectedRowKeys.length >
+              0 && (
+              <Dropdown
+                menu={{
+                  items:
+                    bulkMenuItems,
+                  onClick:
+                    handleBulkAction
+                }}
+              >
+                <Button
+                  type="primary"
+                  size="large"
+                  className="bg-[#af101a]"
+                >
+                  Thao tác (
+                  {
+                    selectedRowKeys.length
+                  }
+                  )
+                </Button>
+              </Dropdown>
+            )}
           </div>
         </div>
-      </Card>
+
+        {/* TABLE */}
+
+        <div className="p-4">
+          <Table<ProductItem>
+            rowKey="id"
+            columns={columns}
+            dataSource={
+              filteredData
+            }
+            loading={loading}
+            rowSelection={{
+              selectedRowKeys,
+              onChange: (
+                keys
+              ) =>
+                setSelectedRowKeys(
+                  keys
+                )
+            }}
+            scroll={{
+              x: 1300
+            }}
+            pagination={{
+              pageSize: 10
+            }}
+            locale={{
+              emptyText: (
+                <Empty description="Không có dữ liệu sản phẩm" />
+              )
+            }}
+          />
+        </div>
+      </div>
 
       {/* MODAL */}
 
@@ -1085,7 +1114,7 @@ export default function Products() {
               }
             ]}
           >
-            <Input />
+            <Input size="large" />
           </Form.Item>
 
           <div className="grid grid-cols-2 gap-4">
@@ -1102,6 +1131,7 @@ export default function Products() {
             >
               <InputNumber
                 min={0}
+                size="large"
                 style={{
                   width: '100%'
                 }}
@@ -1112,7 +1142,7 @@ export default function Products() {
               name="brand"
               label="Thương hiệu"
             >
-              <Input />
+              <Input size="large" />
             </Form.Item>
           </div>
 

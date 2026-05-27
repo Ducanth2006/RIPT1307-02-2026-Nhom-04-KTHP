@@ -538,15 +538,13 @@ export default function Categories() {
           record
         ) => (
           <div>
-            <div className="font-semibold text-[15px]">
+            <div className="font-semibold text-[15px] text-[#191c1e]">
               {text}
             </div>
 
-            {record.parent_id && (
-              <div className="text-xs text-gray-500">
-                Danh mục
-              </div>
-            )}
+            <div className="text-[#5b403d] text-sm mt-1">
+              {record.slug}
+            </div>
           </div>
         )
       },
@@ -576,7 +574,9 @@ export default function Categories() {
             record.parent_id ===
             null
           ) {
-            return (null
+            return (
+              <Tag color="processing">
+              </Tag>
             );
           }
 
@@ -628,7 +628,6 @@ export default function Categories() {
                   checked
                 )
               }
-              size="small"
             />
 
             {status ===
@@ -738,220 +737,217 @@ export default function Categories() {
   // =========================
 
   return (
-    <div className="p-6">
-      <Card
-        className="shadow-sm border-2 border-gray-300"
-        title={
-          <div>
-            <h1 className="text-2xl font-bold">
-              Quản Lý Danh Mục
-            </h1>
+    <div className="p-4 md:p-6 max-w-[1600px] mx-auto space-y-6">
+      {/* HEADER */}
 
-            <p className="text-gray-500 text-sm mt-1">
-              Sắp xếp và quản lý phân loại sản phẩm
-            </p>
-          </div>
-        }
-        extra={
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-[#191c1e] flex items-center gap-3">
+            <FolderTree
+              size={30}
+              className="text-[#af101a]"
+            />
+            Quản Lý Danh Mục
+          </h1>
+
+          <p className="text-[#5b403d] mt-2">
+            Quản lý danh mục ngành hàng và danh
+            mục sản phẩm trong hệ thống.
+          </p>
+        </div>
+
+        <Space wrap>
+          <Button
+            size="large"
+            onClick={fetchCategories}
+            icon={<Activity size={16} />}
+          >
+            Làm mới
+          </Button>
+
           <Button
             type="primary"
             size="large"
-            icon={
-              <Plus size={18} />
-            }
-            onClick={() =>
-              openModal()
-            }
-            danger
+            icon={<Plus size={18} />}
+            className="bg-[#af101a] hover:!bg-[#930010] border-none"
+            onClick={() => openModal()}
           >
             Tạo Danh Mục
           </Button>
-        }
-      >
-        <div className="space-y-5">
-          {/* STATS */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card bordered>
-              <Statistic
-                title="Tổng danh mục Hàng"
-                value={
-                  stats.parent_categories
-                }
-                prefix={
-                  <FolderTree
-                    size={18}
-                  />
-                }
-              />
-            </Card>
+        </Space>
+      </div>
 
-            <Card bordered>
-              <Statistic
-                title="Tổng danh mục Sản phẩm"
-                value={
-                  stats.child_categories
-                }
-                prefix={
-                  <FolderTree
-                    size={18}
-                  />
-                }
-              />
-            </Card>
+      {/* STATS */}
 
-            <Card bordered>
-              <Statistic
-                title="Danh mục đang hoạt động"
-                value={
-                  activeCategoriesCount
-                }
-                prefix={
-                  <Activity
-                    size={18}
-                  />
-                }
-                valueStyle={{
-                  color:
-                    '#16a34a'
-                }}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <Card className="rounded-2xl border border-[#ead0d0] shadow-sm">
+          <Statistic
+            title="Danh mục ngành hàng"
+            value={stats.parent_categories}
+            prefix={
+              <FolderTree
+                size={18}
+                className="text-[#af101a]"
               />
-            </Card>
-          </div>
+            }
+          />
+        </Card>
 
-          {/* TABLE */}
-          <div className="bg-white rounded-xl border p-5">
-            <div className="mb-4">
-              <Input
-                placeholder="Tìm theo tên hoặc slug..."
-                prefix={
-                  <Search size={16} />
-                }
-                value={
-                  searchText
-                }
-                onChange={(
-                  e
-                ) =>
-                  setSearchText(
-                    e.target
-                      .value
-                  )
-                }
-                allowClear
-                className="max-w-md"
+        <Card className="rounded-2xl border border-[#ead0d0] shadow-sm">
+          <Statistic
+            title="Danh mục sản phẩm"
+            value={stats.child_categories}
+            prefix={
+              <FolderTree
+                size={18}
+                className="text-[#2563eb]"
               />
-            </div>
+            }
+          />
+        </Card>
 
-            <Table<Category>
-              rowKey="id"
-              columns={
-                columns
-              }
-              dataSource={
-                filteredData
-              }
-              loading={loading}
-              bordered
-              pagination={{
-                pageSize: 10
-              }}
-              scroll={{
-                x: 1200
-              }}
-              locale={{
-                emptyText:
-                  (
-                    <Empty description="Không có dữ liệu" />
-                  )
-              }}
-            />
-          </div>
+        <Card className="rounded-2xl border border-[#ead0d0] shadow-sm">
+          <Statistic
+            title="Đang hoạt động"
+            value={activeCategoriesCount}
+            prefix={
+              <Activity
+                size={18}
+                className="text-[#16a34a]"
+              />
+            }
+            valueStyle={{
+              color: '#16a34a'
+            }}
+          />
+        </Card>
+      </div>
+
+      {/* MAIN */}
+
+      <div className="bg-white border border-[#ead0d0] rounded-3xl shadow-sm overflow-hidden">
+        {/* FILTER */}
+
+        <div className="p-5 border-b border-[#f1dede]">
+          <Input
+            size="large"
+            placeholder="Tìm theo tên hoặc slug..."
+            prefix={<Search size={16} />}
+            value={searchText}
+            onChange={(e) =>
+              setSearchText(e.target.value)
+            }
+            allowClear
+            className="max-w-md"
+          />
         </div>
 
-        {/* MODAL */}
-        <Modal
-          title={
-            editingCategory
-              ? 'Chỉnh sửa danh mục'
-              : 'Thêm danh mục mới'
-          }
-          open={
-            isModalVisible
-          }
-          onOk={onModalOk}
-          onCancel={() =>
-            setIsModalVisible(
-              false
-            )
-          }
-          width={700}
-          okText="Lưu"
-          cancelText="Hủy"
-          okButtonProps={{
-            danger: true
-          }}
-        >
-          <Form
-            form={form}
-            layout="vertical"
-            initialValues={{
-              status: true
+        {/* TABLE */}
+
+        <div className="p-4">
+          <Table<Category>
+            rowKey="id"
+            columns={columns}
+            dataSource={filteredData}
+            loading={loading}
+            pagination={{
+              pageSize: 10
             }}
-            className="mt-5"
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Form.Item
-                name="name"
-                label="Tên danh mục"
-                rules={[
-                  {
-                    required: true,
-                    message:
-                      'Vui lòng nhập tên danh mục'
-                  }
-                ]}
-              >
-                <Input />
-              </Form.Item>
+            scroll={{
+              x: 1200
+            }}
+            locale={{
+              emptyText: (
+                <Empty description="Không có dữ liệu danh mục" />
+              )
+            }}
+          />
+        </div>
+      </div>
 
-              <Form.Item
-                name="parent_id"
-                label="Danh mục"
-              >
-                <Select
-                  allowClear
-                  placeholder="Làm danh mục gốc"
-                  options={parentCategoryOptions.filter(
-                    (c) =>
-                      c.value !==
-                      editingCategory?.id
-                  )}
-                />
-              </Form.Item>
+      {/* MODAL */}
 
-              <Form.Item
-                name="status"
-                label="Trạng thái"
-                valuePropName="checked"
-              >
-                <Switch
-                  checkedChildren="Active"
-                  unCheckedChildren="Draft"
-                />
-              </Form.Item>
-            </div>
+      <Modal
+        title={
+          editingCategory
+            ? 'Chỉnh sửa danh mục'
+            : 'Thêm danh mục mới'
+        }
+        open={isModalVisible}
+        onOk={onModalOk}
+        onCancel={() =>
+          setIsModalVisible(false)
+        }
+        width={700}
+        okText="Lưu thay đổi"
+        cancelText="Hủy"
+        okButtonProps={{
+          className:
+            'bg-[#af101a] border-none hover:!bg-[#930010]'
+        }}
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          initialValues={{
+            status: true
+          }}
+          className="mt-5"
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Form.Item
+              name="name"
+              label="Tên danh mục"
+              rules={[
+                {
+                  required: true,
+                  message:
+                    'Vui lòng nhập tên danh mục'
+                }
+              ]}
+            >
+              <Input size="large" />
+            </Form.Item>
 
             <Form.Item
-              name="description"
-              label="Mô tả"
+              name="parent_id"
+              label="Danh mục"
             >
-              <Input.TextArea
-                rows={4}
+              <Select
+                size="large"
+                allowClear
+                placeholder="Làm danh mục gốc"
+                options={parentCategoryOptions.filter(
+                  (c) =>
+                    c.value !==
+                    editingCategory?.id
+                )}
               />
             </Form.Item>
-          </Form>
-        </Modal>
-      </Card>
+
+            <Form.Item
+              name="status"
+              label="Trạng thái"
+              valuePropName="checked"
+            >
+              <Switch
+                checkedChildren="Active"
+                unCheckedChildren="Draft"
+              />
+            </Form.Item>
+          </div>
+
+          <Form.Item
+            name="description"
+            label="Mô tả"
+          >
+            <Input.TextArea
+              rows={4}
+              placeholder="Nhập mô tả danh mục..."
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 }
