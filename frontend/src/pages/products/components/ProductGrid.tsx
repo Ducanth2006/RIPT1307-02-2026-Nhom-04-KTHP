@@ -145,7 +145,7 @@ const ProductGrid = () => {
           borderRadius: 4,
           fontSize: isChild ? 13 : 14,
           fontWeight: isActive ? 600 : 400,
-          color: isActive ? "#ee4d2d" : "#333",
+          color: isActive ? "#af101a" : "#333",
           backgroundColor: isActive ? "#fff5f2" : "transparent",
           transition: "all 0.2s",
           display: "flex",
@@ -153,7 +153,7 @@ const ProductGrid = () => {
           gap: 6,
         }}
       >
-        {!isChild && isActive && <span style={{ color: "#ee4d2d" }}>●</span>}
+        {!isChild && isActive && <span style={{ color: "#af101a" }}>●</span>}
         {cat.name}
       </div>
     );
@@ -180,7 +180,7 @@ const ProductGrid = () => {
             bodyStyle={{ padding: "16px 12px" }}
           >
             <div style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 8, padding: "0 8px" }}>
-              <UnorderedListOutlined style={{ fontSize: 16, color: "#ee4d2d" }} />
+              <UnorderedListOutlined style={{ fontSize: 16, color: "#af101a" }} />
               <Text strong style={{ fontSize: 16 }}>
                 Bộ lọc tìm kiếm
               </Text>
@@ -194,7 +194,7 @@ const ProductGrid = () => {
                   borderRadius: 4,
                   fontSize: 14,
                   fontWeight: categoryId === undefined ? 600 : 400,
-                  color: categoryId === undefined ? "#ee4d2d" : "#333",
+                  color: categoryId === undefined ? "#af101a" : "#333",
                   backgroundColor: categoryId === undefined ? "#fff5f2" : "transparent",
                   transition: "all 0.2s",
                   display: "flex",
@@ -202,7 +202,7 @@ const ProductGrid = () => {
                   gap: 6,
                 }}
               >
-                {categoryId === undefined && <span style={{ color: "#ee4d2d" }}>●</span>}
+                {categoryId === undefined && <span style={{ color: "#af101a" }}>●</span>}
                 Tất cả sản phẩm
               </div>
               <Collapse
@@ -227,12 +227,12 @@ const ProductGrid = () => {
                           style={{
                             fontSize: 14,
                             fontWeight: isActive ? 600 : 500,
-                            color: isActive ? "#ee4d2d" : "#333",
+                            color: isActive ? "#af101a" : "#333",
                             display: "flex",
                             alignItems: "center"
                           }}
                         >
-                          {isActive && <span style={{ color: "#ee4d2d", marginRight: 6 }}>●</span>}
+                          {isActive && <span style={{ color: "#af101a", marginRight: 6 }}>●</span>}
                           {parent.name}
                         </div>
                       }
@@ -277,7 +277,7 @@ const ProductGrid = () => {
                     min={0}
                   />
                 </div>
-                <Button type="primary" onClick={handlePriceApply} block style={{ background: "#ee4d2d" }}>
+                <Button type="primary" onClick={handlePriceApply} block style={{ background: "#af101a" }}>
                   Áp dụng
                 </Button>
               </div>

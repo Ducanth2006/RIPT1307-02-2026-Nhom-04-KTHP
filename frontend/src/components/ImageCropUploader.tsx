@@ -264,8 +264,8 @@ const ImageCropUploader = ({ userId, maxImages = 5, onChange }: Props) => {
               userSelect: "none",
             }}
             onMouseEnter={(e) => {
-              (e.currentTarget as HTMLDivElement).style.borderColor = "#ee4d2d";
-              (e.currentTarget as HTMLDivElement).style.color = "#ee4d2d";
+              (e.currentTarget as HTMLDivElement).style.borderColor = "#af101a";
+              (e.currentTarget as HTMLDivElement).style.color = "#af101a";
             }}
             onMouseLeave={(e) => {
               (e.currentTarget as HTMLDivElement).style.borderColor = "#d9d9d9";
@@ -301,7 +301,7 @@ const ImageCropUploader = ({ userId, maxImages = 5, onChange }: Props) => {
         open={cropModalOpen}
         title={
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <ScissorOutlined style={{ color: "#ee4d2d" }} />
+            <ScissorOutlined style={{ color: "#af101a" }} />
             <span>Cắt ảnh</span>
           </div>
         }
@@ -313,7 +313,7 @@ const ImageCropUploader = ({ userId, maxImages = 5, onChange }: Props) => {
               type="primary"
               onClick={handleCropConfirm}
               loading={uploading}
-              style={{ backgroundColor: "#ee4d2d", borderColor: "#ee4d2d" }}
+              style={{ backgroundColor: "#af101a", borderColor: "#af101a" }}
             >
               Xác nhận
             </Button>
@@ -344,8 +344,8 @@ const ImageCropUploader = ({ userId, maxImages = 5, onChange }: Props) => {
             step={0.05}
             value={zoom}
             onChange={(val) => setZoom(val)}
-            trackStyle={{ backgroundColor: "#ee4d2d" }}
-            handleStyle={{ borderColor: "#ee4d2d" }}
+            trackStyle={{ backgroundColor: "#af101a" }}
+            handleStyle={{ borderColor: "#af101a" }}
           />
         </div>
       </Modal>

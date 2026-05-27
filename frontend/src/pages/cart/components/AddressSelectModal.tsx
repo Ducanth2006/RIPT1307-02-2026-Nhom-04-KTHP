@@ -49,7 +49,7 @@ const AddressSelectModal = ({
                   marginBottom: 12,
                   cursor: "pointer",
                   backgroundColor: selectedAddress?.id === addr.id ? "#fffcfb" : "#fff",
-                  borderColor: selectedAddress?.id === addr.id ? "#ee4d2d" : "#f0f0f0",
+                  borderColor: selectedAddress?.id === addr.id ? "#af101a" : "#f0f0f0",
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
@@ -68,7 +68,7 @@ const AddressSelectModal = ({
                     {addr.is_default && (
                       <Tag
                         color="red"
-                        style={{ borderColor: "#ee4d2d", color: "#ee4d2d", backgroundColor: "#fff5f2" }}
+                        style={{ borderColor: "#af101a", color: "#af101a", backgroundColor: "#fff5f2" }}
                       >
                         Mặc định
                       </Tag>
@@ -77,7 +77,7 @@ const AddressSelectModal = ({
                   <div style={{ color: "#666", fontSize: 13 }}>{addr.address_line}</div>
                   <div style={{ color: "#999", fontSize: 12 }}>{addr.city}</div>
                 </div>
-                {selectedAddress?.id === addr.id && <CheckOutlined style={{ color: "#ee4d2d", fontSize: 16 }} />}
+                {selectedAddress?.id === addr.id && <CheckOutlined style={{ color: "#af101a", fontSize: 16 }} />}
               </div>
             )}
           />
@@ -90,7 +90,7 @@ const AddressSelectModal = ({
             onCancel();
             onOpenAddAddress();
           }}
-          style={{ backgroundColor: "#ee4d2d", border: "none", width: "100%", height: 40 }}
+          style={{ backgroundColor: "#af101a", border: "none", width: "100%", height: 40 }}
         >
           + Thêm địa chỉ mới
         </Button>

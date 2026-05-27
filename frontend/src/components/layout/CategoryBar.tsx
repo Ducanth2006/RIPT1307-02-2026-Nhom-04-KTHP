@@ -116,8 +116,8 @@ const CategoryBar = () => {
           style={{
             fontSize: 16,
             fontWeight: activeId === undefined ? 700 : 600,
-            color: activeId === undefined ? "#ee4d2d" : "#312e2e",
-            borderBottom: activeId === undefined ? "3px solid #ee4d2d" : "none",
+            color: activeId === undefined ? "#af101a" : "#312e2e",
+            borderBottom: activeId === undefined ? "3px solid #af101a" : "none",
             borderRadius: 0,
             paddingBottom: 8,
             textTransform: "uppercase",
@@ -134,8 +134,8 @@ const CategoryBar = () => {
             style={{
               fontSize: 16,
               fontWeight: activeId === cat.id ? 700 : 600,
-              color: activeId === cat.id ? "#ee4d2d" : "#312e2e",
-              borderBottom: activeId === cat.id ? "3px solid #ee4d2d" : "none",
+              color: activeId === cat.id ? "#af101a" : "#312e2e",
+              borderBottom: activeId === cat.id ? "3px solid #af101a" : "none",
               borderRadius: 0,
               paddingBottom: 8,
               textTransform: "uppercase",
