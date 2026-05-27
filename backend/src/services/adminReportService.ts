@@ -71,7 +71,8 @@ export const fetchReportData = async (
         customersCurrentResult,
         customersPrevResult,
         orderItemsResult,
-        allOrdersForExportResult
+        allOrdersForExportResult,
+        prevOrderItemsResult
     ] = await Promise.all([
         // 1. Đơn hàng kỳ hiện tại
         supabaseClient
@@ -107,6 +108,7 @@ export const fetchReportData = async (
             .select(`
                 quantity,
                 unit_price,
+                cost_price,
                 product_variants (
                     sku,
                     products (
@@ -134,7 +136,20 @@ export const fetchReportData = async (
             `)
             .gte('created_at', start)
             .lte('created_at', end)
-            .order('created_at', { ascending: false })
+            .order('created_at', { ascending: false }),
+
+        // 7. Chi tiết đơn hàng hoàn tất kỳ trước (để tính lợi nhuận kỳ trước)
+        supabaseClient
+            .from('order_items')
+            .select(`
+                quantity,
+                unit_price,
+                cost_price,
+                orders!inner ( status, total_amount, discount_amount, final_amount )
+            `)
+            .eq('orders.status', 'Completed')
+            .gte('orders.created_at', prevStart)
+            .lte('orders.created_at', prevEnd)
     ]);
 
     // ═══════════════════════════════════════════════════════════
@@ -146,10 +161,12 @@ export const fetchReportData = async (
     if (customersPrevResult.error) throw customersPrevResult.error;
     if (orderItemsResult.error) throw orderItemsResult.error;
     if (allOrdersForExportResult.error) throw allOrdersForExportResult.error;
+    if (prevOrderItemsResult.error) throw prevOrderItemsResult.error;
 
     const currentOrders = ordersCurrentResult.data ?? [];
     const prevOrders = ordersPrevResult.data ?? [];
     const orderItems = orderItemsResult.data ?? [];
+    const prevOrderItems = prevOrderItemsResult.data ?? [];
 
     // ═══════════════════════════════════════════════════════════
     // 1. KPIs
@@ -168,6 +185,33 @@ export const fetchReportData = async (
 
     const aov = completedCurrent.length > 0 ? Math.round(revenueCurrent / completedCurrent.length) : 0;
     const aovPrev = completedPrev.length > 0 ? Math.round(revenuePrev / completedPrev.length) : 0;
+
+    // Tính toán tổng lợi nhuận
+    const profitCurrent = orderItems.reduce((sum: number, item: any) => {
+        const order = item.orders;
+        if (!order) return sum;
+        const total = Number(order.total_amount || 0);
+        const final = Number(order.final_amount || 0);
+        const ratio = total > 0 ? (final / total) : 1;
+        const rev = Number(item.quantity || 0) * Number(item.unit_price || 0) * ratio;
+        const cost = Number(item.quantity || 0) * Number(item.cost_price || 0);
+        return sum + (rev - cost);
+    }, 0);
+
+    const profitPrev = prevOrderItems.reduce((sum: number, item: any) => {
+        const order = item.orders;
+        if (!order) return sum;
+        const total = Number(order.total_amount || 0);
+        const final = Number(order.final_amount || 0);
+        const ratio = total > 0 ? (final / total) : 1;
+        const rev = Number(item.quantity || 0) * Number(item.unit_price || 0) * ratio;
+        const cost = Number(item.quantity || 0) * Number(item.cost_price || 0);
+        return sum + (rev - cost);
+    }, 0);
+
+    // Tính toán biên lợi nhuận (%)
+    const marginCurrent = revenueCurrent > 0 ? Math.round((profitCurrent / revenueCurrent) * 100) : 0;
+    const marginPrev = revenuePrev > 0 ? Math.round((profitPrev / revenuePrev) * 100) : 0;
 
     // ═══════════════════════════════════════════════════════════
     // 2. Biểu đồ doanh thu & đơn hàng theo ngày
@@ -310,6 +354,12 @@ export const fetchReportData = async (
             revenue: Math.round(p.revenue)
         }));
 
+    // Tìm sản phẩm bán chạy nhất (theo volume) và sản phẩm có doanh thu cao nhất (theo revenue)
+    const productList = Object.values(productMap);
+    const bestSellerVolume = productList.sort((a, b) => b.volume - a.volume)[0]?.name || 'Chưa có sản phẩm bán chạy';
+    // Chú ý: sắp xếp lại list theo doanh thu để lấy sản phẩm doanh thu cao nhất
+    const bestSellerRevenue = [...productList].sort((a, b) => b.revenue - a.revenue)[0]?.name || 'Chưa có sản phẩm doanh thu cao';
+
     // ═══════════════════════════════════════════════════════════
     // 4b. Phân tích sử dụng Voucher
     // ═══════════════════════════════════════════════════════════
@@ -378,7 +428,13 @@ export const fetchReportData = async (
             aov,
             aovGrowth: calcGrowth(aov, aovPrev),
             newCustomers: customersCurrent,
-            customersGrowth: calcGrowth(customersCurrent, customersPrev)
+            customersGrowth: calcGrowth(customersCurrent, customersPrev),
+            totalProfit: Math.round(profitCurrent),
+            profitGrowth: calcGrowth(profitCurrent, profitPrev),
+            avgMargin: marginCurrent,
+            marginGrowth: calcGrowth(marginCurrent, marginPrev),
+            bestSellerVolume,
+            bestSellerRevenue
         },
         dailyChart,
         categoryData,
