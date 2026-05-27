@@ -174,6 +174,7 @@ export const thongKeDonHang = async () => {
     let donDangGiao = 0;
     let donDaHuy = 0;
     let donYeuCauHuy = 0;
+    let donHoanThanh = 0;
 
     (allOrders || []).forEach((o: any) => {
         const hasCancelRequest = o.cancel_reason && o.cancel_reason.includes('"isCancelRequested":true');
@@ -184,6 +185,7 @@ export const thongKeDonHang = async () => {
             else if (o.status === 'Packing') donDangDongGoi++;
             else if (o.status === 'Shipping') donDangGiao++;
             else if (o.status === 'Cancelled') donDaHuy++;
+            else if (o.status === 'Completed') donHoanThanh++;
         }
     });
 
@@ -194,7 +196,8 @@ export const thongKeDonHang = async () => {
         donDangDongGoi,
         donDangGiao,
         donDaHuy,
-        donYeuCauHuy
+        donYeuCauHuy,
+        donHoanThanh
     };
 };
 

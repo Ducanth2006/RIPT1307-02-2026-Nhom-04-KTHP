@@ -20,7 +20,9 @@ import {
   Form,
   Tooltip,
   Popconfirm,
-  DatePicker
+  DatePicker,
+  Card,
+  Statistic
 } from 'antd';
 
 import {
@@ -44,8 +46,11 @@ import {
   deleteAdminUser
 } from '../../services/adminUserService';
 
-const { RangePicker } =
-  DatePicker;
+const { RangePicker } = DatePicker;
+
+// =========================
+// TYPES
+// =========================
 
 interface User {
   id: string;
@@ -53,59 +58,27 @@ interface User {
   email: string;
   username?: string;
   phone?: string;
-  role:
-    | 'Admin'
-    | 'Staff'
-    | 'Customer';
-  status:
-    | 'Active'
-    | 'Locked';
+  role: 'Admin' | 'Staff' | 'Customer';
+  status: 'Active' | 'Locked';
   lastLogin: string;
   createdAt: string;
 }
 
 export default function UsersPage() {
-  const [users, setUsers] =
-    useState<User[]>([]);
-
-  const [loading, setLoading] =
-    useState(false);
-
-  const [searchText, setSearchText] =
-    useState('');
-
-  const [roleFilter, setRoleFilter] =
-    useState<
-      | 'All'
-      | 'Admin'
-      | 'Staff'
-      | 'Customer'
-    >('All');
-
-  // FILTER DATE
-  const [
-    createdDateFilter,
-    setCreatedDateFilter
-  ] = useState<any>(null);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [searchText, setSearchText] = useState('');
+  const [roleFilter, setRoleFilter] = useState<'All' | 'Admin' | 'Staff' | 'Customer'>('All');
+  const [createdDateFilter, setCreatedDateFilter] = useState<any>(null);
 
   // PAGINATION
-  const [currentPage, setCurrentPage] =
-    useState(1);
-
+  const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
 
   // MODAL
-  const [isModalOpen, setIsModalOpen] =
-    useState(false);
-
-  const [editingUser, setEditingUser] =
-    useState<User | null>(
-      null
-    );
-
-  const [saving, setSaving] =
-    useState(false);
-
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [saving, setSaving] = useState(false);
   const [form] = Form.useForm();
 
   // =========================
@@ -115,17 +88,12 @@ export default function UsersPage() {
   const loadUsers = async () => {
     try {
       setLoading(true);
-
-      const res =
-        await getAdminUsers();
-
+      const res = await getAdminUsers();
       setUsers(res.data || []);
     } catch (err: any) {
       message.error(
         'Không thể tải danh sách tài khoản: ' +
-          (err.response?.data
-            ?.message ||
-            err.message)
+          (err.response?.data?.message || err.message)
       );
     } finally {
       setLoading(false);
@@ -140,96 +108,37 @@ export default function UsersPage() {
   // FILTER USERS
   // =========================
 
-  const filteredUsers =
-    useMemo(() => {
-      return users.filter(
-        (item) => {
-          // ROLE
-          let matchRole = true;
+  const filteredUsers = useMemo(() => {
+    return users.filter((item) => {
+      // ROLE
+      let matchRole = true;
+      if (roleFilter !== 'All') {
+        matchRole = item.role === roleFilter;
+      }
 
-          if (
-            roleFilter !== 'All'
-          ) {
-            matchRole =
-              item.role ===
-              roleFilter;
-          }
+      // SEARCH
+      let matchSearch = true;
+      if (searchText) {
+        const lowerSearch = searchText.toLowerCase();
+        matchSearch =
+          item.name.toLowerCase().includes(lowerSearch) ||
+          item.email.toLowerCase().includes(lowerSearch) ||
+          !!item.username?.toLowerCase().includes(lowerSearch) ||
+          !!item.phone?.toLowerCase().includes(lowerSearch);
+      }
 
-          // SEARCH
-          let matchSearch = true;
+      // DATE
+      let matchDate = true;
+      if (createdDateFilter && createdDateFilter.length === 2) {
+        const startDate = createdDateFilter[0].startOf('day');
+        const endDate = createdDateFilter[1].endOf('day');
+        const createdAt = dayjs(item.createdAt);
+        matchDate = createdAt.isAfter(startDate) && createdAt.isBefore(endDate);
+      }
 
-          if (searchText) {
-            const lowerSearch =
-              searchText.toLowerCase();
-
-            const matchSearch =
-              item.name
-                .toLowerCase()
-                .includes(
-                  lowerSearch
-                ) ||
-              item.email
-                .toLowerCase()
-                .includes(
-                  lowerSearch
-                ) ||
-              !!item.username
-                ?.toLowerCase()
-                .includes(
-                  lowerSearch
-                ) ||
-              !!item.phone
-                ?.toLowerCase()
-                .includes(
-                  lowerSearch
-                );
-          }
-
-          // DATE
-          let matchDate = true;
-
-          if (
-            createdDateFilter &&
-            createdDateFilter.length ===
-              2
-          ) {
-            const startDate =
-              createdDateFilter[0].startOf(
-                'day'
-              );
-
-            const endDate =
-              createdDateFilter[1].endOf(
-                'day'
-              );
-
-            const createdAt =
-              dayjs(
-                item.createdAt
-              );
-
-            matchDate =
-              createdAt.isAfter(
-                startDate
-              ) &&
-              createdAt.isBefore(
-                endDate
-              );
-          }
-
-          return (
-            matchRole &&
-            matchSearch &&
-            matchDate
-          );
-        }
-      );
-    }, [
-      users,
-      roleFilter,
-      searchText,
-      createdDateFilter
-    ]);
+      return matchRole && matchSearch && matchDate;
+    });
+  }, [users, roleFilter, searchText, createdDateFilter]);
 
   // =========================
   // EXPORT CSV
@@ -248,98 +157,40 @@ export default function UsersPage() {
         'Ngày tạo'
       ];
 
-      const dataRows =
-        filteredUsers.map(
-          (u) => [
-            u.id,
-            u.name,
-            u.email,
-            u.username || '',
-            u.phone || '',
-            u.role === 'Admin'
-              ? 'Quản trị viên'
-              : u.role ===
-                'Staff'
-              ? 'Nhân viên'
-              : 'Khách hàng',
-            u.status ===
-            'Active'
-              ? 'Đang hoạt động'
-              : 'Đã khóa',
-            u.createdAt
-          ]
-        );
+      const dataRows = filteredUsers.map((u) => [
+        u.id,
+        u.name,
+        u.email,
+        u.username || '',
+        u.phone || '',
+        u.role === 'Admin' ? 'Quản trị viên' : u.role === 'Staff' ? 'Nhân viên' : 'Khách hàng',
+        u.status === 'Active' ? 'Đang hoạt động' : 'Đã khóa',
+        u.createdAt
+      ]);
 
       const BOM = '\uFEFF';
-
       const csvContent =
         BOM +
         [
           headers.join(','),
-          ...dataRows.map(
-            (row) =>
-              row
-                .map(
-                  (cell) =>
-                    `"${String(
-                      cell
-                    ).replace(
-                      /"/g,
-                      '""'
-                    )}"`
-                )
-                .join(',')
+          ...dataRows.map((row) =>
+            row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')
           )
         ].join('\n');
 
-      const blob = new Blob(
-        [csvContent],
-        {
-          type: 'text/csv;charset=utf-8;'
-        }
-      );
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
 
-      const url =
-        URL.createObjectURL(
-          blob
-        );
-
-      const link =
-        document.createElement(
-          'a'
-        );
-
-      link.setAttribute(
-        'href',
-        url
-      );
-
-      link.setAttribute(
-        'download',
-        `Danh_Sach_Nguoi_Dung_${
-          new Date()
-            .toISOString()
-            .split('T')[0]
-        }.csv`
-      );
-
-      document.body.appendChild(
-        link
-      );
-
+      link.setAttribute('href', url);
+      link.setAttribute('download', `Danh_Sach_Nguoi_Dung_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
 
-      document.body.removeChild(
-        link
-      );
-
-      message.success(
-        'Xuất danh sách người dùng thành công!'
-      );
+      message.success('Xuất danh sách người dùng thành công!');
     } catch {
-      message.error(
-        'Xuất danh sách thất bại'
-      );
+      message.error('Xuất danh sách thất bại');
     }
   };
 
@@ -347,67 +198,41 @@ export default function UsersPage() {
   // LOCK USER
   // =========================
 
-  const handleToggleLock =
-    async (
-      checked: boolean,
-      record: User
-    ) => {
-      const isLocked =
-        !checked;
+  const handleToggleLock = async (checked: boolean, record: User) => {
+    const isLocked = !checked;
 
-      try {
-        await toggleAdminUserLock(
-          record.id,
-          isLocked
-        );
+    try {
+      await toggleAdminUserLock(record.id, isLocked);
 
-        setUsers((prev) =>
-          prev.map((u) => {
-            if (
-              u.id ===
-              record.id
-            ) {
-              return {
-                ...u,
-                status: checked
-                  ? 'Active'
-                  : 'Locked'
-              };
-            }
+      setUsers((prev) =>
+        prev.map((u) => {
+          if (u.id === record.id) {
+            return { ...u, status: checked ? 'Active' : 'Locked' };
+          }
+          return u;
+        })
+      );
 
-            return u;
-          })
-        );
-
-        if (isLocked) {
-          message.warning(
-            `Tài khoản ${record.email} đã bị khóa`
-          );
-        } else {
-          message.success(
-            `Đã mở khóa tài khoản ${record.email}`
-          );
-        }
-      } catch (err: any) {
-        message.error(
-          'Không thể thay đổi trạng thái tài khoản: ' +
-            (err.response?.data
-              ?.message ||
-              err.message)
-        );
+      if (isLocked) {
+        message.warning(`Tài khoản ${record.email} đã bị khóa`);
+      } else {
+        message.success(`Đã mở khóa tài khoản ${record.email}`);
       }
-    };
+    } catch (err: any) {
+      message.error(
+        'Không thể thay đổi trạng thái tài khoản: ' +
+          (err.response?.data?.message || err.message)
+      );
+    }
+  };
 
   // =========================
   // SHOW MODAL
   // =========================
 
-  const showModal = (
-    user?: User
-  ) => {
+  const showModal = (user?: User) => {
     if (user) {
       setEditingUser(user);
-
       form.setFieldsValue({
         name: user.name,
         email: user.email,
@@ -416,22 +241,14 @@ export default function UsersPage() {
       });
     } else {
       setEditingUser(null);
-
       form.resetFields();
     }
-
     setIsModalOpen(true);
   };
 
-  // =========================
-  // CLOSE MODAL
-  // =========================
-
   const closeModal = () => {
     setIsModalOpen(false);
-
     setEditingUser(null);
-
     form.resetFields();
   };
 
@@ -439,769 +256,394 @@ export default function UsersPage() {
   // SAVE USER
   // =========================
 
-  const handleModalSave =
-    async () => {
-      try {
-        const values =
-          await form.validateFields();
+  const handleModalSave = async () => {
+    try {
+      const values = await form.validateFields();
+      setSaving(true);
 
-        setSaving(true);
-
-        // UPDATE
-        if (editingUser) {
-          const payload: any = {
-            name: values.name,
-            email: values.email,
-            role: values.role
-          };
-
-          if (
-            values.newPassword &&
-            values.newPassword.trim()
-          ) {
-            payload.password =
-              values.newPassword;
-          }
-
-          const res =
-            await updateAdminUser(
-              editingUser.id,
-              payload
-            );
-
-          message.success(
-            res.message ||
-              'Cập nhật thông tin tài khoản thành công!'
-          );
-
-          await loadUsers();
-
-          closeModal();
+      if (editingUser) {
+        const payload: any = {
+          name: values.name,
+          email: values.email,
+          role: values.role
+        };
+        if (values.newPassword && values.newPassword.trim()) {
+          payload.password = values.newPassword;
         }
-
-        // CREATE
-        else {
-          const payload = {
-            name: values.name,
-            email: values.email,
-            password:
-              values.password,
-            role: values.role
-          };
-
-          const res =
-            await createAdminUser(
-              payload
-            );
-
-          message.success(
-            res.message ||
-              'Tạo tài khoản mới thành công!'
-          );
-
-          await loadUsers();
-
-          closeModal();
-        }
-      } catch (err: any) {
-        if (err.errorFields) {
-          return;
-        }
-
-        const backendMessage =
-          err.response?.data
-            ?.message;
-
-        message.error(
-          backendMessage ||
-            'Lưu thông tin tài khoản thất bại'
-        );
-      } finally {
-        setSaving(false);
+        const res = await updateAdminUser(editingUser.id, payload);
+        message.success(res.message || 'Cập nhật thông tin tài khoản thành công!');
+        await loadUsers();
+        closeModal();
+      } else {
+        const payload = {
+          name: values.name,
+          email: values.email,
+          password: values.password,
+          role: values.role
+        };
+        const res = await createAdminUser(payload);
+        message.success(res.message || 'Tạo tài khoản mới thành công!');
+        await loadUsers();
+        closeModal();
       }
-    };
-
-
+    } catch (err: any) {
+      if (err.errorFields) return;
+      message.error(err.response?.data?.message || 'Lưu thông tin tài khoản thất bại');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   // =========================
   // DELETE USER
   // =========================
 
-  const handleDeleteUser =
-    async (
-      userId: string,
-      userName?: string
-    ) => {
-      try {
-        await deleteAdminUser(userId);
-
-        message.success(
-          `Đã xóa tài khoản ${
-            userName || ''
-          } thành công!`
-        );
-
-        await loadUsers();
-      } catch (err: any) {
-        message.error(
-          'Không thể xóa tài khoản: ' +
-            (err.response?.data
-              ?.message ||
-              err.message)
-        );
-      }
-    };
+  const handleDeleteUser = async (userId: string, userName?: string) => {
+    try {
+      await deleteAdminUser(userId);
+      message.success(`Đã xóa tài khoản ${userName || ''} thành công!`);
+      await loadUsers();
+    } catch (err: any) {
+      message.error(
+        'Không thể xóa tài khoản: ' + (err.response?.data?.message || err.message)
+      );
+    }
+  };
 
   // =========================
   // TABLE COLUMNS
   // =========================
 
-  const columns: ColumnsType<User> =
-    [
-      {
-        title: 'Họ và tên',
-
-        dataIndex: 'name',
-
-        render: (
-          _,
-          record
-        ) => (
-          <div className="flex items-center gap-3">
-            <Avatar
-              className={
-                record.role ===
-                'Admin'
-                  ? 'bg-[#d32f2f]/20 text-[#d32f2f]'
-                  : 'bg-[#e0e3e5] text-[#5b403d]'
-              }
-            >
-              {record.name
-                .charAt(0)
-                .toUpperCase()}
-            </Avatar>
-
-            <div>
-              <div className="text-sm font-medium text-[#191c1e]">
-                {
-                  record.name
-                }
-              </div>
-
-              <div className="text-xs text-gray-500">
-                {
-                  record.email
-                }
-              </div>
+  const columns: ColumnsType<User> = [
+    {
+      title: 'Họ và tên',
+      dataIndex: 'name',
+      render: (_, record) => (
+        <div className="flex items-center gap-3">
+          <Avatar
+            className={
+              record.role === 'Admin'
+                ? 'bg-[#af101a] text-white font-bold'
+                : 'bg-[#f1dede] text-[#af101a] font-bold'
+            }
+          >
+            {record.name.charAt(0).toUpperCase()}
+          </Avatar>
+          <div>
+            <div className="font-semibold text-[15px] text-[#191c1e]">
+              {record.name}
+            </div>
+            <div className="text-sm text-[#5b403d] mt-0.5">
+              {record.email}
             </div>
           </div>
-        )
-      },
-
-      {
-        title: 'Vai trò',
-
-        dataIndex: 'role',
-
-        render: (
-          val: string
-        ) => {
-          let color =
-            'default';
-
-          let label = val;
-
-          if (
-            val === 'Admin'
-          ) {
-            color =
-              'magenta';
-
-            label =
-              'Quản trị viên';
-          } else if (
-            val === 'Staff'
-          ) {
-            color = 'blue';
-
-            label =
-              'Nhân viên';
-          } else if (
-            val ===
-            'Customer'
-          ) {
-            color =
-              'green';
-
-            label =
-              'Khách hàng';
-          }
-
-          return (
-            <Tag color={color}>
-              {label}
-            </Tag>
-          );
-        }
-      },
-
-      {
-        title:
-          'Ngày tạo tài khoản',
-
-        dataIndex:
-          'createdAt',
-
-        render: (
-          val: string
-        ) =>
-          dayjs(val).format(
-            'DD/MM/YYYY HH:mm'
-          )
-      },
-
-      {
-        title:
-          'Trạng thái hoạt động',
-
-        dataIndex:
-          'status',
-
-        render: (
-          val: string,
-          record
-        ) => (
-          <div className="flex items-center gap-2">
-            <Switch
-              size="small"
-              checked={
-                val ===
-                'Active'
-              }
-              onChange={(
-                checked
-              ) =>
-                handleToggleLock(
-                  checked,
-                  record
-                )
-              }
+        </div>
+      )
+    },
+    {
+      title: 'Vai trò',
+      dataIndex: 'role',
+      render: (val: string) => {
+        if (val === 'Admin') return <Tag color="red" className="rounded-full px-3 py-1">Quản trị viên</Tag>;
+        if (val === 'Staff') return <Tag color="processing" className="rounded-full px-3 py-1">Nhân viên</Tag>;
+        return <Tag color="green" className="rounded-full px-3 py-1">Khách hàng</Tag>;
+      }
+    },
+    {
+      title: 'Ngày tạo',
+      dataIndex: 'createdAt',
+      render: (val: string) => (
+        <span className="text-[#5b403d]">{dayjs(val).format('DD/MM/YYYY HH:mm')}</span>
+      )
+    },
+    {
+      title: 'Trạng thái',
+      dataIndex: 'status',
+      render: (val: string, record) => (
+        <div className="flex items-center gap-2">
+          <Switch
+            size="small"
+            checked={val === 'Active'}
+            onChange={(checked) => handleToggleLock(checked, record)}
+          />
+          <span
+            className={`text-[14px] font-semibold ${
+              val === 'Locked' ? 'text-[#af101a]' : 'text-[#15803d]'
+            }`}
+          >
+            {val === 'Active' ? 'Đang hoạt động' : 'Đã khóa'}
+          </span>
+        </div>
+      )
+    },
+    {
+      title: 'Thao tác',
+      key: 'action',
+      align: 'right',
+      render: (_, record) => (
+        <Space size="middle">
+          <Tooltip title="Chỉnh sửa thông tin">
+            <Button
+              type="text"
+              icon={<Edit size={16} />}
+              onClick={() => showModal(record)}
+              className="text-[#5b403d] hover:!text-[#af101a]"
             />
+          </Tooltip>
 
-            <span
-              className={`text-sm ${
-                val ===
-                'Locked'
-                  ? 'text-red-500 font-medium'
-                  : 'text-green-600'
-              }`}
+          <Tooltip title="Xóa tài khoản">
+            <Popconfirm
+              title="Bạn có chắc chắn muốn xóa tài khoản này?"
+              description="Tài khoản sẽ bị xóa khỏi hệ thống."
+              okText="Đồng ý"
+              cancelText="Hủy"
+              okButtonProps={{ className: 'bg-[#af101a] hover:!bg-[#930010] border-none' }}
+              onConfirm={() => handleDeleteUser(record.id, record.name)}
             >
-              {val ===
-              'Active'
-                ? 'Đang hoạt động'
-                : 'Đã khóa'}
-            </span>
-          </div>
-        )
-      },
-
-      {
-        title: 'Thao tác',
-
-        key: 'action',
-
-        align: 'right',
-
-        render: (
-          _,
-          record
-        ) => (
-          <Space size="middle">
-            {/* EDIT */}
-            <Tooltip title="Chỉnh sửa thông tin">
               <Button
                 type="text"
-                icon={
-                  <Edit
-                    size={16}
-                  />
-                }
-                onClick={() =>
-                  showModal(
-                    record
-                  )
-                }
-                className="text-[#00799c] hover:bg-blue-50"
+                danger
+                icon={<Trash2 size={16} />}
+                className="text-[#af101a] hover:!text-[#930010]"
               />
-            </Tooltip>
-
-            {/* DELETE */}
-            <Tooltip title="Xóa tài khoản">
-              <Popconfirm
-                title="Bạn có chắc chắn muốn xóa tài khoản này?"
-                description="Tài khoản sẽ bị xóa mềm khỏi hệ thống."
-                okText="Đồng ý"
-                cancelText="Hủy"
-                okButtonProps={{
-                  danger: true
-                }}
-                onConfirm={() =>
-                  handleDeleteUser(
-                    record.id,
-                    record.name
-                  )
-                }
-              >
-                <Button
-                  type="text"
-                  danger
-                  icon={
-                    <Trash2
-                      size={16}
-                    />
-                  }
-                  className="hover:bg-red-50 text-[#af101a]"
-                />
-              </Popconfirm>
-            </Tooltip>
-          </Space>
-        )
-      }
-    ];
+            </Popconfirm>
+          </Tooltip>
+        </Space>
+      )
+    }
+  ];
 
   return (
-    <div className="p-4 md:p-6 space-y-6 max-w-[1600px] mx-auto">
+    <div className="p-4 md:p-6 max-w-[1600px] mx-auto space-y-6">
+      
       {/* HEADER */}
-      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-[#191c1e]">
+          <h1 className="text-3xl font-bold text-[#191c1e] flex items-center gap-3">
+            <Users size={30} className="text-[#af101a]" />
             Quản Lý Người Dùng
           </h1>
-
-          <p className="text-[#5b403d] mt-1 text-sm">
-            Quản lý tài khoản,
-            phân quyền và trạng thái hoạt động.
+          <p className="text-[#5b403d] mt-2">
+            Quản lý tài khoản, phân quyền và trạng thái hoạt động trên hệ thống.
           </p>
         </div>
 
-        <div className="flex gap-3">
+        <Space wrap>
           <Button
-            icon={
-              <Download
-                size={18}
-              />
-            }
-            onClick={
-              handleExport
-            }
+            size="large"
+            icon={<Download size={18} />}
+            onClick={handleExport}
+            className="border-[#ead0d0] hover:!text-[#af101a] hover:!border-[#af101a]"
           >
-            Xuất báo cáo
+            Xuất CSV
           </Button>
 
           <Button
             type="primary"
-            icon={
-              <UserPlus
-                size={18}
-              />
-            }
-            className="bg-[#af101a] hover:bg-[#930010]"
-            onClick={() =>
-              showModal()
-            }
+            size="large"
+            icon={<UserPlus size={18} />}
+            className="bg-[#af101a] hover:!bg-[#930010] border-none"
+            onClick={() => showModal()}
           >
-            Thêm tài khoản mới
+            Thêm tài khoản
           </Button>
-        </div>
+        </Space>
       </div>
 
       {/* STATS */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {[
-          {
-            label:
-              'Tổng số tài khoản',
-            val: users.length,
-            sub: 'Toàn bộ hệ thống',
-            icon: Users,
-            color:
-              'text-[#af101a]',
-            bg: 'bg-[#ffdad6]/50'
-          },
-
-          {
-            label:
-              'Nhân viên & Quản trị',
-
-            val: users.filter(
-              (u) =>
-                u.role ===
-                  'Admin' ||
-                u.role ===
-                  'Staff'
-            ).length,
-
-            sub: 'Có quyền quản trị',
-
-            icon: Shield,
-
-            color:
-              'text-[#00799c]',
-
-            bg: 'bg-[#e0f2fe]'
-          },
-
-          {
-            label:
-              'Tài khoản bị khóa',
-
-            val: users.filter(
-              (u) =>
-                u.status ===
-                'Locked'
-            ).length,
-
-            sub: 'Cần kiểm tra',
-
-            icon: Lock,
-
-            color:
-              'text-red-600',
-
-            bg: 'bg-red-50'
-          }
-        ].map((s, i) => (
-          <div
-            key={i}
-            className="bg-white border border-[#d8dadc] rounded-xl p-5 shadow-sm"
-          >
-            <div className="flex justify-between items-start mb-2">
-              <span className="text-sm font-medium text-[#5b403d]">
-                {s.label}
-              </span>
-
-              <div
-                className={`p-2 rounded-lg ${s.bg} ${s.color}`}
-              >
-                <s.icon
-                  size={20}
-                />
-              </div>
-            </div>
-
-            <div className="text-3xl font-bold text-[#191c1e]">
-              {s.val}
-            </div>
-
-            <div className="text-xs mt-1 text-gray-500">
-              {s.sub}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        {/* Tổng số tài khoản */}
+        <div className="bg-white border border-[#e4beba] border-t-2 border-t-[#af101a] rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-[11px] font-bold text-[#5b403d] uppercase tracking-wider">
+              Tổng số tài khoản
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-[#fff2f0] flex items-center justify-center">
+              <Users size={16} className="text-[#af101a]" />
             </div>
           </div>
-        ))}
+          <div className="flex items-baseline gap-1.5">
+            <h2 className="text-2xl font-black text-[#191c1e]">
+              {users.length}
+            </h2>
+          </div>
+        </div>
+
+        {/* Nhân viên & Quản trị */}
+        <div className="bg-white border border-[#e4beba] rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-[11px] font-bold text-[#5b403d] uppercase tracking-wider">
+              Nhân viên & Quản trị
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-[#eff6ff] flex items-center justify-center">
+              <Shield size={16} className="text-blue-600" />
+            </div>
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <h2 className="text-2xl font-black text-[#191c1e]">
+              {users.filter((u) => u.role === 'Admin' || u.role === 'Staff').length}
+            </h2>
+          </div>
+        </div>
+
+        {/* Tài khoản bị khóa */}
+        <div className="bg-white border border-[#e4beba] rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-[11px] font-bold text-[#5b403d] uppercase tracking-wider">
+              Tài khoản bị khóa
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-[#fef2f2] flex items-center justify-center">
+              <Lock size={16} className="text-red-500" />
+            </div>
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <h2 className="text-2xl font-black text-[#191c1e]">
+              {users.filter((u) => u.status === 'Locked').length}
+            </h2>
+          </div>
+        </div>
       </div>
 
-      {/* TABLE */}
-      <div className="bg-white border border-[#d8dadc] rounded-xl shadow-sm flex flex-col">
-        <div className="p-4 border-b border-[#eceef0] flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-          {/* FILTER */}
-          <div className="flex flex-col sm:flex-row gap-3 w-full">
-            {/* ROLE FILTER */}
+      {/* MAIN CONTENT */}
+      <div className="bg-white border border-[#e4beba] rounded-xl shadow-sm overflow-hidden">
+        
+        {/* FILTER */}
+        <div className="p-5 border-b border-[#f1dede]">
+          <div className="flex flex-wrap gap-3 items-center">
+            <Input
+              size="large"
+              placeholder="Tìm kiếm họ tên, email, username..."
+              prefix={<Search size={16} />}
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              allowClear
+              className="max-w-md"
+            />
+
             <Select
-              value={
-                roleFilter
-              }
-              onChange={
-                setRoleFilter
-              }
-              className="w-full sm:w-56 rounded-lg"
+              size="large"
+              value={roleFilter}
+              onChange={setRoleFilter}
+              style={{ width: 220 }}
               options={[
-                {
-                  value:
-                    'All',
-                  label:
-                    'Tất cả vai trò'
-                },
-
-                {
-                  value:
-                    'Admin',
-                  label:
-                    'Quản trị viên'
-                },
-
-                {
-                  value:
-                    'Staff',
-                  label:
-                    'Nhân viên'
-                },
-
-                {
-                  value:
-                    'Customer',
-                  label:
-                    'Khách hàng'
-                }
+                { value: 'All', label: 'Tất cả vai trò' },
+                { value: 'Admin', label: 'Quản trị viên' },
+                { value: 'Staff', label: 'Nhân viên' },
+                { value: 'Customer', label: 'Khách hàng' }
               ]}
             />
 
-            {/* DATE FILTER */}
             <RangePicker
+              size="large"
               format="DD/MM/YYYY"
-              placeholder={[
-                'Từ ngày',
-                'Đến ngày'
-              ]}
-              value={
-                createdDateFilter
-              }
-              onChange={(
-                dates
-              ) =>
-                setCreatedDateFilter(
-                  dates
-                )
-              }
-              className="w-full sm:w-80"
+              placeholder={['Từ ngày', 'Đến ngày']}
+              value={createdDateFilter}
+              onChange={(dates) => setCreatedDateFilter(dates)}
+              style={{ width: 280 }}
               allowClear
             />
           </div>
-
-          {/* SEARCH */}
-          <Input
-            prefix={
-              <Search
-                size={16}
-                className="text-gray-400"
-              />
-            }
-            placeholder="Tìm kiếm theo họ tên, email, username..."
-            className="w-full lg:w-72 rounded-lg"
-            value={
-              searchText
-            }
-            onChange={(
-              e
-            ) =>
-              setSearchText(
-                e.target.value
-              )
-            }
-            allowClear
-          />
         </div>
 
-        <Table
-          columns={
-            columns
-          }
-          dataSource={
-            filteredUsers
-          }
-          rowKey="id"
-          loading={
-            loading
-          }
-          pagination={{
-            current:
-              currentPage,
-
-            pageSize:
-              itemsPerPage,
-
-            onChange: (
-              page
-            ) =>
-              setCurrentPage(
-                page
-              ),
-
-            showSizeChanger:
-              true
-          }}
-          scroll={{
-            x: 'max-content'
-          }}
-        />
+        {/* TABLE */}
+        <div className="p-4">
+          <Table
+            columns={columns}
+            dataSource={filteredUsers}
+            rowKey="id"
+            loading={loading}
+            pagination={{
+              current: currentPage,
+              pageSize: itemsPerPage,
+              onChange: (page) => setCurrentPage(page),
+              showSizeChanger: true
+            }}
+            scroll={{ x: 1000 }}
+          />
+        </div>
       </div>
 
       {/* MODAL */}
       <Modal
         title={
-          editingUser
-            ? 'Chỉnh sửa thông tin tài khoản'
-            : 'Thêm tài khoản mới'
+          <span className="text-[18px] font-bold text-[#191c1e]">
+            {editingUser ? 'Chỉnh sửa thông tin tài khoản' : 'Thêm tài khoản mới'}
+          </span>
         }
-        open={
-          isModalOpen
-        }
-        onOk={
-          handleModalSave
-        }
-        onCancel={
-          closeModal
-        }
+        open={isModalOpen}
+        onOk={handleModalSave}
+        onCancel={closeModal}
         okText="Lưu thông tin"
         cancelText="Hủy bỏ"
-        confirmLoading={
-          saving
-        }
-        okButtonProps={{
-          className:
-            'bg-[#af101a] hover:bg-[#930010]'
-        }}
+        confirmLoading={saving}
+        okButtonProps={{ className: 'bg-[#af101a] hover:!bg-[#930010] border-none' }}
         width={650}
         destroyOnClose
       >
-        <Form
-          form={form}
-          layout="vertical"
-          className="mt-5"
-        >
-          {/* NAME */}
+        <Form form={form} layout="vertical" className="mt-5 space-y-4">
           <Form.Item
             name="name"
             label="Họ và tên hiển thị"
-            rules={[
-              {
-                required:
-                  true,
-                message:
-                  'Vui lòng nhập họ và tên hiển thị'
-              }
-            ]}
+            rules={[{ required: true, message: 'Vui lòng nhập họ và tên hiển thị' }]}
           >
-            <Input placeholder="Nguyễn Văn A" />
+            <Input size="large" placeholder="Nguyễn Văn A" />
           </Form.Item>
 
-          {/* EMAIL */}
           <Form.Item
             name="email"
             label="Địa chỉ Email"
             rules={[
-              {
-                required:
-                  true,
-                message:
-                  'Vui lòng nhập email'
-              },
-
-              {
-                type: 'email',
-                message:
-                  'Email không đúng định dạng'
-              }
+              { required: true, message: 'Vui lòng nhập email' },
+              { type: 'email', message: 'Email không đúng định dạng' }
             ]}
           >
             <Input
+              size="large"
               placeholder="example@email.com"
-              disabled={
-                !!editingUser &&
-                editingUser.role ===
-                  'Admin'
-              }
+              disabled={!!editingUser && editingUser.role === 'Admin'}
             />
           </Form.Item>
 
-
-
-          {/* PASSWORD */}
           {!editingUser ? (
             <Form.Item
               name="password"
               label="Mật khẩu khởi tạo"
               rules={[
-                {
-                  required:
-                    true,
-                  message:
-                    'Vui lòng nhập mật khẩu'
-                },
-
-                {
-                  min: 6,
-                  message:
-                    'Mật khẩu tối thiểu phải có 6 ký tự'
-                }
+                { required: true, message: 'Vui lòng nhập mật khẩu' },
+                { min: 6, message: 'Mật khẩu tối thiểu phải có 6 ký tự' }
               ]}
             >
-              <Input.Password placeholder="Nhập mật khẩu khởi tạo" />
+              <Input.Password size="large" placeholder="Nhập mật khẩu khởi tạo" />
             </Form.Item>
           ) : (
             <Form.Item
               name="newPassword"
               label="Mật khẩu mới (Bỏ trống nếu không muốn đổi)"
-              rules={[
-                {
-                  min: 6,
-                  message:
-                    'Mật khẩu tối thiểu phải có 6 ký tự'
-                }
-              ]}
+              rules={[{ min: 6, message: 'Mật khẩu tối thiểu phải có 6 ký tự' }]}
             >
-              <Input.Password placeholder="Nhập mật khẩu mới..." />
+              <Input.Password size="large" placeholder="Nhập mật khẩu mới..." />
             </Form.Item>
           )}
 
-          {/* ROLE */}
           <Form.Item
             name="role"
             label="Vai trò / Quyền truy cập"
-            rules={[
-              {
-                required:
-                  true,
-                message:
-                  'Vui lòng chọn vai trò'
-              }
-            ]}
+            rules={[{ required: true, message: 'Vui lòng chọn vai trò' }]}
           >
             <Select
+              size="large"
               options={[
-                {
-                  value:
-                    'Customer',
-                  label:
-                    'Khách hàng (Customer)'
-                },
-
-                {
-                  value:
-                    'Staff',
-                  label:
-                    'Nhân viên (Staff)'
-                },
-
-                {
-                  value:
-                    'Admin',
-                  label:
-                    'Quản trị viên (Admin)'
-                }
+                { value: 'Customer', label: 'Khách hàng (Customer)' },
+                { value: 'Staff', label: 'Nhân viên (Staff)' },
+                { value: 'Admin', label: 'Quản trị viên (Admin)' }
               ]}
             />
           </Form.Item>
 
-          {/* EDIT INFO */}
           {editingUser && (
-            <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm text-gray-600 mt-4">
-              <p>
-                <strong>
-                  Lần đăng nhập cuối:
-                </strong>{' '}
-                {
-                  editingUser.lastLogin
-                }
-              </p>
-
-              <p className="mt-2">
-                <strong>
-                  Ngày tạo tài khoản:
-                </strong>{' '}
-                {
-                  editingUser.createdAt
-                }
-              </p>
+            <div className="bg-[#f1dede]/30 border border-[#ead0d0] rounded-xl p-4 text-[14px] text-[#5b403d] mt-4">
+              <p><strong>Lần đăng nhập cuối:</strong> {editingUser.lastLogin}</p>
+              <p className="mt-1"><strong>Ngày tạo tài khoản:</strong> {editingUser.createdAt}</p>
             </div>
           )}
         </Form>

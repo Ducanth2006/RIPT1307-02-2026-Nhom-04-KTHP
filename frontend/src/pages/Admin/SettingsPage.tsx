@@ -1,251 +1,368 @@
-import React, { useState } from 'react';
-import { Button, Input, Switch, message, Tabs, Form, Divider, Modal } from 'antd';
-import { Save, Server, Shield, Globe, Lock, Code, Eye, RefreshCw } from 'lucide-react';
+import React, {
+  useEffect,
+  useState,
+} from 'react';
+
+import {
+  Button,
+  Input,
+  message,
+  Tabs,
+  Form,
+  Modal,
+  Spin,
+  Card,
+  Row,
+  Col,
+} from 'antd';
+
+import {
+  Save,
+  RefreshCw,
+  Mail,
+  Database,
+  Eye,
+  Settings,
+} from 'lucide-react';
+
+import {
+  layCauHinh,
+  capNhatCauHinh,
+  kiemTraSMTP,
+  flushRedisCache,
+} from '../../services/adminSettingsService';
 
 export default function SettingsPage() {
   const [form] = Form.useForm();
+
+  const [dangTai, setDangTai] = useState(false);
+  const [dangLuu, setDangLuu] = useState(false);
+  const [dangTestSMTP, setDangTestSMTP] = useState(false);
+  const [dangFlushCache, setDangFlushCache] = useState(false);
   const [isViewingSystemInfo, setIsViewingSystemInfo] = useState(false);
 
-  const handleSave = () => {
-    form.validateFields().then(values => {
-      // Simulate PUT /admin/settings
-      console.log('PUT /admin/settings', values);
-      message.success('System settings saved and updated successfully');
-      // Simulate clearing cache upon save
-      message.info('Cache automatically refreshed to apply changes');
-    }).catch(info => {
-      console.log('Validate Failed:', info);
-      message.error('Please check the input fields');
-    });
+  // =========================================
+  // LOAD SETTINGS
+  // =========================================
+  const layDuLieuCauHinh = async () => {
+    try {
+      setDangTai(true);
+      const response = await layCauHinh();
+      const cauHinh = response?.data || {};
+      form.setFieldsValue(cauHinh);
+    } catch (error: any) {
+      console.log(error);
+      message.error(
+        error?.response?.data?.message || 'Không thể tải cấu hình hệ thống',
+      );
+    } finally {
+      setDangTai(false);
+    }
   };
 
-  const handleTestSMTP = () => {
-    message.success('SMTP Connection tested successfully');
+  useEffect(() => {
+    layDuLieuCauHinh();
+  }, []);
+
+  // =========================================
+  // SAVE SETTINGS
+  // =========================================
+  const xuLyLuuCauHinh = async () => {
+    try {
+      const values = await form.validateFields();
+      setDangLuu(true);
+
+      await capNhatCauHinh(values);
+      message.success('Cập nhật cấu hình thành công');
+      await layDuLieuCauHinh();
+    } catch (error: any) {
+      message.error(
+        error?.response?.data?.message || 'Cập nhật cấu hình thất bại',
+      );
+    } finally {
+      setDangLuu(false);
+    }
   };
 
-  const handleClearCache = () => {
-    message.success('Redis cache cleared successfully. Changes are now live.');
+  // =========================================
+  // TEST SMTP
+  // =========================================
+  const xuLyKiemTraSMTP = async () => {
+    try {
+      setDangTestSMTP(true);
+      const values = form.getFieldsValue(true);
+
+      const response = await kiemTraSMTP({
+        smtpHost: values.smtp_host,
+        smtpPort: values.smtp_port,
+        smtpUser: values.smtp_user,
+      });
+
+      message.success(response?.message || 'Kiểm tra SMTP thành công');
+    } catch (error: any) {
+      message.error(
+        error?.response?.data?.message || 'Kiểm tra SMTP thất bại',
+      );
+    } finally {
+      setDangTestSMTP(false);
+    }
   };
 
-  const generalSettingsContent = (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold flex items-center gap-2 mb-4">
-          <Globe className="text-[#d32f2f]" size={20} /> Contact Information
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Form.Item name="hotline" label="Hotline" initialValue="+1 (800) 555-0199">
-            <Input size="large" />
-          </Form.Item>
-          <Form.Item name="supportEmail" label="Support Email" initialValue="support@prosportserp.com">
-            <Input size="large" />
-          </Form.Item>
-          <Form.Item name="storeAddress" label="Store Address" className="md:col-span-2" initialValue="123 Sport Avenue, CA 90210">
-            <Input size="large" />
-          </Form.Item>
-        </div>
-      </div>
+  // =========================================
+  // CLEAR CACHE
+  // =========================================
+  const xuLyFlushCache = async () => {
+    try {
+      setDangFlushCache(true);
+      const response = await flushRedisCache();
+      message.success(response?.message || 'Đã flush Redis cache thành công');
+    } catch (error: any) {
+      message.error(
+        error?.response?.data?.message || 'Flush cache thất bại',
+      );
+    } finally {
+      setDangFlushCache(false);
+    }
+  };
 
-      <Divider />
-
-      <div>
-        <h3 className="text-lg font-semibold flex items-center gap-2 mb-4">
-          Display Configuration
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Form.Item name="bannerAds" label="Banner Ads Notice">
-            <Input.TextArea rows={2} placeholder="Enter homepage banner text..." defaultValue="Winter sale - Up to 50% off on all football shoes!" />
-          </Form.Item>
-          <Form.Item name="generalNotification" label="General Notification">
-            <Input.TextArea rows={2} placeholder="Enter general notice..." defaultValue="Free shipping for orders over $100." />
-          </Form.Item>
-        </div>
-      </div>
-
-      <Divider />
-
-      <div>
-        <h3 className="text-lg font-semibold flex items-center gap-2 mb-4">
-          Operational Parameters
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Form.Item name="defaultShippingFee" label="Default Shipping Fee (USD)" initialValue="15.00">
-            <Input prefix={<span className="text-[#5b403d] font-mono">$</span>} size="large" className="font-mono" />
-          </Form.Item>
-          <Form.Item name="freeShippingThreshold" label="Free Shipping Threshold (USD)" initialValue="100.00">
-            <Input prefix={<span className="text-[#5b403d] font-mono">$</span>} size="large" className="font-mono" />
-          </Form.Item>
-        </div>
-      </div>
+  // =========================================
+  // RENDER HELPERS
+  // =========================================
+  const SectionHeader = ({ title }: { title: string }) => (
+    <div className="mt-6 mb-5 border-b border-[#f1dede] pb-2">
+      <h4 className="font-bold text-[#af101a] uppercase text-[13px] tracking-wider">
+        {title}
+      </h4>
     </div>
   );
 
-  const technicalSettingsContent = (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold flex items-center gap-2 mb-4">
-          <Server className="text-[#d32f2f]" size={20} /> Connection Management (SMTP)
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Form.Item name="smtpHost" label="SMTP Host" initialValue="smtp.sendgrid.net">
-            <Input size="large" />
+  // =========================================
+  // TAB 1: THÔNG TIN CHUNG
+  // =========================================
+  const noiDungThongTinHeThong = (
+    <div className="pb-4">
+      <SectionHeader title="Thông tin liên hệ" />
+      <Row gutter={[20, 16]}>
+        <Col xs={24} md={12}>
+          <Form.Item
+            name="hotline"
+            label="Hotline"
+            rules={[{ required: true, message: 'Vui lòng nhập hotline' }]}
+          >
+            <Input size="large" placeholder="Nhập hotline..." />
           </Form.Item>
-          <Form.Item name="smtpPort" label="SMTP Port" initialValue="587">
-            <Input size="large" />
-          </Form.Item>
-          <Form.Item name="smtpUser" label="SMTP Username" initialValue="apikey">
-            <Input size="large" />
-          </Form.Item>
-          <Form.Item name="smtpPassword" label="SMTP Password" initialValue="SG.example_key_here">
-            <Input.Password size="large" className="font-mono" />
-          </Form.Item>
-        </div>
-        <Button onClick={handleTestSMTP}>Test SMTP Connection</Button>
-      </div>
+        </Col>
 
-      <Divider />
-
-      <div>
-        <h3 className="text-lg font-semibold flex items-center gap-2 mb-4">
-          <Lock className="text-[#d32f2f]" size={20} /> Key Management
-        </h3>
-        <div className="grid grid-cols-1 gap-4">
-          <Form.Item name="paymentGatewayKey" label="Payment Gateway Private Key (Stripe/PayPal)" initialValue="sk_live_1234567890abcdef">
-            <Input.Password size="large" className="font-mono" />
+        <Col xs={24} md={12}>
+          <Form.Item
+            name="email"
+            label="Email hệ thống"
+            rules={[{ required: true, message: 'Vui lòng nhập email' }]}
+          >
+            <Input size="large" placeholder="Nhập email..." />
           </Form.Item>
-          <Form.Item name="thirdPartyApiKey" label="Third-Party API Key (e.g., Maps, Analytics)" initialValue="AIzaSyA_abcdef1234567890">
-            <Input.Password size="large" className="font-mono" />
+        </Col>
+
+        <Col xs={24}>
+          <Form.Item name="dia_chi" label="Địa chỉ cửa hàng">
+            <Input size="large" placeholder="Nhập địa chỉ..." />
           </Form.Item>
-        </div>
-      </div>
+        </Col>
+      </Row>
 
-      <Divider />
+      <SectionHeader title="Cấu hình hiển thị" />
+      <Row gutter={[20, 16]}>
+        <Col xs={24} md={12}>
+          <Form.Item name="banner_text" label="Banner thông báo">
+            <Input.TextArea size="large" rows={4} placeholder="Nhập nội dung banner..." />
+          </Form.Item>
+        </Col>
 
-      <div>
-        <h3 className="text-lg font-semibold flex items-center gap-2 mb-4">
-          <Code className="text-[#d32f2f]" size={20} /> Initialization Information
-        </h3>
-        <p className="text-sm text-gray-500 mb-4">View the full executing configuration of the system.</p>
-        <Button icon={<Eye size={16} />} onClick={() => setIsViewingSystemInfo(true)}>
-          View Full Execution Configuration
+        <Col xs={24} md={12}>
+          <Form.Item name="thong_bao_chung" label="Thông báo chung">
+            <Input.TextArea size="large" rows={4} placeholder="Nhập thông báo..." />
+          </Form.Item>
+        </Col>
+      </Row>
+
+      <SectionHeader title="Thông số vận hành" />
+      <Row gutter={[20, 16]}>
+        <Col xs={24} md={12}>
+          <Form.Item name="phi_van_chuyen_mac_dinh" label="Phí vận chuyển mặc định">
+            <Input size="large" placeholder="VD: 30000" />
+          </Form.Item>
+        </Col>
+
+        <Col xs={24} md={12}>
+          <Form.Item name="mien_phi_van_chuyen_tu" label="Miễn phí ship từ">
+            <Input size="large" placeholder="VD: 500000" />
+          </Form.Item>
+        </Col>
+      </Row>
+    </div>
+  );
+
+  // =========================================
+  // TAB 2: KỸ THUẬT & SMTP
+  // =========================================
+  const noiDungKyThuat = (
+    <div className="pb-4">
+      <SectionHeader title="Cấu hình SMTP & Email" />
+      <Row gutter={[20, 16]}>
+        <Col xs={24} md={12}>
+          <Form.Item name="smtp_host" label="SMTP Host">
+            <Input size="large" placeholder="smtp.gmail.com" />
+          </Form.Item>
+        </Col>
+
+        <Col xs={24} md={12}>
+          <Form.Item name="smtp_port" label="SMTP Port">
+            <Input size="large" placeholder="587" />
+          </Form.Item>
+        </Col>
+
+        <Col xs={24} md={12}>
+          <Form.Item name="smtp_user" label="SMTP User">
+            <Input size="large" placeholder="Nhập SMTP User..." />
+          </Form.Item>
+        </Col>
+
+        <Col xs={24} md={12}>
+          <Form.Item name="smtp_password" label="SMTP Password">
+            <Input.Password size="large" placeholder="••••••••" />
+          </Form.Item>
+        </Col>
+      </Row>
+
+      <div className="mt-2 flex flex-wrap gap-4">
+        <Button
+          size="large"
+          icon={<Mail size={16} />}
+          loading={dangTestSMTP}
+          onClick={xuLyKiemTraSMTP}
+        >
+          Kiểm tra kết nối SMTP
         </Button>
       </div>
+
+      <SectionHeader title="Thông tin hệ thống" />
+      <p className="text-[14px] text-[#5b403d] mb-4">
+        Xem cấu hình runtime hiện tại của toàn bộ hệ thống để phục vụ việc debug.
+      </p>
+
+      <Button
+        size="large"
+        icon={<Eye size={16} />}
+        onClick={() => setIsViewingSystemInfo(true)}
+      >
+        Xem cấu hình JSON
+      </Button>
     </div>
   );
 
-  const performanceContent = (
-    <div className="space-y-6">
-      <div className="bg-[#eceef0] p-6 rounded-lg border border-[#d8dadc]">
-        <h3 className="text-lg font-semibold flex items-center gap-2 mb-2">
-          <RefreshCw className="text-[#d32f2f]" size={20} /> Synchronization & Cache Management
-        </h3>
-        <p className="text-sm text-[#5b403d] mb-4">
-          The system automatically updates the Redis cache whenever settings are saved. However, you can manually clear the cache here to resolve displaying issues.
-        </p>
-        <div className="flex gap-4">
-          <Button type="primary" size="large" className="bg-[#d32f2f] hover:bg-[#ba1a20]" onClick={handleClearCache}>
+  // =========================================
+  // TAB 3: HIỆU NĂNG
+  // =========================================
+  const noiDungHieuNang = (
+    <div className="pb-4 pt-4">
+      <Card className="border border-[#e4beba] bg-white shadow-sm rounded-xl">
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-[16px] font-bold text-[#191c1e] flex items-center gap-2">
+              <Database size={20} className="text-[#af101a]" />
+              Quản lý Redis Cache
+            </h3>
+            <p className="text-[14px] text-[#5b403d] mt-2">
+              Xóa cache thủ công để đồng bộ dữ liệu cấu hình hệ thống ngay lập tức tới máy chủ. Thao tác này sẽ làm mới toàn bộ bộ nhớ đệm.
+            </p>
+          </div>
+
+          <Button
+            danger
+            type="primary"
+            size="large"
+            icon={<RefreshCw size={16} />}
+            loading={dangFlushCache}
+            onClick={xuLyFlushCache}
+            className="rounded-xl font-semibold"
+          >
             Flush Redis Cache
           </Button>
         </div>
-      </div>
+      </Card>
     </div>
   );
 
   const tabItems = [
     {
       key: '1',
-      label: 'General Settings',
-      children: generalSettingsContent,
+      label: <span className="font-semibold text-[15px]">Thông tin chung</span>,
+      children: noiDungThongTinHeThong,
     },
     {
       key: '2',
-      label: 'Technical & Security',
-      children: technicalSettingsContent,
+      label: <span className="font-semibold text-[15px]">SMTP & Kỹ thuật</span>,
+      children: noiDungKyThuat,
     },
     {
       key: '3',
-      label: 'Performance Management',
-      children: performanceContent,
-    }
+      label: <span className="font-semibold text-[15px]">Hiệu năng & Cache</span>,
+      children: noiDungHieuNang,
+    },
   ];
 
   return (
-    <div className="p-4 md:p-6 max-w-[1200px] mx-auto space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="p-4 md:p-6 max-w-[1600px] mx-auto space-y-6">
+      
+      {/* HEADER */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-[#191c1e] mb-1">System Settings</h1>
-          <p className="text-sm text-[#5b403d]">Manage global configuration, security keys, and cache.</p>
+          <h1 className="text-3xl font-bold text-[#191c1e] flex items-center gap-3">
+            <Settings size={30} className="text-[#af101a]" />
+            Cấu Hình Hệ Thống
+          </h1>
+          <p className="text-[#5b403d] mt-2">
+            Quản lý các thông số vận hành, kết nối SMTP và bộ nhớ đệm cache.
+          </p>
         </div>
-        <div className="flex shadow-sm rounded-lg">
-          <Button
-            type="primary"
-            size="large"
-            className="bg-[#d32f2f] hover:bg-[#ba1a20] flex items-center gap-2 font-semibold"
-            onClick={handleSave}
-          >
-            <Save size={18} /> Save & Update System
-          </Button>
-        </div>
+
+        <Button
+          type="primary"
+          size="large"
+          icon={<Save size={18} />}
+          className="bg-[#af101a] hover:!bg-[#930010] border-none font-semibold"
+          loading={dangLuu}
+          onClick={xuLyLuuCauHinh}
+        >
+          Lưu & Cập nhật
+        </Button>
       </div>
 
-      <div className="bg-white border border-[#d8dadc] rounded-xl shadow-sm p-2">
-        <Form form={form} layout="vertical">
-          <Tabs
-            defaultActiveKey="1"
-            items={tabItems}
-            className="px-4 py-2"
-            tabBarStyle={{ color: '#5b403d' }}
-          />
-        </Form>
-      </div>
+      {/* CONTENT */}
+      <Spin spinning={dangTai}>
+        <div className="bg-white border border-[#e4beba] rounded-xl shadow-sm overflow-hidden p-2">
+          <Form form={form} layout="vertical">
+            <Tabs defaultActiveKey="1" items={tabItems} className="px-5 pt-2 pb-4" />
+          </Form>
+        </div>
+      </Spin>
 
+      {/* MODAL XEM CONFIG */}
       <Modal
-        title="Full Executing Configuration"
+        title={<span className="text-[18px] font-bold text-[#191c1e]">Thông tin cấu hình Runtime</span>}
         open={isViewingSystemInfo}
         onCancel={() => setIsViewingSystemInfo(false)}
         footer={[
-          <Button key="close" onClick={() => setIsViewingSystemInfo(false)}>Close</Button>
+          <Button key="close" size="large" onClick={() => setIsViewingSystemInfo(false)}>
+            Đóng
+          </Button>,
         ]}
-        width={800}
+        width={850}
+        destroyOnClose
       >
-        <div className="bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-sm overflow-auto max-h-[60vh]">
+        <div className="bg-[#191c1e] text-[#a7f3d0] p-5 rounded-xl font-mono text-[13px] overflow-auto max-h-[60vh] mt-4 shadow-inner">
           <pre>
-            {`{
-  "system": {
-    "version": "v2.5.0",
-    "environment": "PRODUCTION",
-    "node_env": "production"
-  },
-  "contact": {
-    "hotline": "+1 (800) 555-0199",
-    "supportEmail": "support@prosportserp.com",
-    "address": "123 Sport Avenue, CA 90210"
-  },
-  "display": {
-    "bannerAds": "Winter sale - Up to 50% off on all football shoes!",
-    "generalNotice": "Free shipping for orders over $100."
-  },
-  "operations": {
-    "defaultShippingFee": 15.00,
-    "freeShippingThreshold": 100.00
-  },
-  "smtp": {
-    "host": "smtp.sendgrid.net",
-    "port": 587,
-    "user": "apikey",
-    "password": "SG.example_key_here..."
-  },
-  "keys": {
-    "paymentGateway": "sk_live_1234567890abcdef...",
-    "thirdPartyApi": "AIzaSyA_abcdef1234567890..."
-  },
-  "cache": {
-    "provider": "redis",
-    "status": "connected",
-    "lastRefresh": "${new Date().toISOString()}"
-  }
-}`}
+            {JSON.stringify(form.getFieldsValue(true), null, 2)}
           </pre>
         </div>
       </Modal>

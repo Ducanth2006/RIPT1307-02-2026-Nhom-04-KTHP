@@ -235,7 +235,7 @@ const Cart = () => {
                     onChange={() => toggleGroup(group.items)}
                     className="cart-checkbox"
                   />
-                  <ShopOutlined style={{ color: "#ee4d2d", fontSize: "16px", marginLeft: "4px" }} />
+                  <ShopOutlined style={{ color: "#af101a", fontSize: "16px", marginLeft: "4px" }} />
                   <Link to={`/products/${group.productId}`} className="group-product-link">
                     {group.productName}
                   </Link>

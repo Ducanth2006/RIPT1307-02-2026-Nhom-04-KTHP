@@ -19,10 +19,52 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       locale={viVN}
       theme={{
         token: {
-          colorPrimary: colorPrimary,
-          fontFamily: "Inter",
+          colorPrimary: "#af101a", // Beautiful branding red from homepage
+          fontFamily: "'Quicksand', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
           borderRadius: 8,
-          fontSize: 16,
+          fontSize: 15,
+          colorBorder: "#e4beba", // Soft elegant border to match admin layout
+          colorTextBase: "#191c1e",
+        },
+        components: {
+          Button: {
+            borderRadius: 8,
+            colorPrimary: "#af101a",
+            colorPrimaryHover: "#d32f2f",
+            colorPrimaryActive: "#9a0f16",
+            controlOutline: "rgba(175, 16, 26, 0.1)",
+          },
+          Input: {
+            borderRadius: 8,
+            colorBorder: "#e4beba",
+            colorPrimaryHover: "#af101a",
+            controlOutline: "rgba(175, 16, 26, 0.1)",
+          },
+          InputNumber: {
+            borderRadius: 8,
+            colorBorder: "#e4beba",
+            colorPrimaryHover: "#af101a",
+            controlOutline: "rgba(175, 16, 26, 0.1)",
+          },
+          Select: {
+            borderRadius: 8,
+            colorBorder: "#e4beba",
+            colorPrimaryHover: "#af101a",
+            controlOutline: "rgba(175, 16, 26, 0.1)",
+          },
+          Card: {
+            borderRadiusLG: 12,
+            colorBorderSecondary: "#e4beba",
+          },
+          Table: {
+            borderRadius: 8,
+            colorBorderSecondary: "#e4beba",
+            headerBg: "#f7f9fb",
+            headerColor: "#191c1e",
+          },
+          Modal: {
+            borderRadiusLG: 12,
+          },
         },
       }}
     >

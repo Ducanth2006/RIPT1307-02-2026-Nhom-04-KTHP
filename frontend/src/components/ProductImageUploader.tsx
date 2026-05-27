@@ -169,7 +169,7 @@ const ProductImageUploader = ({ value = [], onChange, maxImages = 5 }: Props) =>
               height: 100,
               borderRadius: 8,
               overflow: "hidden",
-              border: img.is_main ? "2px solid #ee4d2d" : "1px solid #d8dadc",
+              border: img.is_main ? "2px solid #af101a" : "1px solid #d8dadc",
               boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
               cursor: "pointer",
             }}
@@ -189,7 +189,7 @@ const ProductImageUploader = ({ value = [], onChange, maxImages = 5 }: Props) =>
                   bottom: 0,
                   left: 0,
                   right: 0,
-                  backgroundColor: "#ee4d2d",
+                  backgroundColor: "#af101a",
                   color: "#fff",
                   fontSize: 10,
                   textAlign: "center",
@@ -277,8 +277,8 @@ const ProductImageUploader = ({ value = [], onChange, maxImages = 5 }: Props) =>
             }}
             onMouseEnter={(e) => {
               if (!uploading) {
-                (e.currentTarget as HTMLDivElement).style.borderColor = "#ee4d2d";
-                (e.currentTarget as HTMLDivElement).style.color = "#ee4d2d";
+                (e.currentTarget as HTMLDivElement).style.borderColor = "#af101a";
+                (e.currentTarget as HTMLDivElement).style.color = "#af101a";
               }
             }}
             onMouseLeave={(e) => {
@@ -323,7 +323,7 @@ const ProductImageUploader = ({ value = [], onChange, maxImages = 5 }: Props) =>
         open={cropModalOpen}
         title={
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <ScissorOutlined style={{ color: "#ee4d2d" }} />
+            <ScissorOutlined style={{ color: "#af101a" }} />
             <span>Cắt ảnh sản phẩm (Tỉ lệ 1:1)</span>
           </div>
         }
@@ -335,7 +335,7 @@ const ProductImageUploader = ({ value = [], onChange, maxImages = 5 }: Props) =>
               type="primary"
               onClick={handleCropConfirm}
               loading={uploading}
-              style={{ backgroundColor: "#ee4d2d", borderColor: "#ee4d2d" }}
+              style={{ backgroundColor: "#af101a", borderColor: "#af101a" }}
             >
               Cắt & Tải lên
             </Button>
@@ -368,8 +368,8 @@ const ProductImageUploader = ({ value = [], onChange, maxImages = 5 }: Props) =>
             step={0.05}
             value={zoom}
             onChange={(val) => setZoom(val)}
-            trackStyle={{ backgroundColor: "#ee4d2d" }}
-            handleStyle={{ borderColor: "#ee4d2d" }}
+            trackStyle={{ backgroundColor: "#af101a" }}
+            handleStyle={{ borderColor: "#af101a" }}
           />
         </div>
       </Modal>

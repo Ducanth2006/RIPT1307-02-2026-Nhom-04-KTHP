@@ -256,7 +256,7 @@ const Orders = () => {
         {filteredOrders.length === 0 ? (
           <Empty description="Không tìm thấy đơn hàng nào" className="orders-empty">
             <Link to="/products">
-              <Button type="primary" size="large" style={{ backgroundColor: "#ee4d2d", border: "none" }}>
+              <Button type="primary" size="large" style={{ backgroundColor: "#af101a", border: "none" }}>
                 MUA SẮM NGAY
               </Button>
             </Link>
@@ -745,8 +745,8 @@ const Orders = () => {
                             loading={submittingProductId === item.productId}
                             onClick={() => handleSubmitSingleReview(item.productId)}
                             style={{
-                              backgroundColor: inputVal.rating > 0 ? "#ee4d2d" : "#ccc",
-                              borderColor: inputVal.rating > 0 ? "#ee4d2d" : "#ccc",
+                              backgroundColor: inputVal.rating > 0 ? "#af101a" : "#ccc",
+                              borderColor: inputVal.rating > 0 ? "#af101a" : "#ccc",
                               borderRadius: 6,
                               fontWeight: 600,
                             }}

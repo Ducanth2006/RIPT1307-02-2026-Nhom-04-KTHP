@@ -36,13 +36,18 @@ import {
   RefreshCw,
   DollarSign,
   Package2,
-  Plus
+  Plus,
+  Box
 } from 'lucide-react';
 
 import axiosInstance from '../../utils/axiosConfig';
 import ip from '../../utils/ip';
 
 const { RangePicker } = DatePicker;
+
+// =========================
+// TYPES
+// =========================
 
 interface AnhSanPham {
   is_main: boolean;
@@ -727,8 +732,8 @@ export default function Inventory() {
 
           if (!anh) {
             return (
-              <div className="w-[50px] h-[50px] rounded bg-gray-100 flex items-center justify-center">
-                <Package2 size={18} />
+              <div className="w-[54px] h-[54px] rounded-xl bg-gray-100 flex items-center justify-center">
+                <Box size={18} />
               </div>
             );
           }
@@ -736,9 +741,9 @@ export default function Inventory() {
           return (
             <Image
               src={anh}
-              width={50}
-              height={50}
-              className="rounded object-cover"
+              width={54}
+              height={54}
+              className="rounded-xl object-cover"
               preview={false}
             />
           );
@@ -746,32 +751,31 @@ export default function Inventory() {
       },
 
       {
-        title: 'SKU',
-        dataIndex: 'sku',
-        key: 'sku',
-        width: 180
-      },
-
-      {
         title: 'Sản phẩm',
-        dataIndex: 'productName',
-        key: 'productName'
+        key: 'productName',
+        render: (_, record) => (
+          <div>
+            <div className="font-semibold text-[15px] text-[#191c1e]">
+              {record.productName}
+            </div>
+            <div className="text-[#5b403d] text-sm mt-1">
+              SKU: {record.sku}
+            </div>
+          </div>
+        )
       },
 
       {
-        title: 'Size',
-        dataIndex: 'size',
-        key: 'size',
+        title: 'Biến thể',
+        key: 'variant',
 
-        render: (v) => v || '-'
-      },
-
-      {
-        title: 'Màu',
-        dataIndex: 'color',
-        key: 'color',
-
-        render: (v) => v || '-'
+        render: (_, record) => (
+          <div className="text-[#5b403d]">
+            Size: <span className="font-medium text-[#191c1e]">{record.size || '-'}</span>
+            <br />
+            Màu: <span className="font-medium text-[#191c1e]">{record.color || '-'}</span>
+          </div>
+        )
       },
 
       {
@@ -784,7 +788,7 @@ export default function Inventory() {
         ) => {
           if (stock <= 0) {
             return (
-              <Tag color="red">
+              <Tag color="red" className="rounded-full px-3 py-1">
                 Hết hàng
               </Tag>
             );
@@ -792,14 +796,14 @@ export default function Inventory() {
 
           if (stock <= 5) {
             return (
-              <Tag color="orange">
+              <Tag color="orange" className="rounded-full px-3 py-1">
                 Sắp hết ({stock})
               </Tag>
             );
           }
 
           return (
-            <Tag color="green">
+            <Tag color="green" className="rounded-full px-3 py-1">
               Còn hàng ({stock})
             </Tag>
           );
@@ -811,14 +815,17 @@ export default function Inventory() {
         dataIndex: 'costPrice',
         key: 'costPrice',
 
-        render: (v) =>
-          dinhDangTien(v)
+        render: (v) => (
+          <span className="font-semibold text-[#15803d]">
+            {dinhDangTien(v)}
+          </span>
+        )
       },
 
       {
         title: 'Yêu cầu huỷ đơn',
         key: 'cancelRequests',
-        width: 180,
+        width: 150,
         render: (_, record) => {
           const ordersWithCancelRequest = cancelRequestedOrders.filter((order: any) =>
             order.chiTietDonHang?.some((item: any) => String(item.sanPhamChiTiet?.id || item.variantId) === String(record.id))
@@ -829,9 +836,8 @@ export default function Inventory() {
           return (
             <Button
               type="primary"
-              danger
               size="small"
-              className="bg-red-500 hover:bg-red-600 text-xs rounded-lg border-none"
+              className="bg-[#af101a] hover:!bg-[#930010] text-xs rounded-lg border-none"
               onClick={() => {
                 setCancellableOrdersForSelectedVariant(ordersWithCancelRequest);
                 setBienTheDangChon(record);
@@ -855,9 +861,9 @@ export default function Inventory() {
         title: 'Thời gian',
         dataIndex: 'timestamp',
         key: 'timestamp',
-
-        render: (value) =>
-          formatDate(value)
+        render: (value) => (
+          <span className="text-[#5b403d]">{formatDate(value)}</span>
+        )
       },
 
       {
@@ -868,25 +874,22 @@ export default function Inventory() {
         render: (type) => {
           if (type === 'IMPORT') {
             return (
-              <Tag color="green">
+              <Tag color="green" className="rounded-full px-3 py-1">
                 NHẬP KHO
               </Tag>
             );
           }
 
-          if (
-            type ===
-            'EXPORT_DELETE'
-          ) {
+          if (type === 'EXPORT_DELETE') {
             return (
-              <Tag color="red">
+              <Tag color="red" className="rounded-full px-3 py-1">
                 XUẤT HỦY
               </Tag>
             );
           }
 
           return (
-            <Tag color="blue">
+            <Tag color="processing" className="rounded-full px-3 py-1">
               BÁN HÀNG
             </Tag>
           );
@@ -897,38 +900,20 @@ export default function Inventory() {
         title: 'Sản phẩm',
         key: 'product',
 
-        render: (
-          _: any,
-          record
-        ) => (
+        render: (_, record) => (
           <div>
-            <div className="font-medium">
-              {
-                record.productName
-              }
+            <div className="font-semibold text-[15px] text-[#191c1e]">
+              {record.productName}
             </div>
-
-            <div className="text-gray-500 text-sm">
-              SKU:
-              {' '}
-              {record.sku}
-              {' | '}
-              Size:
-              {' '}
-              {record.size || '-'}
-              {' | '}
-              Màu:
-              {' '}
-              {record.color || '-'}
+            <div className="text-[#5b403d] text-sm mt-1">
+              SKU: {record.sku} | Size: {record.size || '-'} | Màu: {record.color || '-'}
             </div>
           </div>
         )
       },
 
       {
-        title:
-          'Biến Động Số Lượng',
-
+        title: 'Biến Động',
         dataIndex: 'quantity',
         key: 'quantity',
 
@@ -937,15 +922,14 @@ export default function Inventory() {
           record
         ) => {
           const isImport =
-            record.type ===
-            'IMPORT';
+            record.type === 'IMPORT';
 
           return (
             <span
-              className={`font-bold ${
+              className={`font-bold text-[15px] ${
                 isImport
-                  ? 'text-green-600'
-                  : 'text-red-500'
+                  ? 'text-[#15803d]'
+                  : 'text-[#af101a]'
               }`}
             >
               {isImport
@@ -960,292 +944,187 @@ export default function Inventory() {
         title: 'Giá Trị',
         key: 'value',
 
-        render: (
-          _: any,
-          record
-        ) =>
-          dinhDangTien(
-            Number(
-              record.quantity || 0
-            ) *
-              Number(
-                record.costPrice || 0
-              )
-          )
+        render: (_, record) => (
+          <span className="font-medium text-[#191c1e]">
+            {dinhDangTien(Number(record.quantity || 0) * Number(record.costPrice || 0))}
+          </span>
+        )
       }
     ];
 
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6 max-w-[1600px] mx-auto space-y-6">
       {contextHolder}
 
-      <Card
-        className="shadow-sm border-2 border-gray-300"
-        title={
-          <div>
-            <h1 className="text-2xl font-bold">
-              Quản Lý Kho
-            </h1>
+      {/* HEADER */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-[#191c1e] flex items-center gap-3">
+            <Package2 size={30} className="text-[#af101a]" />
+            Quản Lý Kho Hàng
+          </h1>
+          <p className="text-[#5b403d] mt-2">
+            Quản lý tồn kho và biến động giao dịch kho.
+          </p>
+        </div>
 
-            <p className="text-gray-500 text-sm mt-1">
-              Quản lý tồn kho và giao dịch kho
-            </p>
-          </div>
-        }
-        extra={
-          <Space>
-            <Button
-              onClick={
-                taiTatCaDuLieu
-              }
-              icon={
-                <RefreshCw size={16} />
-              }
-            >
-              Làm mới
-            </Button>
+        <Space wrap>
+          <Button
+            size="large"
+            onClick={taiTatCaDuLieu}
+            icon={<RefreshCw size={16} />}
+          >
+            Làm mới
+          </Button>
 
-            <Button
-              type="primary"
-              size="large"
-              icon={<Plus size={18} />}
-              onClick={moModal}
-            >
-              Tạo Phiếu
-            </Button>
-          </Space>
-        }
-      >
+          <Button
+            type="primary"
+            size="large"
+            icon={<Plus size={18} />}
+            className="bg-[#af101a] hover:!bg-[#930010] border-none"
+            onClick={moModal}
+          >
+            Tạo Phiếu Kho
+          </Button>
+        </Space>
+      </div>
+
+      {/* TABS & MAIN CONTENT */}
+      <div className="bg-white border border-[#e4beba] rounded-xl shadow-sm overflow-hidden">
         <Tabs
           defaultActiveKey="1"
+          className="px-5 pt-3"
           items={[
             {
               key: '1',
-
-              label:
-                'Danh Sách Tồn Kho',
-
+              label: <span className="font-semibold text-[15px]">Danh Sách Tồn Kho</span>,
               children: (
-                <div className="space-y-5">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Card bordered>
-                      <Statistic
-                        title="Tổng giá trị kho"
-                        value={
-                          statsKho.tongGiaTriKho
-                        }
-                        formatter={(
-                          value
-                        ) =>
-                          dinhDangTien(
-                            Number(
-                              value
-                            )
-                          )
-                        }
-                        prefix={
-                          <DollarSign size={18} />
-                        }
-                      />
-                    </Card>
-
-                    <Card bordered>
-                      <Statistic
-                        title="Sắp hết hàng"
-                        value={
-                          statsKho.soLuongSapHet
-                        }
-                        prefix={
-                          <AlertTriangle size={18} />
-                        }
-                        valueStyle={{
-                          color:
-                            '#ef4444'
-                        }}
-                      />
-                    </Card>
-                  </div>
-
-                  <div className="bg-white rounded-xl border p-5">
-                    <div className="mb-4">
-                      <Input
-                        placeholder="Tìm SKU, sản phẩm..."
-                        prefix={
-                          <Search size={16} />
-                        }
-                        value={
-                          tuKhoaTimKiem
-                        }
-                        onChange={(
-                          e
-                        ) =>
-                          setTuKhoaTimKiem(
-                            e.target
-                              .value
-                          )
-                        }
-                        allowClear
-                        className="max-w-md"
-                      />
+                <div className="pb-5 space-y-6 mt-2">
+                  {/* STATS */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    {/* Tổng giá trị kho */}
+                    <div className="bg-white border border-[#e4beba] border-t-2 border-t-[#af101a] rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="text-[11px] font-bold text-[#5b403d] uppercase tracking-wider">
+                          Tổng giá trị kho
+                        </span>
+                        <div className="w-8 h-8 rounded-lg bg-[#fff2f0] flex items-center justify-center">
+                          <DollarSign size={16} className="text-[#af101a]" />
+                        </div>
+                      </div>
+                      <div className="flex items-baseline gap-1.5">
+                        <h2 className="text-2xl font-black text-[#191c1e]">
+                          {dinhDangTien(statsKho.tongGiaTriKho)}
+                        </h2>
+                      </div>
                     </div>
 
-                    <Table<BienTheKho>
-                      rowKey="id"
-                      columns={
-                        cotTonKho
-                      }
-                      dataSource={
-                        danhSachLocDuoc
-                      }
-                      loading={
-                        loadingDanhSach
-                      }
-                      bordered
-                      scroll={{
-                        x: 1200
-                      }}
-                      pagination={{
-                        pageSize: 10
-                      }}
-                      locale={{
-                        emptyText:
-                          (
-                            <Empty description="Không có dữ liệu" />
-                          )
-                      }}
+                    {/* Sản phẩm sắp hết hàng */}
+                    <div className="bg-white border border-[#e4beba] rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="text-[11px] font-bold text-[#5b403d] uppercase tracking-wider">
+                          Sản phẩm sắp hết hàng
+                        </span>
+                        <div className="w-8 h-8 rounded-lg bg-[#fff7ed] flex items-center justify-center">
+                          <AlertTriangle size={16} className="text-[#f97316]" />
+                        </div>
+                      </div>
+                      <div className="flex items-baseline gap-1.5">
+                        <h2 className="text-2xl font-black text-[#191c1e]">
+                          {statsKho.soLuongSapHet}
+                        </h2>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* FILTER */}
+                  <div className="flex flex-wrap gap-3 items-center">
+                    <Input
+                      placeholder="Tìm SKU, sản phẩm..."
+                      prefix={<Search size={16} />}
+                      value={tuKhoaTimKiem}
+                      onChange={(e) => setTuKhoaTimKiem(e.target.value)}
+                      allowClear
+                      size="large"
+                      className="max-w-md"
                     />
                   </div>
+
+                  {/* TABLE */}
+                  <Table<BienTheKho>
+                    rowKey="id"
+                    columns={cotTonKho}
+                    dataSource={danhSachLocDuoc}
+                    loading={loadingDanhSach}
+                    scroll={{ x: 1000 }}
+                    pagination={{ pageSize: 10, showSizeChanger: true }}
+                    locale={{
+                      emptyText: <Empty description="Không có dữ liệu tồn kho" />
+                    }}
+                  />
                 </div>
               )
             },
-
             {
               key: '2',
-
-              label:
-                'Lịch Sử Giao Dịch',
-
+              label: <span className="font-semibold text-[15px]">Lịch Sử Giao Dịch</span>,
               children: (
-                <div className="space-y-4">
-                  <div className="bg-white border rounded-xl p-4">
-                    <Row gutter={[16, 16]}>
-                      <Col xs={24} md={8}>
-                        <Input
-                          allowClear
-                          prefix={
-                            <Search size={16} />
+                <div className="pb-5 space-y-5 mt-2">
+                  {/* FILTER */}
+                  <Row gutter={[12, 12]} className="items-center">
+                    <Col xs={24} md={8}>
+                      <Input
+                        allowClear
+                        size="large"
+                        prefix={<Search size={16} />}
+                        placeholder="Tìm SKU / tên sản phẩm..."
+                        value={tuKhoaTimKiemLichSu}
+                        onChange={(e) => setTuKhoaTimKiemLichSu(e.target.value)}
+                      />
+                    </Col>
+
+                    <Col xs={24} md={6}>
+                      <Select
+                        size="large"
+                        value={loaiGiaoDichFilter}
+                        onChange={setLoaiGiaoDichFilter}
+                        style={{ width: '100%' }}
+                        options={[
+                          { label: 'Tất cả giao dịch', value: 'ALL' },
+                          { label: 'Nhập kho', value: 'IMPORT' },
+                          { label: 'Xuất bán', value: 'EXPORT_SELL' },
+                          { label: 'Xuất hủy', value: 'EXPORT_DELETE' }
+                        ]}
+                      />
+                    </Col>
+
+                    <Col xs={24} md={10}>
+                      <RangePicker
+                        size="large"
+                        style={{ width: '100%' }}
+                        value={khoangThoiGian}
+                        onChange={(dates) => {
+                          if (!dates) {
+                            setKhoangThoiGian(null);
+                            return;
                           }
-                          placeholder="Tìm SKU / tên sản phẩm..."
-                          value={
-                            tuKhoaTimKiemLichSu
-                          }
-                          onChange={(
-                            e
-                          ) =>
-                            setTuKhoaTimKiemLichSu(
-                              e.target
-                                .value
-                            )
-                          }
-                        />
-                      </Col>
+                          setKhoangThoiGian([dates[0], dates[1]]);
+                        }}
+                        format="DD/MM/YYYY"
+                      />
+                    </Col>
+                  </Row>
 
-                      <Col xs={24} md={6}>
-                        <Select
-                          value={
-                            loaiGiaoDichFilter
-                          }
-                          onChange={
-                            setLoaiGiaoDichFilter
-                          }
-                          style={{
-                            width:
-                              '100%'
-                          }}
-                          options={[
-                            {
-                              label:
-                                'Tất cả giao dịch',
-                              value:
-                                'ALL'
-                            },
-
-                            {
-                              label:
-                                'Nhập kho',
-                              value:
-                                'IMPORT'
-                            },
-
-                            {
-                              label:
-                                'Xuất bán',
-                              value:
-                                'EXPORT_SELL'
-                            },
-
-                            {
-                              label:
-                                'Xuất hủy',
-                              value:
-                                'EXPORT_DELETE'
-                            }
-                          ]}
-                        />
-                      </Col>
-
-                      <Col xs={24} md={10}>
-                        <RangePicker
-                          style={{
-                            width:
-                              '100%'
-                          }}
-                          value={
-                            khoangThoiGian
-                          }
-                          onChange={(
-                            dates
-                          ) => {
-                            if (
-                              !dates
-                            ) {
-                              setKhoangThoiGian(
-                                null
-                              );
-
-                              return;
-                            }
-
-                            setKhoangThoiGian(
-                              [
-                                dates[0],
-                                dates[1]
-                              ]
-                            );
-                          }}
-                          format="DD/MM/YYYY"
-                        />
-                      </Col>
-                    </Row>
-                  </div>
-
+                  {/* TABLE */}
                   <Table<NhatKyBienDong>
                     rowKey="id"
-                    columns={
-                      cotLichSu
-                    }
-                    dataSource={
-                      danhSachLichSuLocDuoc
-                    }
-                    loading={
-                      loadingLichSu
-                    }
-                    bordered
-                    scroll={{
-                      x: 1200
-                    }}
-                    pagination={{
-                      pageSize: 10
+                    columns={cotLichSu}
+                    dataSource={danhSachLichSuLocDuoc}
+                    loading={loadingLichSu}
+                    scroll={{ x: 1000 }}
+                    pagination={{ pageSize: 10, showSizeChanger: true }}
+                    locale={{
+                      emptyText: <Empty description="Không có dữ liệu lịch sử" />
                     }}
                   />
                 </div>
@@ -1253,184 +1132,113 @@ export default function Inventory() {
             }
           ]}
         />
-      </Card>
+      </div>
 
+      {/* MODAL TẠO PHIẾU */}
       <Modal
         open={dangMoModal}
-        title="Tạo Phiếu Giao Dịch Kho"
+        title={<span className="text-[18px] font-bold text-[#191c1e]">Tạo Phiếu Giao Dịch Kho</span>}
         onCancel={dongModal}
         onOk={xacNhanTaoPhieu}
         okText="Xác nhận"
         cancelText="Hủy"
-        confirmLoading={
-          loadingLuuPhieu
-        }
+        confirmLoading={loadingLuuPhieu}
         okButtonProps={{
-          danger:
-            tabModal ===
-            'EXPORT'
+          className: tabModal === 'EXPORT' ? 'bg-red-500 hover:bg-red-600 border-none' : 'bg-[#af101a] hover:!bg-[#930010] border-none'
         }}
         width={700}
       >
         <Tabs
           type="card"
+          className="mt-4"
           activeKey={tabModal}
           onChange={(value) => {
-            setTabModal(
-              value as
-                | 'IMPORT'
-                | 'EXPORT'
-            );
-
-            setBienTheDangChon(
-              null
-            );
-
+            setTabModal(value as 'IMPORT' | 'EXPORT');
+            setBienTheDangChon(null);
             formNhap.resetFields();
-
             formXuat.resetFields();
           }}
           items={[
             {
               key: 'IMPORT',
-
               label: 'Nhập Kho',
-
               children: (
-                <Form
-                  layout="vertical"
-                  form={formNhap}
-                >
+                <Form layout="vertical" form={formNhap} className="mt-3">
                   <Form.Item
                     label="Chọn sản phẩm"
                     name="variant_id"
-                    rules={[
-                      {
-                        required: true,
-                        message:
-                          'Vui lòng chọn sản phẩm'
-                      }
-                    ]}
+                    rules={[{ required: true, message: 'Vui lòng chọn sản phẩm' }]}
                   >
                     <Select
+                      size="large"
                       showSearch
                       placeholder="Tìm SKU..."
                       optionFilterProp="label"
-                      onChange={
-                        xuLyChonSanPham
-                      }
-                      options={danhSachKho.map(
-                        (
-                          item
-                        ) => ({
-                          value:
-                            item.id,
-
-                          label: `${item.sku} | ${item.productName} | Size: ${item.size || '-'} | Màu: ${item.color || '-'}`
-                        })
-                      )}
+                      onChange={xuLyChonSanPham}
+                      options={danhSachKho.map((item) => ({
+                        value: item.id,
+                        label: `${item.sku} | ${item.productName} | Size: ${item.size || '-'} | Màu: ${item.color || '-'}`
+                      }))}
                     />
                   </Form.Item>
 
-                  <Form.Item
-                    label="Số lượng nhập"
-                    name="soLuongNhap"
-                    rules={[
-                      {
-                        required: true,
-                        message:
-                          'Nhập số lượng'
-                      }
-                    ]}
-                  >
-                    <InputNumber
-                      min={1}
-                      controls
-                      style={{
-                        width: '100%'
-                      }}
-                    />
-                  </Form.Item>
+                  <div className="grid grid-cols-2 gap-4">
+                    <Form.Item
+                      label="Số lượng nhập"
+                      name="soLuongNhap"
+                      rules={[{ required: true, message: 'Nhập số lượng' }]}
+                    >
+                      <InputNumber min={1} size="large" style={{ width: '100%' }} />
+                    </Form.Item>
 
-                  <Form.Item
-                    label="Giá vốn"
-                    name="giaVon"
-                    rules={[
-                      {
-                        required: true,
-                        message:
-                          'Nhập giá vốn'
-                      }
-                    ]}
-                  >
-                    <InputNumber
-                      min={0}
-                      controls
-                      style={{
-                        width: '100%'
-                      }}
-                    />
-                  </Form.Item>
+                    <Form.Item
+                      label="Giá vốn"
+                      name="giaVon"
+                      rules={[{ required: true, message: 'Nhập giá vốn' }]}
+                    >
+                      <InputNumber min={0} size="large" style={{ width: '100%' }} />
+                    </Form.Item>
+                  </div>
 
                   {bienTheDangChon && (
                     <Alert
                       type="info"
                       showIcon
-                      message={`Giá vốn hiện tại: ${dinhDangTien(
-                        bienTheDangChon.costPrice
-                      )}`}
+                      className="border-[#ead0d0] bg-gray-50 text-[#191c1e]"
+                      message={`Giá vốn hiện tại: ${dinhDangTien(bienTheDangChon.costPrice)}`}
                     />
                   )}
                 </Form>
               )
             },
-
             {
               key: 'EXPORT',
-
-              label:
-                'Xuất Kho (Hủy/Hao hụt)',
-
+              label: 'Xuất Kho (Hủy/Hao hụt)',
               children: (
-                <div className="space-y-4">
+                <div className="space-y-4 mt-3">
                   <Alert
                     type="warning"
                     showIcon
                     message="Xuất kho sẽ làm giảm tồn kho thực tế"
+                    className="border-orange-200 bg-orange-50"
                   />
 
-                  <Form
-                    layout="vertical"
-                    form={formXuat}
-                  >
+                  <Form layout="vertical" form={formXuat}>
                     <Form.Item
                       label="Chọn sản phẩm"
                       name="variant_id"
-                      rules={[
-                        {
-                          required: true,
-                          message:
-                            'Vui lòng chọn sản phẩm'
-                        }
-                      ]}
+                      rules={[{ required: true, message: 'Vui lòng chọn sản phẩm' }]}
                     >
                       <Select
+                        size="large"
                         showSearch
                         placeholder="Tìm SKU..."
                         optionFilterProp="label"
-                        onChange={
-                          xuLyChonSanPham
-                        }
-                        options={danhSachKho.map(
-                          (
-                            item
-                          ) => ({
-                            value:
-                              item.id,
-
-                            label: `${item.sku} | ${item.productName} | Size: ${item.size || '-'} | Màu: ${item.color || '-'}`
-                          })
-                        )}
+                        onChange={xuLyChonSanPham}
+                        options={danhSachKho.map((item) => ({
+                          value: item.id,
+                          label: `${item.sku} | ${item.productName} | Size: ${item.size || '-'} | Màu: ${item.color || '-'}`
+                        }))}
                       />
                     </Form.Item>
 
@@ -1438,6 +1246,7 @@ export default function Inventory() {
                       <Alert
                         type="error"
                         showIcon
+                        className="mb-4"
                         message={`Tồn kho hiện tại: ${bienTheDangChon.stock}`}
                       />
                     )}
@@ -1445,24 +1254,13 @@ export default function Inventory() {
                     <Form.Item
                       label="Số lượng xuất"
                       name="soLuongXuat"
-                      rules={[
-                        {
-                          required: true,
-                          message:
-                            'Nhập số lượng xuất'
-                        }
-                      ]}
+                      rules={[{ required: true, message: 'Nhập số lượng xuất' }]}
                     >
                       <InputNumber
                         min={1}
-                        max={Number(
-                          bienTheDangChon?.stock ||
-                            0
-                        )}
-                        controls
-                        style={{
-                          width: '100%'
-                        }}
+                        size="large"
+                        max={Number(bienTheDangChon?.stock || 0)}
+                        style={{ width: '100%' }}
                       />
                     </Form.Item>
                   </Form>
@@ -1476,9 +1274,9 @@ export default function Inventory() {
       {/* CANCEL REQUEST MODAL FROM INVENTORY */}
       <Modal
         title={
-          <div className="flex items-center gap-2 text-red-600 font-bold text-lg border-b border-gray-100 pb-3">
-            <AlertTriangle size={20} className="text-red-500" />
-            <span>Yêu Cầu Hủy Đơn Hàng - {bienTheDangChon?.productName}</span>
+          <div className="flex items-center gap-2 text-[#af101a] font-bold text-[18px]">
+            <AlertTriangle size={20} />
+            <span>Yêu Cầu Hủy Đơn - {bienTheDangChon?.productName}</span>
           </div>
         }
         open={activeCancelModalOpen}
@@ -1487,13 +1285,12 @@ export default function Inventory() {
         width={700}
         centered
       >
-        <div className="space-y-6 mt-4">
+        <div className="space-y-5 mt-4">
           <Alert
-            message="Xác nhận duyệt hủy đơn hàng"
+            message={<span className="font-semibold text-[#af101a]">Xác nhận duyệt hủy đơn hàng</span>}
             description="Phê duyệt hủy đơn tại đây sẽ cập nhật trạng thái đơn hàng thành 'Đã hủy', tự động hoàn trả số lượng sản phẩm vào tồn kho thực tế, và ghi nhận nhật ký biến động kho 'NHẬP KHO'."
-            type="warning"
             showIcon
-            className="rounded-2xl"
+            className="rounded-xl border-[#ead0d0] bg-[#f1dede] text-[#5b403d]"
           />
 
           <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
@@ -1511,48 +1308,47 @@ export default function Inventory() {
               } catch {}
 
               return (
-                <div key={order.id} className="border border-gray-150 rounded-2xl p-5 bg-[#fafafa] space-y-4 shadow-sm">
+                <div key={order.id} className="border border-[#ead0d0] rounded-2xl p-4 bg-white space-y-4 shadow-sm">
                   <div className="flex justify-between items-center">
                     <div>
-                      <span className="font-bold text-red-600 text-[16px] block">Mã đơn hàng: #{order.id}</span>
-                      <span className="text-gray-400 text-xs">Ngày đặt: {new Date(order.created_at).toLocaleString('vi-VN')}</span>
+                      <span className="font-bold text-[#af101a] text-[15px] block">Mã đơn hàng: #{order.id}</span>
+                      <span className="text-[#5b403d] text-xs">Ngày đặt: {new Date(order.created_at).toLocaleString('vi-VN')}</span>
                     </div>
                     <Tag color="orange" className="px-3 py-1 rounded-full text-xs font-semibold">Chờ duyệt hủy</Tag>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3 text-sm border-t border-b border-gray-150 py-3 text-gray-600">
-                    <div><strong>Khách hàng:</strong> {order.nguoiNhan || order.khachHang?.name || '---'}</div>
-                    <div><strong>Số điện thoại:</strong> {order.soDienThoaiNhan || '---'}</div>
-                    <div><strong>Số lượng đặt mua:</strong> <span className="font-bold text-red-500">{orderItem?.quantity || 1} sản phẩm</span></div>
-                    <div><strong>Tổng tiền đơn hàng:</strong> <span className="font-bold text-green-600">{dinhDangTien(order.final_amount)}</span></div>
+                  <div className="grid grid-cols-2 gap-2 text-[14px] border-t border-b border-[#f1dede] py-3 text-[#191c1e]">
+                    <div><span className="text-[#5b403d]">Khách hàng:</span> {order.nguoiNhan || order.khachHang?.name || '---'}</div>
+                    <div><span className="text-[#5b403d]">SĐT:</span> {order.soDienThoaiNhan || '---'}</div>
+                    <div><span className="text-[#5b403d]">SL đặt mua:</span> <span className="font-bold">{orderItem?.quantity || 1}</span></div>
+                    <div><span className="text-[#5b403d]">Tổng tiền:</span> <span className="font-bold text-[#15803d]">{dinhDangTien(order.final_amount)}</span></div>
                   </div>
 
                   <div className="space-y-2">
-                    <strong className="text-gray-700 block">Lý do hủy đơn của khách hàng:</strong>
-                    <div className="bg-white border border-gray-200 rounded-xl p-3 text-gray-600 italic">
+                    <span className="text-[#5b403d] text-sm font-semibold block">Lý do hủy đơn:</span>
+                    <div className="bg-gray-50 border border-[#ead0d0] rounded-xl p-3 text-[#191c1e] text-[14px] italic">
                       "{parsedReason || 'Không cung cấp lý do chi tiết'}"
                     </div>
                   </div>
 
                   {proofImage && (
                     <div className="space-y-2">
-                      <strong className="text-gray-700 block">Minh chứng hình ảnh:</strong>
+                      <span className="text-[#5b403d] text-sm font-semibold block">Minh chứng hình ảnh:</span>
                       <div className="flex justify-start">
                         <Image
                           src={proofImage}
                           alt="Proof"
-                          className="rounded-xl border border-gray-200 max-h-[250px] object-contain shadow-sm bg-white"
+                          className="rounded-xl border border-[#ead0d0] max-h-[200px] object-contain shadow-sm bg-white"
                         />
                       </div>
                     </div>
                   )}
 
-                  <div className="flex justify-end pt-2 border-t border-gray-100 mt-2">
+                  <div className="flex justify-end pt-2 border-t border-[#f1dede] mt-2">
                     <Button
                       type="primary"
-                      danger
                       loading={loadingLuuPhieu}
-                      className="bg-red-500 hover:bg-red-600 rounded-xl px-5 h-[42px] font-semibold text-sm border-none shadow-sm flex items-center gap-2"
+                      className="bg-[#af101a] hover:!bg-[#930010] rounded-xl px-5 h-[40px] font-semibold text-sm border-none shadow-sm flex items-center gap-2"
                       onClick={() => xacNhanDuyetHuyTuInventory(order.id)}
                     >
                       Duyệt hủy đơn & Hoàn kho

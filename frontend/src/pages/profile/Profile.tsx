@@ -200,7 +200,7 @@ const ProfileForm = ({ profile, userId }: { profile: IProfile; userId: number })
                 type="primary"
                 htmlType="submit"
                 loading={updateMutation.isPending}
-                style={{ backgroundColor: "#ee4d2d", border: "none" }}
+                style={{ backgroundColor: "#af101a", border: "none" }}
               >
                 Lưu
               </Button>
@@ -306,7 +306,7 @@ const PasswordForm = ({ userId }: { userId: number }) => {
               type="primary"
               htmlType="submit"
               loading={changePasswordMutation.isPending}
-              style={{ backgroundColor: "#ee4d2d", border: "none" }}
+              style={{ backgroundColor: "#af101a", border: "none" }}
             >
               Xác nhận
             </Button>
@@ -443,7 +443,7 @@ const AddressesList = ({ userId }: { userId: number }) => {
           type="primary"
           icon={<PlusOutlined />}
           onClick={handleOpenAdd}
-          style={{ backgroundColor: "#ee4d2d", border: "none" }}
+          style={{ backgroundColor: "#af101a", border: "none" }}
         >
           Thêm địa chỉ mới
         </Button>
@@ -480,7 +480,7 @@ const AddressesList = ({ userId }: { userId: number }) => {
                   <Divider type="vertical" />
                   <Text type="secondary">{addr.phone}</Text>
                   {addr.is_default && (
-                    <Tag color="red" style={{ borderColor: "#ee4d2d", color: "#ee4d2d", backgroundColor: "#fff5f2" }}>
+                    <Tag color="red" style={{ borderColor: "#af101a", color: "#af101a", backgroundColor: "#fff5f2" }}>
                       Mặc định
                     </Tag>
                   )}
@@ -572,7 +572,7 @@ const AddressesList = ({ userId }: { userId: number }) => {
               type="primary"
               htmlType="submit"
               loading={createMutation.isPending || updateMutation.isPending}
-              style={{ backgroundColor: "#ee4d2d", borderColor: "#ee4d2d" }}
+              style={{ backgroundColor: "#af101a", borderColor: "#af101a" }}
             >
               Lưu lại
             </Button>
@@ -684,7 +684,7 @@ const ComplaintsSection = ({ userId }: { userId: number }) => {
           type="primary"
           icon={<PlusOutlined />}
           onClick={() => setIsCreateOpen(true)}
-          style={{ backgroundColor: "#ee4d2d", border: "none" }}
+          style={{ backgroundColor: "#af101a", border: "none" }}
         >
           Gửi Khiếu Nại Mới
         </Button>
@@ -702,7 +702,7 @@ const ComplaintsSection = ({ userId }: { userId: number }) => {
           description={
             <span>
               Bạn chưa có khiếu nại nào.{" "}
-              <Button type="link" style={{ padding: 0, color: "#ee4d2d" }} onClick={() => setIsCreateOpen(true)}>
+              <Button type="link" style={{ padding: 0, color: "#af101a" }} onClick={() => setIsCreateOpen(true)}>
                 Gửi khiếu nại ngay
               </Button>
             </span>
@@ -815,7 +815,7 @@ const ComplaintsSection = ({ userId }: { userId: number }) => {
       <Modal
         title={
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <MessageOutlined style={{ color: "#ee4d2d" }} />
+            <MessageOutlined style={{ color: "#af101a" }} />
             <span>Gửi Khiếu Nại / Phản Hồi</span>
           </div>
         }
@@ -904,7 +904,7 @@ const ComplaintsSection = ({ userId }: { userId: number }) => {
               type="primary"
               htmlType="submit"
               loading={createMutation.isPending}
-              style={{ backgroundColor: "#ee4d2d", borderColor: "#ee4d2d" }}
+              style={{ backgroundColor: "#af101a", borderColor: "#af101a" }}
             >
               Gửi Khiếu Nại
             </Button>
@@ -916,7 +916,7 @@ const ComplaintsSection = ({ userId }: { userId: number }) => {
       <Modal
         title={
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <EyeOutlined style={{ color: "#ee4d2d" }} />
+            <EyeOutlined style={{ color: "#af101a" }} />
             <span>Chi Tiết Khiếu Nại #{selectedComplaint?.id}</span>
           </div>
         }

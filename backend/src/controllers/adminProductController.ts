@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { fetchAllProducts, createProductWithDetails, deleteProductById, fetchProductStats, updateBasicProduct } from '../services/adminProductService';
+import supabaseClient from '../config/supabase';
 
 export const getProductStats = async (req: Request, res: Response) => {
     try {
@@ -78,7 +79,7 @@ export const updateProduct = async (req: Request, res: Response): Promise<any> =
         const id = Number(req.params.id);
         if (isNaN(id)) return res.status(400).json({ message: "ID sản phẩm không hợp lệ.", data: null, errorDetails: null });
 
-        const { name, description, category_id, base_price, status, brand } = req.body;
+        const { name, description, category_id, base_price, status, brand, images } = req.body;
 
         const updateData: any = {};
         if (name !== undefined) updateData.name = String(name).trim();
@@ -92,6 +93,26 @@ export const updateProduct = async (req: Request, res: Response): Promise<any> =
         if (brand !== undefined) updateData.brand = String(brand).trim();
 
         const result = await updateBasicProduct(id, updateData);
+
+        // ── Cập nhật hình ảnh nếu được truyền lên ──
+        if (images !== undefined) {
+            // Xóa ảnh cũ
+            await supabaseClient.from('product_images').delete().eq('product_id', id);
+            
+            // Thêm ảnh mới
+            if (Array.isArray(images) && images.length > 0) {
+                const imagesToInsert = images.map((img: any) => ({
+                    product_id: id,
+                    image_url: String(img.image_url || img.url || '').trim(),
+                    is_main: Boolean(img.is_main)
+                })).filter(img => img.image_url !== '');
+                
+                if (imagesToInsert.length > 0) {
+                    await supabaseClient.from('product_images').insert(imagesToInsert);
+                }
+            }
+        }
+
         res.status(200).json({ message: "Cập nhật sản phẩm thành công!", data: result, errorDetails: null });
     } catch (error: any) {
         res.status(500).json({ message: "Lỗi hệ thống khi cập nhật sản phẩm.", data: null, errorDetails: error.message || error });

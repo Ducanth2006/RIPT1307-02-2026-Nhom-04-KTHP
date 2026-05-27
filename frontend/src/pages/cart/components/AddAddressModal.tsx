@@ -92,7 +92,7 @@ const AddAddressModal = ({
             type="primary"
             htmlType="submit"
             loading={loading}
-            style={{ backgroundColor: "#ee4d2d", borderColor: "#ee4d2d" }}
+            style={{ backgroundColor: "#af101a", borderColor: "#af101a" }}
           >
             Lưu & Chọn
           </Button>
