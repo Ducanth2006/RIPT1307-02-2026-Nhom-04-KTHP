@@ -6,7 +6,7 @@ import {
   TrendingUp, RefreshCw, AlertCircle
 } from 'lucide-react';
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
+  LineChart, Line, BarChart, Bar, ComposedChart, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, Legend
 } from 'recharts';
 import { getAdminReportData } from '../../services/adminReportService';
@@ -45,7 +45,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
         {payload.map((p: any, i: number) => (
           <p key={i} className="text-sm" style={{ color: p.color }}>
             <span className="font-medium">{p.name}: </span>
-            {p.dataKey === 'revenue' ? formatFullCurrency(p.value) : formatNumber(p.value)}
+            {['revenue', 'cost', 'profit'].includes(p.dataKey) ? formatFullCurrency(p.value) : formatNumber(p.value)}
           </p>
         ))}
       </div>
@@ -83,8 +83,9 @@ interface KPIs {
 
 interface ReportData {
   kpis: KPIs;
-  dailyChart: { name: string; revenue: number; orders: number }[];
+  dailyChart: { name: string; revenue: number; cost?: number; profit?: number; orders: number }[];
   categoryData: { name: string; value: number }[];
+  voucherData?: { name: string; value: number; count: number; discount: number }[];
   topProducts: {
     key: string;
     rank: number;
@@ -197,8 +198,8 @@ export default function ReportsPage() {
         break;
       case 'products':
         exportCSV(
-          `Bao_Cao_San_Pham_${timeRange}.csv`,
-          ['Hạng', 'Tên sản phẩm', 'Danh mục', 'Đã bán (SP)', 'Doanh thu (₫)'],
+          `Bao_Cao_Doanh_Thu_San_Pham_${timeRange}.csv`,
+          ['Hạng', 'Tên sản phẩm', 'Danh mục', 'Đã bán (SP)', 'Doanh thu đóng góp (₫)'],
           data.topProducts.map(p => [p.rank, p.name, p.category, p.volume, p.revenue])
         );
         break;
@@ -208,7 +209,7 @@ export default function ReportsPage() {
   const exportMenuItems: MenuProps['items'] = [
     { key: 'orders', label: 'Báo cáo đơn hàng' },
     { key: 'revenue', label: 'Báo cáo doanh thu' },
-    { key: 'products', label: 'Báo cáo sản phẩm bán chạy' },
+    { key: 'products', label: 'Báo cáo sản phẩm doanh thu cao' },
   ];
 
   // ── Growth badge ──
@@ -255,7 +256,7 @@ export default function ReportsPage() {
     );
   }
 
-  const { kpis, dailyChart, categoryData, topProducts } = data;
+  const { kpis, dailyChart, categoryData, voucherData = [], topProducts } = data;
 
   // ═══════════════════════════════════════════════════════════
   // KPI Cards config
@@ -517,7 +518,7 @@ export default function ReportsPage() {
         <div className="bg-white border border-[#e4beba] shadow-sm rounded-xl p-6">
           <h3 className="font-bold text-[#191c1e] mb-4 flex items-center gap-2">
             <BarChart2 size={18} className="text-[#af101a]" />
-            Cơ cấu theo danh mục
+            Cơ cấu doanh thu theo danh mục
           </h3>
           <div className="h-[320px]">
             {categoryData.length > 0 ? (
@@ -551,12 +552,116 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      {/* ═══ Top Products Table ═══ */}
+      {/* ═══ Financial & Voucher Analytics Row ═══ */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6 mb-6">
+        {/* Financial Combo (Composed) Chart */}
+        <div className="lg:col-span-2 bg-white border border-[#e4beba] shadow-sm rounded-xl p-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+            <div>
+              <h3 className="font-bold text-[#191c1e] text-base flex items-center gap-2">
+                <DollarSign size={18} className="text-[#af101a]" />
+                Phân tích hiệu quả tài chính & Lợi nhuận
+              </h3>
+              <p className="text-xs text-[#8f6f6c] mt-0.5">
+                So sánh Doanh thu thực nhận, Giá vốn hàng bán (trục Y trái) và Lợi nhuận thực tế (trục Y phải) theo ngày
+              </p>
+            </div>
+          </div>
+          <div className="h-[320px]">
+            {dailyChart.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={dailyChart} margin={{ top: 10, right: 10, left: 10, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eceef0" />
+                  <XAxis
+                    dataKey="name"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: '#8f6f6c', fontSize: 11 }}
+                    interval={dailyChart.length > 15 ? Math.floor(dailyChart.length / 10) : 0}
+                  />
+                  {/* Trục Y chính bên trái cho Doanh thu & Giá vốn */}
+                  <YAxis
+                    yAxisId="left"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: '#8f6f6c', fontSize: 11 }}
+                    tickFormatter={(v) => formatCurrency(v)}
+                  />
+                  {/* Trục Y phụ bên phải cho Lợi nhuận */}
+                  <YAxis
+                    yAxisId="right"
+                    orientation="right"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: '#af101a', fontSize: 11 }}
+                    tickFormatter={(v) => formatCurrency(v)}
+                  />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend iconType="circle" />
+                  <Bar yAxisId="left" name="Doanh thu" dataKey="revenue" fill="#00799c" radius={[4, 4, 0, 0]} maxBarSize={30} />
+                  <Bar yAxisId="left" name="Giá vốn" dataKey="cost" fill="#94a3b8" radius={[4, 4, 0, 0]} maxBarSize={30} />
+                  <Line
+                    yAxisId="right"
+                    type="monotone"
+                    name="Lợi nhuận thực tế"
+                    dataKey="profit"
+                    stroke="#af101a"
+                    strokeWidth={3}
+                    dot={{ r: 4, strokeWidth: 2, fill: '#fff' }}
+                    activeDot={{ r: 6 }}
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-full text-[#8f6f6c]">
+                Chưa có dữ liệu tài chính trong khoảng thời gian này
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Voucher Pie Chart */}
+        <div className="bg-white border border-[#e4beba] shadow-sm rounded-xl p-6">
+          <h3 className="font-bold text-[#191c1e] mb-4 flex items-center gap-2">
+            <BarChart2 size={18} className="text-[#af101a]" />
+            Cơ cấu doanh thu theo Voucher
+          </h3>
+          <div className="h-[320px]">
+            {voucherData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={voucherData}
+                    cx="50%"
+                    cy="45%"
+                    innerRadius={55}
+                    outerRadius={95}
+                    paddingAngle={4}
+                    dataKey="value"
+                    label={({ name, percent }) => `${name} (${((percent ?? 0) * 100).toFixed(0)}%)`}
+                    labelLine={{ strokeWidth: 1 }}
+                  >
+                    {voucherData.map((_entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<PieTooltip />} />
+                  <Legend iconType="circle" layout="horizontal" verticalAlign="bottom" />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-full text-[#8f6f6c]">
+                Chưa có dữ liệu sử dụng Voucher
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
       <div className="bg-white border border-[#e4beba] shadow-sm rounded-xl overflow-hidden">
         <div className="px-6 py-5 border-b border-[#f3dede]">
           <h3 className="font-bold text-[#191c1e] flex items-center gap-2">
             <ShoppingBag size={18} className="text-[#af101a]" />
-            Top sản phẩm bán chạy
+            Top 5 sản phẩm có doanh thu cao nhất
           </h3>
         </div>
         <Table
@@ -564,7 +669,7 @@ export default function ReportsPage() {
           columns={topProductColumns}
           pagination={false}
           className="px-2"
-          locale={{ emptyText: 'Chưa có dữ liệu sản phẩm bán chạy trong khoảng thời gian này' }}
+          locale={{ emptyText: 'Chưa có dữ liệu sản phẩm có doanh thu cao nhất trong khoảng thời gian này' }}
         />
       </div>
     </div>
