@@ -79,6 +79,12 @@ interface KPIs {
   aovGrowth: number;
   newCustomers: number;
   customersGrowth: number;
+  totalProfit?: number;
+  profitGrowth?: number;
+  avgMargin?: number;
+  marginGrowth?: number;
+  bestSellerVolume?: string;
+  bestSellerRevenue?: string;
 }
 
 interface ReportData {
@@ -273,6 +279,24 @@ export default function ReportsPage() {
       highlight: true
     },
     {
+      title: 'Tổng lợi nhuận',
+      value: formatCurrency(kpis.totalProfit || 0),
+      fullValue: formatFullCurrency(kpis.totalProfit || 0),
+      growth: kpis.profitGrowth,
+      icon: DollarSign,
+      color: 'text-[#2a7a40]',
+      bgColor: 'bg-[#d5fcde]',
+      highlight: true
+    },
+    {
+      title: 'Biên lợi nhuận TB',
+      value: `${kpis.avgMargin || 0}%`,
+      growth: kpis.marginGrowth,
+      icon: TrendingUp,
+      color: 'text-[#7c3aed]',
+      bgColor: 'bg-[#f4ebff]'
+    },
+    {
       title: 'Tổng đơn hàng',
       value: formatNumber(kpis.totalOrders),
       growth: kpis.ordersGrowth,
@@ -286,8 +310,8 @@ export default function ReportsPage() {
       fullValue: formatFullCurrency(kpis.aov),
       growth: kpis.aovGrowth,
       icon: TrendingUp,
-      color: 'text-[#2a7a40]',
-      bgColor: 'bg-[#d5fcde]'
+      color: 'text-[#00799c]',
+      bgColor: 'bg-[#e0f2fe]'
     },
     {
       title: 'Khách hàng mới',
@@ -296,6 +320,22 @@ export default function ReportsPage() {
       icon: UsersIcon,
       color: 'text-[#7c3aed]',
       bgColor: 'bg-[#f4ebff]'
+    },
+    {
+      title: 'SP bán chạy nhất',
+      value: kpis.bestSellerVolume || 'N/A',
+      icon: ShoppingBag,
+      color: 'text-[#d97706]',
+      bgColor: 'bg-[#fef3c7]',
+      isText: true
+    },
+    {
+      title: 'SP doanh thu cao nhất',
+      value: kpis.bestSellerRevenue || 'N/A',
+      icon: DollarSign,
+      color: 'text-[#af101a]',
+      bgColor: 'bg-[#fff2f0]',
+      isText: true
     }
   ];
 
@@ -432,18 +472,35 @@ export default function ReportsPage() {
                 <kpi.icon size={16} className={kpi.color} />
               </div>
             </div>
-            <div className="flex items-baseline gap-1.5 mt-2">
-              <h2
-                className="text-2xl font-black text-[#191c1e]"
-                title={kpi.fullValue}
-              >
-                {kpi.value}
-              </h2>
-              <GrowthBadge value={kpi.growth} />
+            <div className="flex items-baseline gap-1.5 mt-2 w-full overflow-hidden">
+              {kpi.isText ? (
+                <h2
+                  className="text-sm font-bold text-[#191c1e] truncate w-full"
+                  title={kpi.fullValue || kpi.value}
+                >
+                  {kpi.value}
+                </h2>
+              ) : (
+                <>
+                  <h2
+                    className="text-2xl font-black text-[#191c1e]"
+                    title={kpi.fullValue}
+                  >
+                    {kpi.value}
+                  </h2>
+                  {kpi.growth !== undefined && <GrowthBadge value={kpi.growth} />}
+                </>
+              )}
             </div>
-            <p className="text-[10px] text-[#8f6f6c] mt-1 uppercase tracking-wide">
-              so với kỳ trước
-            </p>
+            {kpi.growth !== undefined ? (
+              <p className="text-[10px] text-[#8f6f6c] mt-1 uppercase tracking-wide">
+                so với kỳ trước
+              </p>
+            ) : (
+              <p className="text-[10px] text-[#8f6f6c] mt-1 uppercase tracking-wide">
+                Sản phẩm dẫn đầu
+              </p>
+            )}
           </div>
         ))}
       </div>
