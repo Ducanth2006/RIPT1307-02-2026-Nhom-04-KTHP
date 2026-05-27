@@ -1,5 +1,41 @@
 import type { Request, Response } from 'express';
-import { registerUser, loginUser, logoutUser } from '../services/authService';
+import { registerUser, loginUser, logoutUser, loginGoogleUser, loginFacebookUser } from '../services/authService';
+
+export const googleLogin = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { token } = req.body;
+        if (!token) {
+            return res.status(400).json({ message: 'Vui lòng cung cấp token Google.' });
+        }
+
+        const data = await loginGoogleUser(token);
+        return res.status(200).json({
+            message: 'Đăng nhập Google thành công',
+            data: data.user,
+            token: data.token
+        });
+    } catch (error: any) {
+        return res.status(400).json({ message: error.message });
+    }
+};
+
+export const facebookLogin = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const { token } = req.body;
+        if (!token) {
+            return res.status(400).json({ message: 'Vui lòng cung cấp token Facebook.' });
+        }
+
+        const data = await loginFacebookUser(token);
+        return res.status(200).json({
+            message: 'Đăng nhập Facebook thành công',
+            data: data.user,
+            token: data.token
+        });
+    } catch (error: any) {
+        return res.status(400).json({ message: error.message });
+    }
+};
 
 export const register = async (req: Request, res: Response): Promise<any> => {
     try {
