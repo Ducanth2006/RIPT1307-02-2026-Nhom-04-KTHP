@@ -1,10 +1,17 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button, Row, Col, Typography, Carousel } from "antd";
-import { LeftOutlined, RightOutlined } from "@ant-design/icons";
+import {
+  LeftOutlined,
+  RightOutlined,
+  TruckOutlined,
+  RetweetOutlined,
+  CustomerServiceOutlined,
+  SafetyCertificateOutlined
+} from "@ant-design/icons";
 import ProductList from "./products/ProductList";
 import NewArrivals from "./products/NewArrivals";
-import LimitedProducts from "./products/LimitedProducts";
+import BestSellingProducts from "./products/LimitedProducts";
 import CategoryBar from "../components/layout/CategoryBar";
 import HomepageCollections from "../components/BoSuuTap/HomepageCollections";
 
@@ -124,11 +131,107 @@ const Home = () => {
         </div>
       </div>
 
+      {/* ==================== TRUST / VALUE PROPOSITION BADGES ==================== */}
+      <div style={{ background: "#fff", borderBottom: "1px solid #f0f0f0", padding: "24px 40px" }}>
+        <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+          <Row gutter={[24, 24]} align="middle" justify="space-between">
+            <Col xs={24} sm={12} lg={6}>
+              <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                <div style={{
+                  width: "56px",
+                  height: "56px",
+                  borderRadius: "12px",
+                  background: "#f8f9fa",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "24px",
+                  color: "#af101a",
+                  flexShrink: 0
+                }}>
+                  <TruckOutlined />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: "16px", color: "#111", lineHeight: 1.2 }}>Giao Hàng Miễn Phí</div>
+                  <div style={{ fontSize: "13px", color: "#777", marginTop: "4px" }}>Cho đơn hàng từ 1.000.000đ</div>
+                </div>
+              </div>
+            </Col>
+            <Col xs={24} sm={12} lg={6}>
+              <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                <div style={{
+                  width: "56px",
+                  height: "56px",
+                  borderRadius: "12px",
+                  background: "#f8f9fa",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "24px",
+                  color: "#af101a",
+                  flexShrink: 0
+                }}>
+                  <RetweetOutlined />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: "16px", color: "#111", lineHeight: 1.2 }}>30 Ngày Đổi Trả</div>
+                  <div style={{ fontSize: "13px", color: "#777", marginTop: "4px" }}>Bảo hành đổi trả dễ dàng</div>
+                </div>
+              </div>
+            </Col>
+            <Col xs={24} sm={12} lg={6}>
+              <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                <div style={{
+                  width: "56px",
+                  height: "56px",
+                  borderRadius: "12px",
+                  background: "#f8f9fa",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "24px",
+                  color: "#af101a",
+                  flexShrink: 0
+                }}>
+                  <CustomerServiceOutlined />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: "16px", color: "#111", lineHeight: 1.2 }}>Hỗ Trợ Tận Tâm</div>
+                  <div style={{ fontSize: "13px", color: "#777", marginTop: "4px" }}>Tư vấn viên trực tuyến 24/7</div>
+                </div>
+              </div>
+            </Col>
+            <Col xs={24} sm={12} lg={6}>
+              <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                <div style={{
+                  width: "56px",
+                  height: "56px",
+                  borderRadius: "12px",
+                  background: "#f8f9fa",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "24px",
+                  color: "#af101a",
+                  flexShrink: 0
+                }}>
+                  <SafetyCertificateOutlined />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: "16px", color: "#111", lineHeight: 1.2 }}>100% Chính Hãng</div>
+                  <div style={{ fontSize: "13px", color: "#777", marginTop: "4px" }}>Hoàn tiền nếu phát hiện hàng giả</div>
+                </div>
+              </div>
+            </Col>
+          </Row>
+        </div>
+      </div>
+
       <CategoryBar />
 
-      <NewArrivals />
+      <BestSellingProducts />
 
-      <LimitedProducts />
+      <NewArrivals />
 
       <div id="trending-now">
         <ProductList genderFilter={genderFilter} />
