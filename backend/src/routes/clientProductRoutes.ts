@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getClientProducts, getClientProductById, getNewArrivals, getHomepageCollections, getLowStockProducts } from '../controllers/clientProductController';
+import { getClientProducts, getClientProductById, getNewArrivals, getHomepageCollections, getBestSellingProducts } from '../controllers/clientProductController';
 
 const router = Router();
 
@@ -100,18 +100,18 @@ router.get('/homepage-collections', getHomepageCollections);
 
 /**
  * @swagger
- * /products/low-stock:
+ * /products/best-sellers:
  *   get:
- *     summary: Lấy danh sách sản phẩm sắp hết hàng (Public / FOMO)
- *     description: Trả về danh sách tối đa 10 sản phẩm có các biến thể có số lượng tồn kho thấp (0 < stock_quantity < 10) để kích thích tâm lý mua hàng (FOMO).
+ *     summary: Lấy danh sách sản phẩm bán chạy (Public)
+ *     description: Trả về danh sách tối đa 10 sản phẩm bán chạy nhất được tính từ bảng chi tiết đơn hàng, hoặc fallback sang các sản phẩm có giá cao nhất nếu chưa có đơn hàng.
  *     tags: [Client Products]
  *     responses:
  *       200:
- *         description: Lấy danh sách sản phẩm sắp hết hàng thành công
+ *         description: Lấy danh sách sản phẩm bán chạy thành công
  *       500:
  *         description: Lỗi hệ thống
  */
-router.get('/low-stock', getLowStockProducts);
+router.get('/best-sellers', getBestSellingProducts);
 
 /**
  * @swagger
