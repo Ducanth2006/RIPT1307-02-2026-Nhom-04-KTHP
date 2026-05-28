@@ -79,7 +79,7 @@ export const updateProduct = async (req: Request, res: Response): Promise<any> =
         const id = Number(req.params.id);
         if (isNaN(id)) return res.status(400).json({ message: "ID sản phẩm không hợp lệ.", data: null, errorDetails: null });
 
-        const { name, description, category_id, base_price, status, brand, images } = req.body;
+        const { name, description, category_id, base_price, status, brand, images, variants } = req.body;
 
         const updateData: any = {};
         if (name !== undefined) updateData.name = String(name).trim();
@@ -93,6 +93,46 @@ export const updateProduct = async (req: Request, res: Response): Promise<any> =
         if (brand !== undefined) updateData.brand = String(brand).trim();
 
         const result = await updateBasicProduct(id, updateData);
+
+        // ── Cập nhật biến thể nếu được truyền lên ──
+        if (variants !== undefined) {
+            // Xóa biến thể cũ
+            await supabaseClient.from('product_variants').delete().eq('product_id', id);
+
+            // Thêm biến thể mới
+            if (Array.isArray(variants) && variants.length > 0) {
+                const variantsToInsert = variants.map((v: any, index: number) => ({
+                    product_id: id,
+                    sku: v.sku ? String(v.sku).trim() : `AUTO-${Date.now()}-${index}`,
+                    size: v.size ? String(v.size).trim() : null,
+                    color: v.color ? String(v.color).trim() : null,
+                    price: Number(v.price ?? (base_price !== undefined ? base_price : 0)),
+                    cost_price: Number(v.cost_price ?? 0),
+                    stock_quantity: Number(v.stock_quantity ?? v.stock ?? 0)
+                }));
+
+                const { data: insertedVariants } = await supabaseClient
+                    .from('product_variants')
+                    .insert(variantsToInsert)
+                    .select();
+
+                // ── Tự động ghi nhận Lịch sử Kho khi cập nhật ──
+                if (insertedVariants && insertedVariants.length > 0) {
+                    const logsToInsert = insertedVariants
+                        .filter(v => Number(v.stock_quantity || 0) > 0)
+                        .map(v => ({
+                            variant_id: v.id,
+                            action_type: 'IMPORT',
+                            quantity: Number(v.stock_quantity),
+                            cost_price: Number(v.cost_price || 0)
+                        }));
+
+                    if (logsToInsert.length > 0) {
+                        await supabaseClient.from('inventory_logs').insert(logsToInsert);
+                    }
+                }
+            }
+        }
 
         // ── Cập nhật hình ảnh nếu được truyền lên ──
         if (images !== undefined) {
