@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Layout, Input, Badge, Button, Popover, Empty, List, Dropdown } from "antd";
+import { Layout, Input, Badge, Button, Popover, Empty, List, Dropdown, Avatar } from "antd";
 import { SearchOutlined, ShoppingCartOutlined, UserOutlined, BellOutlined } from "@ant-design/icons";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -151,28 +151,7 @@ const Header = () => {
           </div>
         </Link>
 
-        <div className="desktop-categories" style={{ display: "flex", gap: 32, fontWeight: 600 }}>
-          <Link to="/" style={{ color: "#af101a", fontWeight: 700 }}>
-            Nam
-          </Link>
-          <Link to="/" style={{ color: "#111" }}>
-            Nữ
-          </Link>
-          <Link to="/" style={{ color: "#111" }}>
-            Trẻ em
-          </Link>
-          <Link to="/" style={{ color: "#111" }}>
-            Thể thao
-          </Link>
-          <Link to="/" style={{ color: "#111" }}>
-            Thương hiệu
-          </Link>
-          <Link to="/" style={{ color: "#111" }}>
-            Thời trang
-          </Link>
-        </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <Input
             className="header-search"
             placeholder="Tìm kiếm..."
@@ -183,7 +162,7 @@ const Header = () => {
             onChange={(e) => setSearchVal(e.target.value)}
             onPressEnter={() => handleSearch(searchVal)}
             style={{
-              width: 300,
+              width: 450,
               borderRadius: 30,
               backgroundColor: "#f5f5f5",
             }}
@@ -232,11 +211,23 @@ const Header = () => {
               placement="bottomRight"
               trigger={["hover"]}
             >
-              <Button type="text" icon={<UserOutlined />} style={{ color: "#111" }} />
+              <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", marginLeft: 8 }}>
+                <Avatar
+                  src={userObj?.avatar}
+                  style={{ backgroundColor: "#af101a", verticalAlign: "middle" }}
+                >
+                  {(userObj?.full_name || userObj?.username || "T")
+                    .replace(/\s*\([^)]*\)/g, "")
+                    .trim()[0]?.toUpperCase()}
+                </Avatar>
+                <span style={{ fontWeight: 600, color: "#111", fontSize: 14 }}>
+                  {(userObj?.full_name || userObj?.username || "Tài khoản").replace(/\s*\([^)]*\)/g, "").trim()}
+                </span>
+              </div>
             </Dropdown>
           ) : (
             <Link to="/login">
-              <Button type="text" icon={<UserOutlined />} style={{ color: "#111" }} />
+              <Button type="text" icon={<UserOutlined />} style={{ color: "#111", fontSize: 22 }} />
             </Link>
           )}
         </div>

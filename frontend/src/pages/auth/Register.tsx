@@ -49,8 +49,7 @@ const Register = () => {
       <main
         className="auth-main"
         style={{
-          backgroundImage:
-            "url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070&auto=format&fit=crop')",
+          backgroundImage: "url('/login.png')",
         }}
       >
         <div className="form-container">

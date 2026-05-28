@@ -13,8 +13,8 @@
   .auth-header {
     padding: 24px 40px;
     background-color: @white;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-    
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+
     .header-container {
       max-width: 1200px;
       margin: 0 auto;
@@ -53,6 +53,7 @@
         color: @primary-red;
         font-size: 14px;
         text-decoration: none;
+
         &:hover {
           opacity: 0.8;
         }
@@ -74,8 +75,11 @@
     &::before {
       content: '';
       position: absolute;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.1);
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.1);
     }
 
     .form-container {
@@ -84,13 +88,13 @@
       max-width: 1200px;
       width: 100%;
       display: flex;
-      justify-content: flex-end;
+      justify-content: flex-start;
 
       .auth-card {
         background: @white;
         padding: 40px;
         border-radius: 4px;
-        box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
         width: 100%;
         max-width: 400px;
 
@@ -132,7 +136,7 @@
             border-radius: 2px;
             text-transform: uppercase;
             margin-top: 0px;
-            
+
             &:hover {
               background: #333 !important;
             }
@@ -143,6 +147,7 @@
             justify-content: space-between;
             margin-top: 12px;
             font-size: 13px;
+
             a {
               color: #0055aa;
               text-decoration: none;
@@ -151,6 +156,7 @@
 
           .social-divider {
             margin: 30px 0;
+
             span {
               font-size: 12px;
               color: #ccc;
@@ -162,7 +168,7 @@
             display: grid;
             grid-template-cols: 1fr 1fr;
             gap: 12px;
-            
+
             .ant-btn {
               display: flex;
               align-items: center;
@@ -177,7 +183,7 @@
             text-align: center;
             margin-top: 40px;
             font-size: 14px;
-            color: rgba(0,0,0,0.26);
+            color: rgba(0, 0, 0, 0.26);
 
             .link {
               color: @primary-red;
@@ -199,15 +205,16 @@
     .footer-content {
       max-width: 1200px;
       margin: 0 auto;
-      
+
       .footer-links {
         display: flex;
         justify-content: center;
         gap: 32px;
         margin-bottom: 24px;
+
         span {
           font-size: 12px;
-          color: rgba(0,0,0,0.54);
+          color: rgba(0, 0, 0, 0.54);
           cursor: pointer;
         }
       }
@@ -215,7 +222,7 @@
       .copyright {
         text-align: center;
         font-size: 12px;
-        color: rgba(0,0,0,0.54);
+        color: rgba(0, 0, 0, 0.54);
       }
     }
   }
