@@ -3,7 +3,7 @@ import { Form, Input, Button, Divider, message } from "antd";
 import { UserOutlined, LockOutlined, GoogleOutlined, FacebookFilled } from "@ant-design/icons";
 import { Link, useNavigate } from "react-router-dom";
 import { useGoogleLogin } from "@react-oauth/google";
-import { login, loginGoogle, loginFacebook } from "../../services/Auth/apiClient";
+import { login, loginGoogle, loginFacebook } from "../../services/client/auth/apiClient";
 import "./Auth.less";
 
 const Login = () => {
@@ -52,7 +52,7 @@ const Login = () => {
               localStorage.setItem("accessToken", res.token);
               localStorage.setItem("user", JSON.stringify(res.data));
               message.success("Đăng nhập bằng Facebook thành công!");
-              if (res.data.role === "Admin") {
+              if (res.data.role === "Admin" || res.data.role === "Staff") {
                 navigate("/admin/dashboard");
               } else {
                 navigate("/");
@@ -74,14 +74,14 @@ const Login = () => {
   };
 
   const handleGoogleLogin = useGoogleLogin({
-    onSuccess: async (tokenResponse) => {
+    onSuccess: async (tokenResponse: { access_token: string }) => {
       setLoading(true);
       try {
         const { data: res } = await loginGoogle(tokenResponse.access_token);
         localStorage.setItem("accessToken", res.token);
         localStorage.setItem("user", JSON.stringify(res.data));
         message.success("Đăng nhập bằng Google thành công!");
-        if (res.data.role === "Admin") {
+        if (res.data.role === "Admin" || res.data.role === "Staff") {
           navigate("/admin/dashboard");
         } else {
           navigate("/");
@@ -108,7 +108,7 @@ const Login = () => {
       message.success("Đăng nhập thành công!");
 
       // Redirect based on role if needed, or default to Home
-      if (res.data.role === "Admin") {
+      if (res.data.role === "Admin" || res.data.role === "Staff") {
         navigate("/admin/dashboard");
       } else {
         navigate("/");
