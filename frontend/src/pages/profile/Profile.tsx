@@ -35,19 +35,19 @@ import {
   SyncOutlined,
 } from "@ant-design/icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getProfile, updateProfile, changePassword } from "../../services/Profile/apiClient";
+import { getProfile, updateProfile, changePassword } from "../../services/client/profile/apiClient";
 import {
   getAddresses,
   createAddress,
   updateAddress,
   deleteAddress,
   setDefaultAddress,
-} from "../../services/Address/apiClient";
-import { getComplaints, getComplaintById, createComplaint } from "../../services/Complaint/apiClient";
-import type { IAddress, IUpdateAddressRequest } from "../../services/Address/typing";
-import type { IProfile, IUpdateProfileRequest, IChangePasswordRequest } from "../../services/Profile/typing";
-import type { IComplaint, ICreateComplaintRequest } from "../../services/Complaint/typing";
-import { getOrders } from "../../services/Order/apiClient";
+} from "../../services/client/address/apiClient";
+import { getComplaints, getComplaintById, createComplaint } from "../../services/client/complaint/apiClient";
+import type { IAddress, IUpdateAddressRequest } from "../../services/client/address/typing";
+import type { IProfile, IUpdateProfileRequest, IChangePasswordRequest } from "../../services/client/profile/typing";
+import type { IComplaint, ICreateComplaintRequest } from "../../services/client/complaint/typing";
+import { getOrders } from "../../services/client/order/apiClient";
 import type { RcFile } from "antd/es/upload";
 import ImageCropUploader from "../../components/ImageCropUploader";
 import "./Profile.less";

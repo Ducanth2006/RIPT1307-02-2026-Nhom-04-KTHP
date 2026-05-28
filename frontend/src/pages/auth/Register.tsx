@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Form, Input, Button, Divider, message } from "antd";
 import { UserOutlined, LockOutlined, GoogleOutlined, FacebookFilled, MailOutlined } from "@ant-design/icons";
 import { Link, useNavigate } from "react-router-dom";
-import { register } from "../../services/Auth/apiClient";
+import { register } from "../../services/client/auth/apiClient";
 import "./Auth.less";
 
 const Register = () => {

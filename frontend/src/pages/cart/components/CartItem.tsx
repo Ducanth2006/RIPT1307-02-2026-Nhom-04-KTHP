@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { MinusOutlined, PlusOutlined } from "@ant-design/icons";
-import type { Cart as CartType } from "../../../services/Cart/typing";
+import type { Cart as CartType } from "../../../services/client/cart/typing";
 
 interface CartItemProps {
   item: CartType.ICartItem;

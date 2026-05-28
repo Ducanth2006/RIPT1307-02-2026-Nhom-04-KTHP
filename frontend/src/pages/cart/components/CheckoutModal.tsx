@@ -2,8 +2,8 @@ import { Modal, Form, Input, Radio, Divider, Tag, Button, Typography, Popover, L
 import { ShoppingCartOutlined, EnvironmentOutlined, DollarCircleOutlined, TagsOutlined } from "@ant-design/icons";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { getVouchers } from "../../../services/Voucher/apiClient";
-import type { IAddress } from "../../../services/Address/typing";
+import { getVouchers } from "../../../services/client/voucher/apiClient";
+import type { IAddress } from "../../../services/client/address/typing";
 
 const { Text } = Typography;
 const formatPrice = (p: number) => Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(p);

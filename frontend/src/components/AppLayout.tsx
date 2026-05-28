@@ -19,9 +19,9 @@ import {
 } from "lucide-react";
 import { Avatar, Dropdown, Popover, FloatButton, message } from "antd";
 import NotificationPanel from "./NotificationPanel";
-import { logout } from "../services/Auth/apiClient";
+import { logout } from "../services/client/auth/apiClient";
 import { useQuery } from "@tanstack/react-query";
-import { getNotificationsApi } from "../services/Notification/apiClient";
+import { getNotificationsApi } from "../services/client/notification/apiClient";
 
 export default function AppLayout() {
   const location = useLocation();
@@ -49,7 +49,13 @@ export default function AppLayout() {
     return <Navigate to="/login" replace />;
   }
 
-  // 🛡️ Route Guard: Chỉ Quản trị viên (Admin) mới có quyền vào quản lý Users, Báo cáo & Cài đặt hệ thống
+  // 🛡️ Chỉ Admin và Staff (Nhân viên) mới được truy cập vào trang quản trị /admin/*
+  if (userObj?.role !== "Admin" && userObj?.role !== "Staff") {
+    message.error("Bạn không có quyền truy cập vào trang quản trị!");
+    return <Navigate to="/" replace />;
+  }
+
+  // 🛡️ Route Guard: Chỉ Quản trị viên (Admin) mới có quyền vào các trang ẩn (Users, Báo cáo & Cài đặt hệ thống)
   const isProtectedPath = currentPath.startsWith("/admin/users") || currentPath.startsWith("/admin/settings") || currentPath.startsWith("/admin/reports");
   if (isProtectedPath && userObj?.role !== "Admin") {
     message.error("Bạn không có quyền truy cập vào khu vực bảo mật này! Chỉ dành cho Quản trị viên (Admin).");

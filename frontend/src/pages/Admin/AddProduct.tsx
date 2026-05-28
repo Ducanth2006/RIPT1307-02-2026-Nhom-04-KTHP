@@ -12,7 +12,6 @@ import {
   Button,
   Select,
   Card,
-  Upload,
   Switch,
   message,
   Divider,
@@ -21,26 +20,28 @@ import {
   Col,
   Image,
   Spin,
-  Alert
+  Alert,
+  Empty
 } from 'antd';
-
-import type { UploadFile } from 'antd/es/upload/interface';
 
 import {
   ArrowLeft,
   Save,
   PackagePlus,
-  UploadCloud,
   Image as ImageIcon,
   BadgeDollarSign,
   Layers3,
   Package2,
   FileText,
-  CheckCircle2
+  CheckCircle2,
+  Trash2,
+  Plus
 } from 'lucide-react';
 
 import axiosInstance from '../../utils/axiosConfig';
 import ip from '../../utils/ip';
+import ProductImageUploader, { ProductImage } from '../../components/ProductImageUploader';
+import { createAdminProduct } from '../../services/admin/productService';
 
 export default function AddProduct() {
   const navigate = useNavigate();
@@ -59,8 +60,14 @@ export default function AddProduct() {
   const [categories, setCategories] =
     useState<any[]>([]);
 
-  const [imageList, setImageList] =
-    useState<UploadFile[]>([]);
+  const [images, setImages] =
+    useState<ProductImage[]>([]);
+
+  const [variants, setVariants] = useState<
+    { key: number; size: string; color: string; price: number; stock: number; cost_price: number }[]
+  >([
+    { key: 1, size: 'M', color: 'Đen', price: 0, stock: 10, cost_price: 0 }
+  ]);
 
   // =========================
   // FETCH CATEGORY
@@ -102,67 +109,34 @@ export default function AddProduct() {
         const values =
           await form.validateFields();
 
+        if (variants.length === 0) {
+          messageApi.warning('Vui lòng thêm ít nhất một phân loại (Size & Màu sắc)!');
+          return;
+        }
+
         setSubmitting(true);
 
-        const formData =
-          new FormData();
+        const mappedVariants = variants.map((v, index) => ({
+          sku: `SKU-${Date.now()}-${index}`,
+          size: v.size,
+          color: v.color,
+          price: v.price || values.base_price || 0,
+          cost_price: v.cost_price || 0,
+          stock_quantity: v.stock || 0
+        }));
 
-        formData.append(
-          'name',
-          values.name
-        );
+        const payload = {
+          name: values.name,
+          brand: values.brand || '',
+          base_price: values.base_price,
+          category_id: values.category_id,
+          description: values.description || '',
+          status: values.status ? 'Active' : 'Draft',
+          variants: mappedVariants,
+          images: images
+        };
 
-        formData.append(
-          'brand',
-          values.brand || ''
-        );
-
-        formData.append(
-          'base_price',
-          values.base_price
-        );
-
-        formData.append(
-          'category_id',
-          values.category_id
-        );
-
-        formData.append(
-          'description',
-          values.description || ''
-        );
-
-        formData.append(
-          'status',
-          values.status
-            ? 'Active'
-            : 'Draft'
-        );
-
-        formData.append(
-          'stock',
-          values.stock || 0
-        );
-
-        imageList.forEach((file) => {
-          if (file.originFileObj) {
-            formData.append(
-              'images',
-              file.originFileObj
-            );
-          }
-        });
-
-        await axiosInstance.post(
-          `${ip}/admin/products`,
-          formData,
-          {
-            headers: {
-              'Content-Type':
-                'multipart/form-data'
-            }
-          }
-        );
+        await createAdminProduct(payload);
 
         messageApi.success(
           'Tạo sản phẩm thành công'
@@ -347,69 +321,142 @@ export default function AddProduct() {
                   </h2>
                 </div>
 
-                <div className="p-6 space-y-5">
-                  <Upload.Dragger
-                    multiple
-                    beforeUpload={() =>
-                      false
-                    }
-                    fileList={imageList}
-                    onChange={({
-                      fileList
-                    }) =>
-                      setImageList(
-                        fileList
-                      )
-                    }
-                    listType="picture"
-                    className="rounded-2xl"
+                <div className="p-6">
+                  <ProductImageUploader value={images} onChange={setImages} maxImages={20} />
+                </div>
+              </div>
+
+              {/* PHÂN LOẠI SẢN PHẨM (VARIANTS) */}
+              <div className="bg-white border border-[#e4beba] rounded-xl shadow-sm overflow-hidden">
+                <div className="px-6 py-5 border-b border-[#f3dede] flex items-center justify-between">
+                  <h2 className="text-xl font-bold text-[#191c1e] flex items-center gap-2">
+                    <Layers3 size={22} className="text-[#af101a]" />
+                    Phân loại sản phẩm (Size & Màu sắc)
+                  </h2>
+                  <Button
+                    type="dashed"
+                    onClick={() => {
+                      const basePrice = form.getFieldValue('base_price') || 0;
+                      setVariants([
+                        ...variants,
+                        {
+                          key: Date.now() + Math.random(),
+                          size: 'M',
+                          color: 'Trắng',
+                          price: basePrice,
+                          stock: 10,
+                          cost_price: 0
+                        }
+                      ]);
+                    }}
+                    icon={<Plus size={16} />}
                   >
-                    <p className="flex justify-center mb-3">
-                      <UploadCloud
-                        size={42}
-                        className="text-[#af101a]"
-                      />
-                    </p>
+                    Thêm phân loại
+                  </Button>
+                </div>
 
-                    <p className="text-lg font-semibold">
-                      Upload ảnh sản phẩm
-                    </p>
-
-                    <p className="text-[#666] mt-1">
-                      Kéo thả ảnh hoặc nhấn để tải
-                      lên
-                    </p>
-                  </Upload.Dragger>
-
-                  {imageList.length >
-                    0 && (
-                    <div className="flex flex-wrap gap-4">
-                      {imageList.map(
-                        (
-                          file,
-                          index
-                        ) => (
-                          <div
-                            key={
-                              index
-                            }
-                            className="border rounded-2xl overflow-hidden"
-                          >
-                            <Image
-                              width={
-                                110
-                              }
-                              height={
-                                110
-                              }
-                              className="object-cover"
-                              src={URL.createObjectURL(
-                                file.originFileObj as Blob
-                              )}
+                <div className="p-6">
+                  {variants.length === 0 ? (
+                    <Empty description="Chưa có phân loại nào. Nhấp 'Thêm phân loại' để thêm." />
+                  ) : (
+                    <div className="space-y-4">
+                      {variants.map((item, index) => (
+                        <div
+                          key={item.key}
+                          className="flex flex-col md:flex-row items-start md:items-center gap-4 p-4 border border-[#f3dede] rounded-xl bg-[#fffbfb]"
+                        >
+                          <div className="w-full md:w-1/6">
+                            <label className="text-xs font-semibold text-[#5b403d] mb-1 block">Size</label>
+                            <Select
+                              value={item.size}
+                              onChange={(val) => {
+                                const updated = [...variants];
+                                updated[index].size = val;
+                                setVariants(updated);
+                              }}
+                              className="w-full"
+                              placeholder="Chọn size"
+                              options={[
+                                { value: 'S', label: 'Size S' },
+                                { value: 'M', label: 'Size M' },
+                                { value: 'L', label: 'Size L' },
+                                { value: 'XL', label: 'Size XL' },
+                                { value: 'XXL', label: 'Size XXL' },
+                                { value: 'Freesize', label: 'Freesize' }
+                              ]}
                             />
                           </div>
-                        )
-                      )}
+
+                          <div className="w-full md:w-1/6">
+                            <label className="text-xs font-semibold text-[#5b403d] mb-1 block">Màu sắc</label>
+                            <Input
+                              value={item.color}
+                              onChange={(e) => {
+                                const updated = [...variants];
+                                updated[index].color = e.target.value;
+                                setVariants(updated);
+                              }}
+                              placeholder="Ví dụ: Đen, Trắng..."
+                            />
+                          </div>
+
+                          <div className="w-full md:w-1/5">
+                            <label className="text-xs font-semibold text-[#5b403d] mb-1 block">Giá vốn (VND)</label>
+                            <InputNumber
+                              value={item.cost_price || 0}
+                              onChange={(val) => {
+                                const updated = [...variants];
+                                updated[index].cost_price = val || 0;
+                                setVariants(updated);
+                              }}
+                              min={0}
+                              className="w-full"
+                              placeholder="Giá nhập..."
+                            />
+                          </div>
+
+                          <div className="w-full md:w-1/5">
+                            <label className="text-xs font-semibold text-[#5b403d] mb-1 block">Giá bán (VND)</label>
+                            <InputNumber
+                              value={item.price}
+                              onChange={(val) => {
+                                const updated = [...variants];
+                                updated[index].price = val || 0;
+                                setVariants(updated);
+                              }}
+                              min={0}
+                              className="w-full"
+                              placeholder="Nhập giá..."
+                            />
+                          </div>
+
+                          <div className="w-full md:w-1/6">
+                            <label className="text-xs font-semibold text-[#5b403d] mb-1 block">Số lượng tồn</label>
+                            <InputNumber
+                              value={item.stock}
+                              onChange={(val) => {
+                                const updated = [...variants];
+                                updated[index].stock = val || 0;
+                                setVariants(updated);
+                              }}
+                              min={0}
+                              className="w-full"
+                              placeholder="Tồn kho"
+                            />
+                          </div>
+
+                          <div className="pt-5 self-end md:self-center">
+                            <Button
+                              type="text"
+                              danger
+                              onClick={() => {
+                                setVariants(variants.filter((v) => v.key !== item.key));
+                              }}
+                              icon={<Trash2 size={18} />}
+                            />
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
@@ -429,34 +476,20 @@ export default function AddProduct() {
                   />
 
                   <h3 className="text-lg font-bold">
-                    Giá & Kho hàng
+                    Giá bán sản phẩm
                   </h3>
                 </div>
 
                 <Form.Item
                   name="base_price"
-                  label="Giá bán"
+                  label="Giá cơ bản"
                   rules={[
                     {
                       required: true,
                       message:
-                        'Vui lòng nhập giá bán'
+                        'Vui lòng nhập giá cơ bản'
                     }
                   ]}
-                >
-                  <InputNumber
-                    min={0}
-                    size="large"
-                    style={{
-                      width: '100%'
-                    }}
-                    placeholder="0"
-                  />
-                </Form.Item>
-
-                <Form.Item
-                  name="stock"
-                  label="Số lượng tồn"
                 >
                   <InputNumber
                     min={0}

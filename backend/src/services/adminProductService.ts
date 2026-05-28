@@ -78,14 +78,37 @@ export const createProductWithDetails = async (productData: any, variants: any[]
     // ── Bước 2: Thêm vào bảng product_variants (nếu có) ──
     if (variants && variants.length > 0) {
         const variantsToInsert = variants.map(v => ({ ...v, product_id: product.id }));
-        const { error: variantErr } = await supabaseClient
+        const { data: insertedVariants, error: variantErr } = await supabaseClient
             .from('product_variants')
-            .insert(variantsToInsert);
+            .insert(variantsToInsert)
+            .select();
 
         if (variantErr) {
             // ⚡ ROLLBACK: Xóa sản phẩm đã tạo ở bước 1
             await supabaseClient.from('products').delete().eq('id', product.id);
             throw { code: 'VARIANT_FAILED', message: 'Lỗi khi thêm biến thể. Đã rollback sản phẩm.', details: variantErr };
+        }
+
+        // ── Tự động ghi nhận Lịch sử Nhập kho ban đầu (Initial Inventory Logs) ──
+        if (insertedVariants && insertedVariants.length > 0) {
+            const logsToInsert = insertedVariants
+                .filter(v => Number(v.stock_quantity || 0) > 0)
+                .map(v => ({
+                    variant_id: v.id,
+                    action_type: 'IMPORT',
+                    quantity: Number(v.stock_quantity),
+                    cost_price: Number(v.cost_price || 0)
+                }));
+
+            if (logsToInsert.length > 0) {
+                const { error: logErr } = await supabaseClient
+                    .from('inventory_logs')
+                    .insert(logsToInsert);
+                
+                if (logErr) {
+                    console.error("⚠️ Lỗi chèn logs tồn kho ban đầu:", logErr);
+                }
+            }
         }
     }
 

@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Button, List, Spin } from 'antd';
 import { Package, AlertTriangle, ShieldAlert, CheckCircle, Clock, CheckCheck, Trash2, Bell } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { getNotificationsApi, readNotificationApi, readAllNotificationsApi } from '../services/Notification/apiClient';
+import { getNotificationsApi, readNotificationApi, readAllNotificationsApi } from '../services/client/notification/apiClient';
 
 interface UINotification {
   id: string;

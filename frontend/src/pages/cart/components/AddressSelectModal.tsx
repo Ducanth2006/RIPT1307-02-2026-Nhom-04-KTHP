@@ -1,6 +1,6 @@
 import { Modal, Empty, List, Typography, Divider, Tag, Button } from "antd";
 import { CheckOutlined } from "@ant-design/icons";
-import type { IAddress } from "../../../services/Address/typing";
+import type { IAddress } from "../../../services/client/address/typing";
 
 const { Text } = Typography;
 

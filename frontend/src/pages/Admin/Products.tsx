@@ -24,7 +24,8 @@ import {
   Popconfirm,
   Dropdown,
   Card,
-  Statistic
+  Statistic,
+  Divider
 } from 'antd';
 
 import type {
@@ -56,7 +57,7 @@ import {
   getAdminProductStats,
   deleteAdminProduct,
   updateAdminProduct
-} from '../../services/adminProductService';
+} from '../../services/admin/productService';
 
 import axiosInstance from '../../utils/axiosConfig';
 import ip from '../../utils/ip';
@@ -66,6 +67,16 @@ interface ProductImage {
   is_main?: boolean;
   url?: string;
   image_url?: string;
+}
+
+interface ProductVariant {
+  id?: number;
+  size?: string;
+  color?: string;
+  price?: number;
+  stock_quantity?: number;
+  sku?: string;
+  cost_price?: number;
 }
 
 interface ProductItem {
@@ -85,6 +96,7 @@ interface ProductItem {
   };
 
   product_images?: ProductImage[];
+  product_variants?: ProductVariant[];
 }
 
 export default function Products() {
@@ -141,6 +153,10 @@ export default function Products() {
 
   const [editingImages, setEditingImages] =
     useState<{ image_url: string; is_main: boolean }[]>([]);
+
+  const [editingVariants, setEditingVariants] = useState<
+    { key: number; id?: number; size: string; color: string; price: number; stock: number; cost_price: number }[]
+  >([]);
 
   const [form] = Form.useForm();
 
@@ -295,6 +311,17 @@ export default function Products() {
     })) || [];
     setEditingImages(imgs);
 
+    const varts = product.product_variants?.map((v, index) => ({
+      key: v.id || Date.now() + index + Math.random(),
+      id: v.id,
+      size: v.size || 'M',
+      color: v.color || 'Trắng',
+      price: v.price || product.base_price || 0,
+      stock: v.stock_quantity || 0,
+      cost_price: v.cost_price || 0
+    })) || [];
+    setEditingVariants(varts);
+
     form.setFieldsValue({
       name: product.name,
       brand: product.brand,
@@ -313,6 +340,20 @@ export default function Products() {
         const values =
           await form.validateFields();
 
+        if (editingVariants.length === 0) {
+          messageApi.warning('Vui lòng thêm ít nhất một phân loại (Size & Màu sắc)!');
+          return;
+        }
+
+        const mappedVariants = editingVariants.map((v, index) => ({
+          sku: `SKU-${Date.now()}-${index}`,
+          size: v.size,
+          color: v.color,
+          price: v.price || values.base_price || 0,
+          cost_price: v.cost_price || 0,
+          stock_quantity: v.stock || 0
+        }));
+
         await updateAdminProduct(
           editingProduct?.id || '',
           {
@@ -322,7 +363,8 @@ export default function Products() {
             category_id: values.category_id,
             description: values.description,
             status: values.status ? 'Active' : 'Draft',
-            images: editingImages
+            images: editingImages,
+            variants: mappedVariants
           }
         );
 
@@ -1112,7 +1154,7 @@ export default function Products() {
         onOk={onEditModalOk}
         okText="Lưu thay đổi"
         cancelText="Hủy"
-        width={800}
+        width={1000}
         okButtonProps={{ style: { backgroundColor: '#af101a', borderColor: '#af101a' } }}
         destroyOnClose
       >
@@ -1222,10 +1264,154 @@ export default function Products() {
                 <ProductImageUploader
                   value={editingImages}
                   onChange={setEditingImages}
-                  maxImages={5}
+                  maxImages={20}
                 />
               </div>
             </div>
+          </div>
+
+          <Divider style={{ margin: '24px 0 16px 0', borderColor: '#f3dede' }}>
+            <span className="text-[#af101a] font-bold flex items-center gap-2">
+              <Layers3 size={18} /> Phân loại sản phẩm (Size & Màu sắc)
+            </span>
+          </Divider>
+
+          <div className="p-4 border border-[#e4beba] rounded-xl bg-white space-y-4">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-xs font-semibold text-gray-500">
+                Danh sách biến thể của sản phẩm
+              </span>
+              <Button
+                type="dashed"
+                onClick={() => {
+                  const basePrice = form.getFieldValue('base_price') || 0;
+                  setEditingVariants([
+                    ...editingVariants,
+                    {
+                      key: Date.now() + Math.random(),
+                      size: 'M',
+                      color: 'Trắng',
+                      price: basePrice,
+                      stock: 10,
+                      cost_price: 0
+                    }
+                  ]);
+                }}
+                icon={<Plus size={14} />}
+                size="small"
+              >
+                Thêm phân loại
+              </Button>
+            </div>
+
+            {editingVariants.length === 0 ? (
+              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có phân loại nào." />
+            ) : (
+              <div className="max-h-[300px] overflow-y-auto pr-1 space-y-3">
+                {editingVariants.map((item, index) => (
+                  <div
+                    key={item.key}
+                    className="flex flex-col sm:flex-row items-center gap-3 p-3 border border-[#f3dede] rounded-lg bg-[#fffcfc]"
+                  >
+                    <div className="w-full sm:w-1/6">
+                      <label className="text-[11px] font-semibold text-[#5b403d] mb-0.5 block">Size</label>
+                      <Select
+                        value={item.size}
+                        onChange={(val) => {
+                          const updated = [...editingVariants];
+                          updated[index].size = val;
+                          setEditingVariants(updated);
+                        }}
+                        className="w-full"
+                        size="small"
+                        options={[
+                          { value: 'S', label: 'Size S' },
+                          { value: 'M', label: 'Size M' },
+                          { value: 'L', label: 'Size L' },
+                          { value: 'XL', label: 'Size XL' },
+                          { value: 'XXL', label: 'Size XXL' },
+                          { value: 'Freesize', label: 'Freesize' }
+                        ]}
+                      />
+                    </div>
+
+                    <div className="w-full sm:w-1/6">
+                      <label className="text-[11px] font-semibold text-[#5b403d] mb-0.5 block">Màu sắc</label>
+                      <Input
+                        value={item.color}
+                        onChange={(e) => {
+                          const updated = [...editingVariants];
+                          updated[index].color = e.target.value;
+                          setEditingVariants(updated);
+                        }}
+                        size="small"
+                        placeholder="Màu sắc..."
+                      />
+                    </div>
+
+                    <div className="w-full sm:w-1/5">
+                      <label className="text-[11px] font-semibold text-[#5b403d] mb-0.5 block">Giá vốn (VND)</label>
+                      <InputNumber
+                        value={item.cost_price || 0}
+                        onChange={(val) => {
+                          const updated = [...editingVariants];
+                          updated[index].cost_price = val || 0;
+                          setEditingVariants(updated);
+                        }}
+                        min={0}
+                        size="small"
+                        className="w-full"
+                        placeholder="Giá nhập..."
+                      />
+                    </div>
+
+                    <div className="w-full sm:w-1/5">
+                      <label className="text-[11px] font-semibold text-[#5b403d] mb-0.5 block">Giá bán (VND)</label>
+                      <InputNumber
+                        value={item.price}
+                        onChange={(val) => {
+                          const updated = [...editingVariants];
+                          updated[index].price = val || 0;
+                          setEditingVariants(updated);
+                        }}
+                        min={0}
+                        size="small"
+                        className="w-full"
+                        placeholder="Giá bán..."
+                      />
+                    </div>
+
+                    <div className="w-full sm:w-1/6">
+                      <label className="text-[11px] font-semibold text-[#5b403d] mb-0.5 block">Số lượng tồn</label>
+                      <InputNumber
+                        value={item.stock}
+                        onChange={(val) => {
+                          const updated = [...editingVariants];
+                          updated[index].stock = val || 0;
+                          setEditingVariants(updated);
+                        }}
+                        min={0}
+                        size="small"
+                        className="w-full"
+                        placeholder="Số lượng..."
+                      />
+                    </div>
+
+                    <div className="pt-4 self-end sm:self-center">
+                      <Button
+                        type="text"
+                        danger
+                        onClick={() => {
+                          setEditingVariants(editingVariants.filter((v) => v.key !== item.key));
+                        }}
+                        icon={<Trash2 size={16} />}
+                        size="small"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </Form>
       </Modal>
