@@ -28,7 +28,7 @@ const ProductCard = ({ product, badge }: Props) => {
       style={{ height: "100%", borderRadius: 8, overflow: "hidden" }}
       cover={
         <div style={{ position: "relative" }}>
-          <Image src={imageUrl} alt={product.name} style={{ height: 280, objectFit: "cover" }} preview={false} />
+          <Image src={imageUrl} alt={product.name} width="100%" style={{ width: "100%", height: 280, objectFit: "cover" }} preview={false} />
 
           {/* Badge NEW/LIMITED/HOT */}
           {displayBadge && (
