@@ -3,8 +3,8 @@ import { List, Typography, Button, Space, Modal, Card, Pagination, Empty, Breadc
 import { BellOutlined, CheckOutlined, ClockCircleOutlined, EyeOutlined, HomeOutlined } from "@ant-design/icons";
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getNotificationsApi, readAllNotificationsApi, readNotificationApi } from "../../services/Notification/apiClient";
-import type { Notification as NotificationType } from "../../services/Notification/typing";
+import { getNotificationsApi, readAllNotificationsApi, readNotificationApi } from "../../services/client/notification/apiClient";
+import type { Notification as NotificationType } from "../../services/client/notification/typing";
 
 const { Text, Title, Paragraph } = Typography;
 
