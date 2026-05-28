@@ -3,7 +3,7 @@ import { Button, Spin } from "antd";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { LeftOutlined, RightOutlined } from "@ant-design/icons";
-import { getCategories } from "../../services/Category/apiClient";
+import { getCategories } from "../../services/client/category/apiClient";
 
 const CategoryBar = () => {
   const navigate = useNavigate();
