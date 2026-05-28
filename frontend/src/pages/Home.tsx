@@ -36,7 +36,7 @@ const Home = () => {
   return (
     <>
       {/* ==================== HERO BANNER ==================== */}
-      <div style={{ position: "relative", height: "680px" }}>
+      <div style={{ position: "relative" }}>
         <Carousel
           ref={carouselRef}
           autoplay
@@ -46,7 +46,6 @@ const Home = () => {
           easing="cubic-bezier(0.25, 1, 0.5, 1)"
           infinite={true}
           dots={true}
-          style={{ height: "680px" }}
         >
           {heroImages.map((item, idx) => (
             <div key={idx}>
@@ -58,11 +57,8 @@ const Home = () => {
                 }}
                 style={{
                   position: "relative",
-                  height: "680px",
                   cursor: "pointer",
                   overflow: "hidden",
-                  transform: "translate3d(0,0,0)", // Bắt buộc sử dụng GPU để dịch chuyển mượt mà
-                  willChange: "transform"
                 }}
               >
                 <img
@@ -70,11 +66,8 @@ const Home = () => {
                   alt={`Hero Banner ${idx}`}
                   style={{
                     width: "100%",
-                    height: "100%",
-                    objectFit: "cover",
-                    objectPosition: "center",
+                    height: "auto",
                     display: "block",
-                    transform: "translateZ(0)" // Tối ưu gia tốc phần cứng cho riêng thẻ ảnh
                   }}
                 />
               </div>
