@@ -2,7 +2,7 @@ import { Card, Image, Button, Typography } from "antd";
 import { HeartOutlined, HeartFilled } from "@ant-design/icons";
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import type { Products } from "../../services/Product/typing";
+import type { Products } from "../../services/client/product/typing";
 
 const { Text } = Typography;
 
