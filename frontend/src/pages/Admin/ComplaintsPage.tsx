@@ -39,7 +39,7 @@ import {
   getAdminComplaintById,
   confirmAdminComplaint,
   replyAdminComplaint,
-} from '../../services/adminComplaintService';
+} from '../../services/admin/complaintService';
 
 const { TextArea } = Input;
 
