@@ -84,8 +84,8 @@ const Register = () => {
 
               <div style={{ textAlign: "center", marginTop: 12, fontSize: 12, color: "#888" }}>
                 Bằng việc đăng ký, bạn đã đồng ý với Elite Performance về
-                <span style={{ color: "#ee4d2d" }}> Điều khoản dịch vụ</span> &
-                <span style={{ color: "#ee4d2d" }}> Chính sách bảo mật</span>
+                <span style={{ color: "#af101a" }}> Điều khoản dịch vụ</span> &
+                <span style={{ color: "#af101a" }}> Chính sách bảo mật</span>
               </div>
 
               <Divider className="social-divider">

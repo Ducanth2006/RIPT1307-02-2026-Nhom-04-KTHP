@@ -5,7 +5,7 @@ import {
   ArrowUpRight, ArrowDownRight, Plus, ChevronRight, ChevronLeft,
   DollarSign, ShoppingCart, Users, Clock, Headset,
   RefreshCw, AlertCircle, Package, Boxes, BarChart2,
-  Ticket, FolderTree
+  Ticket, FolderTree, Home
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { getAdminDashboardStats } from '../../services/adminDashboardService';
@@ -185,8 +185,22 @@ export default function Dashboard() {
 
   const { kpis, dailyRevenue, chartMonthLabel, topProducts } = data;
 
+  interface KpiCard {
+    title: string;
+    value: string;
+    fullValue?: string;
+    growth: number | null;
+    icon: any;
+    color: string;
+    bgColor: string;
+    highlight?: boolean;
+    clickPath?: string;
+    urgent?: boolean;
+    subtitle?: string;
+  }
+
   // ── KPI card configurations (5 cards) ──
-  const kpiCards = [
+  const kpiCards: KpiCard[] = [
     {
       title: 'Doanh thu tháng',
       value: formatCurrency(kpis.revenueThisMonth),
@@ -249,12 +263,21 @@ export default function Dashboard() {
   return (
     <div className="p-6 max-w-[1440px] mx-auto space-y-6">
       {/* ═══ Header ═══ */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-[#191c1e]">Trang chủ</h1>
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-[#191c1e] flex items-center gap-3">
+            <Home size={30} className="text-[#af101a]" />
+            Trang Chủ
+          </h1>
+          <p className="text-[#5b403d] mt-2">
+            Tổng quan hoạt động kinh doanh, thống kê doanh thu và phân tích hiệu suất bán hàng.
+          </p>
+        </div>
+
         <Button
           onClick={() => { setChartMonthOffset(0); fetchDashboard(0, false); }}
           icon={<RefreshCw size={14} />}
-          className="flex items-center gap-2 text-[#515f74] border-[#d8dadc] hover:border-[#af101a] hover:text-[#af101a]"
+          className="flex items-center gap-2 text-[#515f74] border-[#d8dadc] hover:border-[#af101a] hover:text-[#af101a] h-10 px-4 rounded-lg"
         >
           Làm mới
         </Button>
@@ -262,57 +285,57 @@ export default function Dashboard() {
 
       {/* ═══ KPI Cards Row (5 cards) ═══ */}
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        {kpiCards.map((kpi, i) => (
-          <div
-            key={i}
-            className={`bg-white border rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md ${
-              kpi.urgent ? 'border-[#d97706] cursor-pointer' : 'border-[#e4beba]'
-            } ${kpi.clickPath ? 'cursor-pointer' : ''}`}
-            onClick={kpi.clickPath ? () => navigate(kpi.clickPath!) : undefined}
-          >
-            {/* Accent bar cho card doanh thu */}
-            {kpi.highlight && <div className="absolute top-0 left-0 w-full h-1 bg-[#af101a]" />}
+        {kpiCards.map((kpi, i) => {
+          const isHighlight = kpi.highlight;
+          return (
+            <div
+              key={i}
+              className={`bg-white border border-[#e4beba] rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md ${
+                isHighlight ? 'border-t-2 border-t-[#af101a]' : kpi.urgent ? 'border-[#d97706]' : ''
+              } ${kpi.clickPath ? 'cursor-pointer' : ''}`}
+              onClick={kpi.clickPath ? () => navigate(kpi.clickPath!) : undefined}
+            >
+              <div className="flex justify-between items-start mb-2">
+                <span className="text-[11px] font-bold text-[#5b403d] uppercase tracking-wider">
+                  {kpi.title}
+                </span>
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${kpi.bgColor}`}>
+                  <kpi.icon size={16} className={kpi.color} />
+                </div>
+              </div>
 
-            <div className="flex justify-between items-start mb-2">
-              <span className="text-[11px] font-semibold text-[#515f74] uppercase tracking-wider">
-                {kpi.title}
-              </span>
-              <div className={`w-8 h-8 rounded-lg ${kpi.bgColor} flex items-center justify-center`}>
-                <kpi.icon size={16} className={kpi.color} />
+              <div className="flex items-baseline gap-1.5">
+                <h2
+                  className="text-2xl font-black text-[#191c1e]"
+                  title={kpi.fullValue || kpi.value}
+                >
+                  {kpi.value}
+                </h2>
+                {kpi.subtitle && (
+                  <span className="text-xs font-semibold text-[#8f6f6c]">{kpi.subtitle}</span>
+                )}
+              </div>
+
+              <div className="mt-1.5">
+                {kpi.growth !== null && kpi.growth !== undefined ? (
+                  <div className={`text-xs font-bold flex items-center gap-1 ${
+                    kpi.growth >= 0 ? 'text-[#2a7a40]' : 'text-[#af101a]'
+                  }`}>
+                    {kpi.growth >= 0 ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+                    <span>{kpi.growth >= 0 ? '+' : ''}{kpi.growth}% so với tháng trước</span>
+                  </div>
+                ) : (
+                  kpi.urgent && (
+                    <div className="text-xs font-bold text-[#d97706] flex items-center gap-1">
+                      <AlertCircle size={12} />
+                      <span>Cần xử lý</span>
+                    </div>
+                  )
+                )}
               </div>
             </div>
-
-            <div className="flex items-baseline gap-1.5">
-              <h2
-                className="text-2xl font-bold text-[#191c1e]"
-                title={kpi.fullValue || kpi.value}
-              >
-                {kpi.value}
-              </h2>
-              {kpi.subtitle && (
-                <span className="text-xs text-[#8f6f6c] font-medium">{kpi.subtitle}</span>
-              )}
-            </div>
-
-            <div className="mt-1.5">
-              {kpi.growth !== null && kpi.growth !== undefined ? (
-                <div className={`text-xs font-medium flex items-center gap-1 ${
-                  kpi.growth >= 0 ? 'text-[#2a7a40]' : 'text-[#af101a]'
-                }`}>
-                  {kpi.growth >= 0 ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-                  <span>{kpi.growth >= 0 ? '+' : ''}{kpi.growth}% so với tháng trước</span>
-                </div>
-              ) : (
-                kpi.urgent && (
-                  <div className="text-xs font-medium text-[#d97706] flex items-center gap-1">
-                    <AlertCircle size={12} />
-                    <span>Cần xử lý</span>
-                  </div>
-                )
-              )}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* ═══ Revenue Chart (30 ngày) & Quick Actions ═══ */}

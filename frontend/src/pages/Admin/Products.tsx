@@ -60,10 +60,12 @@ import {
 
 import axiosInstance from '../../utils/axiosConfig';
 import ip from '../../utils/ip';
+import ProductImageUploader from '../../components/ProductImageUploader';
 
 interface ProductImage {
   is_main?: boolean;
-  url: string;
+  url?: string;
+  image_url?: string;
 }
 
 interface ProductItem {
@@ -75,6 +77,7 @@ interface ProductItem {
   status: string;
   category_id: number;
   main_image?: string;
+  description?: string;
 
   categories?: {
     id: number;
@@ -135,6 +138,9 @@ export default function Products() {
 
   const [editingProduct, setEditingProduct] =
     useState<ProductItem | null>(null);
+
+  const [editingImages, setEditingImages] =
+    useState<{ image_url: string; is_main: boolean }[]>([]);
 
   const [form] = Form.useForm();
 
@@ -283,14 +289,19 @@ export default function Products() {
   ) => {
     setEditingProduct(product);
 
+    const imgs = product.product_images?.map(img => ({
+      image_url: img.image_url || img.url || '',
+      is_main: !!img.is_main
+    })) || [];
+    setEditingImages(imgs);
+
     form.setFieldsValue({
       name: product.name,
       brand: product.brand,
-      base_price:
-        product.base_price,
-      status:
-        product.status ===
-        'Active'
+      base_price: product.base_price,
+      category_id: product.category_id,
+      description: product.description || '',
+      status: product.status === 'Active'
     });
 
     setIsModalVisible(true);
@@ -307,11 +318,11 @@ export default function Products() {
           {
             name: values.name,
             brand: values.brand,
-            base_price:
-              values.base_price,
-            status: values.status
-              ? 'Active'
-              : 'Draft'
+            base_price: values.base_price,
+            category_id: values.category_id,
+            description: values.description,
+            status: values.status ? 'Active' : 'Draft',
+            images: editingImages
           }
         );
 
@@ -866,76 +877,78 @@ export default function Products() {
       {/* STATS */}
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
-        <Card className="rounded-2xl border border-[#ead0d0] shadow-sm">
-          <Statistic
-            title="Tổng sản phẩm"
-            value={
-              stats.totalProducts
-            }
-            prefix={
-              <Box
-                size={18}
-                className="text-[#af101a]"
-              />
-            }
-          />
-        </Card>
+        {/* Tổng sản phẩm - White card with Red Top Accent */}
+        <div className="bg-white border border-[#e4beba] border-t-2 border-t-[#af101a] rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-[11px] font-bold text-[#5b403d] uppercase tracking-wider">
+              Tổng sản phẩm
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-[#fff2f0] flex items-center justify-center">
+              <Box size={16} className="text-[#af101a]" />
+            </div>
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <h2 className="text-2xl font-black text-[#191c1e]">
+              {stats.totalProducts}
+            </h2>
+          </div>
+        </div>
 
-        <Card className="rounded-2xl border border-[#ead0d0] shadow-sm">
-          <Statistic
-            title="Đang hoạt động"
-            value={
-              stats.activeProducts
-            }
-            prefix={
-              <CheckCircle
-                size={18}
-                className="text-[#16a34a]"
-              />
-            }
-            valueStyle={{
-              color: '#16a34a'
-            }}
-          />
-        </Card>
+        {/* Đang hoạt động - White card with Green Accent */}
+        <div className="bg-white border border-[#e4beba] rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-[11px] font-bold text-[#5b403d] uppercase tracking-wider">
+              Đang hoạt động
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-[#f0fdf4] flex items-center justify-center">
+              <CheckCircle size={16} className="text-[#16a34a]" />
+            </div>
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <h2 className="text-2xl font-black text-[#191c1e]">
+              {stats.activeProducts}
+            </h2>
+          </div>
+        </div>
 
-        <Card className="rounded-2xl border border-[#ead0d0] shadow-sm">
-          <Statistic
-            title="Tổng tồn kho"
-            value={
-              stats.totalStock
-            }
-            prefix={
-              <Layers3
-                size={18}
-                className="text-[#2563eb]"
-              />
-            }
-          />
-        </Card>
+        {/* Tổng tồn kho - White card with Blue Accent */}
+        <div className="bg-white border border-[#e4beba] rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-[11px] font-bold text-[#5b403d] uppercase tracking-wider">
+              Tổng tồn kho
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-[#eff6ff] flex items-center justify-center">
+              <Layers3 size={16} className="text-[#2563eb]" />
+            </div>
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <h2 className="text-2xl font-black text-[#191c1e]">
+              {new Intl.NumberFormat('vi-VN').format(stats.totalStock)}
+            </h2>
+          </div>
+        </div>
 
-        <Card className="rounded-2xl border border-[#ead0d0] shadow-sm">
-          <Statistic
-            title="Sắp hết hàng"
-            value={
-              stats.lowStockAlerts
-            }
-            prefix={
-              <AlertTriangle
-                size={18}
-                className="text-[#f97316]"
-              />
-            }
-            valueStyle={{
-              color: '#f97316'
-            }}
-          />
-        </Card>
+        {/* Sắp hết hàng - White card with Orange Accent */}
+        <div className="bg-white border border-[#e4beba] rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-[11px] font-bold text-[#5b403d] uppercase tracking-wider">
+              Sắp hết hàng
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-[#fff7ed] flex items-center justify-center">
+              <AlertTriangle size={16} className="text-[#f97316]" />
+            </div>
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <h2 className="text-2xl font-black text-[#191c1e]">
+              {stats.lowStockAlerts}
+            </h2>
+          </div>
+        </div>
       </div>
 
       {/* MAIN */}
 
-      <div className="bg-white border border-[#ead0d0] rounded-3xl shadow-sm overflow-hidden">
+      <div className="bg-white border border-[#e4beba] rounded-xl shadow-sm overflow-hidden">
         {/* FILTER */}
 
         <div className="p-5 border-b border-[#f1dede]">
@@ -1090,78 +1103,130 @@ export default function Products() {
 
       <Modal
         open={isModalVisible}
-        title="Cập nhật sản phẩm"
-        onCancel={() =>
-          setIsModalVisible(false)
+        title={
+          <div className="text-xl font-bold text-[#af101a] border-b border-[#f3dede] pb-3">
+            Cập nhật sản phẩm
+          </div>
         }
+        onCancel={() => setIsModalVisible(false)}
         onOk={onEditModalOk}
         okText="Lưu thay đổi"
         cancelText="Hủy"
-        width={650}
+        width={800}
+        okButtonProps={{ style: { backgroundColor: '#af101a', borderColor: '#af101a' } }}
+        destroyOnClose
       >
         <Form
           form={form}
           layout="vertical"
+          className="mt-4"
         >
-          <Form.Item
-            name="name"
-            label="Tên sản phẩm"
-            rules={[
-              {
-                required: true,
-                message:
-                  'Nhập tên sản phẩm'
-              }
-            ]}
-          >
-            <Input size="large" />
-          </Form.Item>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1">
+            {/* Cột trái: Thông tin sản phẩm */}
+            <div className="space-y-1">
+              <Form.Item
+                name="name"
+                label={<span className="font-semibold text-[#5b403d]">Tên sản phẩm</span>}
+                rules={[
+                  {
+                    required: true,
+                    message: 'Nhập tên sản phẩm'
+                  }
+                ]}
+              >
+                <Input size="large" className="rounded-lg border-[#e4beba]" />
+              </Form.Item>
 
-          <div className="grid grid-cols-2 gap-4">
-            <Form.Item
-              name="base_price"
-              label="Giá bán"
-              rules={[
-                {
-                  required: true,
-                  message:
-                    'Nhập giá bán'
-                }
-              ]}
-            >
-              <InputNumber
-                min={0}
-                size="large"
-                style={{
-                  width: '100%'
-                }}
-              />
-            </Form.Item>
+              <div className="grid grid-cols-2 gap-4">
+                <Form.Item
+                  name="base_price"
+                  label={<span className="font-semibold text-[#5b403d]">Giá bán (đ)</span>}
+                  rules={[
+                    {
+                      required: true,
+                      message: 'Nhập giá bán'
+                    }
+                  ]}
+                >
+                  <InputNumber
+                    min={0}
+                    size="large"
+                    style={{ width: '100%' }}
+                    className="rounded-lg border-[#e4beba]"
+                  />
+                </Form.Item>
 
-            <Form.Item
-              name="brand"
-              label="Thương hiệu"
-            >
-              <Input size="large" />
-            </Form.Item>
+                <Form.Item
+                  name="brand"
+                  label={<span className="font-semibold text-[#5b403d]">Thương hiệu</span>}
+                >
+                  <Input size="large" className="rounded-lg border-[#e4beba]" />
+                </Form.Item>
+              </div>
+
+              <Form.Item
+                name="category_id"
+                label={<span className="font-semibold text-[#5b403d]">Danh mục sản phẩm</span>}
+                rules={[
+                  {
+                    required: true,
+                    message: 'Vui lòng chọn danh mục'
+                  }
+                ]}
+              >
+                <Select
+                  size="large"
+                  placeholder="Chọn danh mục..."
+                  className="rounded-lg"
+                  options={allCategories
+                    .filter((c) => c.parent_id !== null)
+                    .map((item) => ({
+                      value: item.id,
+                      label: item.name
+                    }))}
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="description"
+                label={<span className="font-semibold text-[#5b403d]">Mô tả sản phẩm</span>}
+              >
+                <Input.TextArea
+                  rows={4}
+                  placeholder="Nhập mô tả sản phẩm..."
+                  className="rounded-lg border-[#e4beba]"
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="status"
+                label={<span className="font-semibold text-[#5b403d]">Trạng thái kích hoạt</span>}
+                valuePropName="checked"
+              >
+                <Switch
+                  checkedChildren="Active"
+                  unCheckedChildren="Draft"
+                />
+              </Form.Item>
+            </div>
+
+            {/* Cột phải: Hình ảnh sản phẩm */}
+            <div className="border-t md:border-t-0 md:border-l border-[#f3dede] pt-4 md:pt-0 md:pl-6 space-y-4">
+              <div>
+                <h3 className="font-bold text-[#5b403d] mb-1">Hình ảnh sản phẩm</h3>
+                <p className="text-xs text-gray-500 mb-4">
+                  Quản lý hình ảnh trực tiếp. Ảnh có viền đỏ nổi bật là ảnh hiển thị chính đại diện cho sản phẩm.
+                </p>
+              </div>
+              <div className="p-4 border border-dashed border-[#e4beba] rounded-xl bg-[#fffaf9]">
+                <ProductImageUploader
+                  value={editingImages}
+                  onChange={setEditingImages}
+                  maxImages={5}
+                />
+              </div>
+            </div>
           </div>
-
-          <Form.Item
-            name="status"
-            label="Trạng thái"
-            valuePropName="checked"
-          >
-            <Switch
-              checkedChildren="Active"
-              unCheckedChildren="Draft"
-            />
-          </Form.Item>
-
-          <Alert
-            type="info"
-            showIcon
-            message="Muốn chỉnh sửa ảnh hoặc biến thể nên vào trang chi tiết sản phẩm."
-          />
         </Form>
       </Modal>
     </div>

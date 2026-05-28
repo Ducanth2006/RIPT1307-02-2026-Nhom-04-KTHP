@@ -248,7 +248,7 @@ export default function AddProduct() {
             <div className="xl:col-span-2 space-y-6">
               {/* INFO */}
 
-              <div className="bg-white border border-[#ead0d0] rounded-3xl shadow-sm overflow-hidden">
+              <div className="bg-white border border-[#e4beba] rounded-xl shadow-sm overflow-hidden">
                 <div className="px-6 py-5 border-b border-[#f3dede]">
                   <h2 className="text-xl font-bold text-[#191c1e] flex items-center gap-2">
                     <FileText
@@ -336,7 +336,7 @@ export default function AddProduct() {
 
               {/* IMAGE */}
 
-              <div className="bg-white border border-[#ead0d0] rounded-3xl shadow-sm overflow-hidden">
+              <div className="bg-white border border-[#e4beba] rounded-xl shadow-sm overflow-hidden">
                 <div className="px-6 py-5 border-b border-[#f3dede]">
                   <h2 className="text-xl font-bold text-[#191c1e] flex items-center gap-2">
                     <ImageIcon
@@ -421,7 +421,7 @@ export default function AddProduct() {
             <div className="space-y-6">
               {/* PRICE */}
 
-              <Card className="rounded-3xl border border-[#ead0d0] shadow-sm">
+              <Card className="rounded-xl border border-[#e4beba] shadow-sm">
                 <div className="flex items-center gap-2 mb-5">
                   <BadgeDollarSign
                     size={22}
@@ -471,7 +471,7 @@ export default function AddProduct() {
 
               {/* STATUS */}
 
-              <Card className="rounded-3xl border border-[#ead0d0] shadow-sm">
+              <Card className="rounded-xl border border-[#e4beba] shadow-sm">
                 <div className="flex items-center gap-2 mb-5">
                   <CheckCircle2
                     size={22}
@@ -504,7 +504,7 @@ export default function AddProduct() {
 
               {/* QUICK INFO */}
 
-              <Card className="rounded-3xl border border-[#ead0d0] shadow-sm">
+              <Card className="rounded-xl border border-[#e4beba] shadow-sm">
                 <div className="flex items-center gap-2 mb-5">
                   <Package2
                     size={22}

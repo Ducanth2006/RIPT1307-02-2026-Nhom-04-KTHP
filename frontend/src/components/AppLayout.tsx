@@ -49,8 +49,8 @@ export default function AppLayout() {
     return <Navigate to="/login" replace />;
   }
 
-  // 🛡️ Route Guard: Chỉ Quản trị viên (Admin) mới có quyền vào quản lý Users & Cài đặt hệ thống
-  const isProtectedPath = currentPath.startsWith("/admin/users") || currentPath.startsWith("/admin/settings");
+  // 🛡️ Route Guard: Chỉ Quản trị viên (Admin) mới có quyền vào quản lý Users, Báo cáo & Cài đặt hệ thống
+  const isProtectedPath = currentPath.startsWith("/admin/users") || currentPath.startsWith("/admin/settings") || currentPath.startsWith("/admin/reports");
   if (isProtectedPath && userObj?.role !== "Admin") {
     message.error("Bạn không có quyền truy cập vào khu vực bảo mật này! Chỉ dành cho Quản trị viên (Admin).");
     return <Navigate to="/admin/dashboard" replace />;
@@ -68,7 +68,7 @@ export default function AppLayout() {
     { name: "Đơn hàng", path: "/admin/orders", icon: ShoppingCart },
     ...(userObj?.role === "Admin" ? [{ name: "Người dùng", path: "/admin/users", icon: Users }] : []),
     { name: "Voucher", path: "/admin/vouchers", icon: Ticket },
-    { name: "Báo cáo", path: "/admin/reports", icon: BarChart2 },
+    ...(userObj?.role === "Admin" ? [{ name: "Báo cáo", path: "/admin/reports", icon: BarChart2 }] : []),
     { name: "Khiếu nại", path: "/admin/complaints", icon: Headset },
     ...(userObj?.role === "Admin" ? [{ name: "Cài đặt", path: "/admin/settings", icon: SettingsIcon }] : []),
   ];

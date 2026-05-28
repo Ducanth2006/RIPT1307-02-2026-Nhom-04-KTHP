@@ -84,7 +84,7 @@ const CheckoutModal = ({
                 }}
               >
                 <div style={{ display: "flex", width: "100%", borderRadius: "4px", border: "1px solid #e8e8e8", overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.05)", opacity: isEligible ? 1 : 0.5 }}>
-                  <div style={{ backgroundColor: "#ee4d2d", color: "#fff", width: "100px", padding: "12px 8px", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", borderRight: "2px dashed #fff" }}>
+                  <div style={{ backgroundColor: "#af101a", color: "#fff", width: "100px", padding: "12px 8px", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", borderRight: "2px dashed #fff" }}>
                     <Text style={{ color: "#fff", fontSize: 16, fontWeight: 800, textAlign: "center", lineHeight: 1.2 }}>
                       {item.discount_type === "Percentage" ? `${item.discount_value}%` : `-${(item.discount_value / 1000)}k`}
                     </Text>
@@ -124,7 +124,7 @@ const CheckoutModal = ({
     <Modal
       title={
         <span>
-          <ShoppingCartOutlined style={{ marginRight: 8, color: "#ee4d2d" }} /> Xác Nhận Đặt Hàng & Thanh Toán
+          <ShoppingCartOutlined style={{ marginRight: 8, color: "#af101a" }} /> Xác Nhận Đặt Hàng & Thanh Toán
         </span>
       }
       open={open}
@@ -154,7 +154,7 @@ const CheckoutModal = ({
       >
         <div style={{ marginBottom: 16 }}>
           <Text strong style={{ fontSize: 15, display: "flex", alignItems: "center", gap: 6 }}>
-            <EnvironmentOutlined style={{ color: "#ee4d2d" }} /> Địa chỉ nhận hàng
+            <EnvironmentOutlined style={{ color: "#af101a" }} /> Địa chỉ nhận hàng
           </Text>
         </div>
 
@@ -179,7 +179,7 @@ const CheckoutModal = ({
                 <Divider type="vertical" style={{ margin: "0 4px" }} />
                 <Text strong>{selectedAddress.phone}</Text>
                 {selectedAddress.is_default && (
-                  <Tag color="red" style={{ borderColor: "#ee4d2d", color: "#ee4d2d", backgroundColor: "#fff5f2" }}>
+                  <Tag color="red" style={{ borderColor: "#af101a", color: "#af101a", backgroundColor: "#fff5f2" }}>
                     Mặc định
                   </Tag>
                 )}
@@ -191,7 +191,7 @@ const CheckoutModal = ({
             <Button
               type="link"
               onClick={onOpenAddressSelect}
-              style={{ color: "#ee4d2d", fontWeight: 500 }}
+              style={{ color: "#af101a", fontWeight: 500 }}
             >
               Thay đổi
             </Button>
@@ -212,7 +212,7 @@ const CheckoutModal = ({
             <Button
               type="primary"
               onClick={onOpenAddAddress}
-              style={{ backgroundColor: "#ee4d2d", border: "none" }}
+              style={{ backgroundColor: "#af101a", border: "none" }}
             >
               + Thêm địa chỉ mới
             </Button>
@@ -246,13 +246,13 @@ const CheckoutModal = ({
             </Form.Item>
             <Popover
               content={voucherContent}
-              title={<span style={{ fontWeight: "bold" }}><TagsOutlined style={{ color: "#ee4d2d", marginRight: 6 }} /> Chọn mã giảm giá</span>}
+              title={<span style={{ fontWeight: "bold" }}><TagsOutlined style={{ color: "#af101a", marginRight: 6 }} /> Chọn mã giảm giá</span>}
               trigger="click"
               placement="bottomRight"
               open={isVoucherOpen}
               onOpenChange={setIsVoucherOpen}
             >
-              <Button type="primary" ghost style={{ borderColor: "#ee4d2d", color: "#ee4d2d" }}>Chọn Voucher</Button>
+              <Button type="primary" ghost style={{ borderColor: "#af101a", color: "#af101a" }}>Chọn Voucher</Button>
             </Popover>
           </div>
         </Form.Item>
@@ -285,7 +285,7 @@ const CheckoutModal = ({
             <br />
             <Text type="secondary">Tổng thanh toán:</Text>
             <br />
-            <Text style={{ fontSize: 24, fontWeight: 700, color: "#ee4d2d" }}>{formatPrice(finalPrice)}</Text>
+            <Text style={{ fontSize: 24, fontWeight: 700, color: "#af101a" }}>{formatPrice(finalPrice)}</Text>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <Button onClick={() => {
@@ -298,7 +298,7 @@ const CheckoutModal = ({
               type="primary"
               htmlType="submit"
               loading={loading}
-              style={{ backgroundColor: "#ee4d2d", borderColor: "#ee4d2d" }}
+              style={{ backgroundColor: "#af101a", borderColor: "#af101a" }}
             >
               Đặt Hàng Ngay
             </Button>

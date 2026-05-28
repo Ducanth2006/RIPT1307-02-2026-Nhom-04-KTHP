@@ -780,52 +780,61 @@ export default function Categories() {
       {/* STATS */}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        <Card className="rounded-2xl border border-[#ead0d0] shadow-sm">
-          <Statistic
-            title="Danh mục ngành hàng"
-            value={stats.parent_categories}
-            prefix={
-              <FolderTree
-                size={18}
-                className="text-[#af101a]"
-              />
-            }
-          />
-        </Card>
+        {/* Danh mục ngành hàng */}
+        <div className="bg-white border border-[#e4beba] border-t-2 border-t-[#af101a] rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-[11px] font-bold text-[#5b403d] uppercase tracking-wider">
+              Danh mục ngành hàng
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-[#fff2f0] flex items-center justify-center">
+              <FolderTree size={16} className="text-[#af101a]" />
+            </div>
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <h2 className="text-2xl font-black text-[#191c1e]">
+              {stats.parent_categories}
+            </h2>
+          </div>
+        </div>
 
-        <Card className="rounded-2xl border border-[#ead0d0] shadow-sm">
-          <Statistic
-            title="Danh mục sản phẩm"
-            value={stats.child_categories}
-            prefix={
-              <FolderTree
-                size={18}
-                className="text-[#2563eb]"
-              />
-            }
-          />
-        </Card>
+        {/* Danh mục sản phẩm */}
+        <div className="bg-white border border-[#e4beba] rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-[11px] font-bold text-[#5b403d] uppercase tracking-wider">
+              Danh mục sản phẩm
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-[#eff6ff] flex items-center justify-center">
+              <FolderTree size={16} className="text-[#2563eb]" />
+            </div>
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <h2 className="text-2xl font-black text-[#191c1e]">
+              {stats.child_categories}
+            </h2>
+          </div>
+        </div>
 
-        <Card className="rounded-2xl border border-[#ead0d0] shadow-sm">
-          <Statistic
-            title="Đang hoạt động"
-            value={activeCategoriesCount}
-            prefix={
-              <Activity
-                size={18}
-                className="text-[#16a34a]"
-              />
-            }
-            valueStyle={{
-              color: '#16a34a'
-            }}
-          />
-        </Card>
+        {/* Đang hoạt động */}
+        <div className="bg-white border border-[#e4beba] rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-[11px] font-bold text-[#5b403d] uppercase tracking-wider">
+              Đang hoạt động
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-[#f0fdf4] flex items-center justify-center">
+              <Activity size={16} className="text-[#16a34a]" />
+            </div>
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <h2 className="text-2xl font-black text-[#191c1e]">
+              {activeCategoriesCount}
+            </h2>
+          </div>
+        </div>
       </div>
 
       {/* MAIN */}
 
-      <div className="bg-white border border-[#ead0d0] rounded-3xl shadow-sm overflow-hidden">
+      <div className="bg-white border border-[#e4beba] rounded-xl shadow-sm overflow-hidden">
         {/* FILTER */}
 
         <div className="p-5 border-b border-[#f1dede]">
