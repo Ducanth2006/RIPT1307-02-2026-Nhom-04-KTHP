@@ -66,7 +66,7 @@ const ProductList = ({ genderFilter }: ProductListProps) => {
       <div style={{ position: "relative", marginBottom: "28px", borderRadius: "16px", overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.08)" }}>
         <Link to="/products">
           <img
-            src="/trending.png"
+            src="/bst3.png"
             alt="Sản phẩm thịnh hành"
             style={{
               width: "100%",

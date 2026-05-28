@@ -68,10 +68,13 @@ const BestSellingProducts = () => {
       <div style={{ position: "relative", marginBottom: "28px", borderRadius: "16px", overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.08)" }}>
         <Link to="/best-sellers">
           <img
-            src="/best-sellers.png"
+            src="/bst1.png"
             alt="Sản phẩm bán chạy"
             style={{
               width: "100%",
+              aspectRatio: "3/1",
+              objectFit: "cover",
+              objectPosition: "center",
               height: "auto",
               display: "block",
               transition: "transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)",
