@@ -29,6 +29,7 @@ import clientComplaintRoutes from './routes/clientComplaintRoutes';
 import clientNotificationRoutes from './routes/clientNotificationRoutes';
 import clientAuthRoutes from './routes/clientAuthRoutes';
 import clientVoucherRoutes from './routes/clientVoucherRoutes';
+import clientOrderRoutes from './routes/clientOrderRoutes';
 
 const app = express();
 const port = process.env.PORT || 5001;
@@ -99,7 +100,7 @@ app.use('/api/admin/reports', adminReportRoutes);
 // =============================================================
 // 🛍️ CLIENT APIs - Dành cho giao diện Khách mua hàng
 // =============================================================
-import clientOrderRoutes from './routes/clientOrderRoutes';
+
 
 app.use('/api/products', clientProductRoutes);
 app.use('/api/categories', clientCategoryRoutes);
