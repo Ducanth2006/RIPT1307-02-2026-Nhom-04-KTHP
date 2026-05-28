@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { LeftOutlined, RightOutlined } from "@ant-design/icons";
 import ProductCard from "../../components/product/ProductCard";
-import { getNewArrivals } from "../../services/Product/apiClient";
+import { getNewArrivals } from "../../services/client/product/apiClient";
 
 const { Title, Text } = Typography;
 
