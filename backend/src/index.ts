@@ -16,6 +16,7 @@ import adminInventoryRoutes from './routes/adminInventoryRoutes';
 import adminUserRoutes from './routes/adminUserRoutes';
 import adminComplaintRoutes from './routes/adminComplaintRoutes';
 import adminSettingRoutes from './routes/adminSettingRoutes';
+import adminReportRoutes from './routes/adminReportRoutes';
 
 // ── Client Routes (Khách mua hàng) ────────────────────────────
 import clientProductRoutes from './routes/clientProductRoutes';
@@ -93,6 +94,7 @@ app.use('/api/admin/inventory', adminInventoryRoutes);
 app.use('/api/admin/users', adminUserRoutes);
 app.use('/api/admin/complaints', adminComplaintRoutes);
 app.use('/api/admin/settings', adminSettingRoutes);
+app.use('/api/admin/reports', adminReportRoutes);
 
 // =============================================================
 // 🛍️ CLIENT APIs - Dành cho giao diện Khách mua hàng

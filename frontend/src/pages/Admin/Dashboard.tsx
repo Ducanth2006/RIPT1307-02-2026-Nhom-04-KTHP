@@ -5,7 +5,7 @@ import {
   ArrowUpRight, ArrowDownRight, Plus, ChevronRight, ChevronLeft,
   DollarSign, ShoppingCart, Users, Clock, Headset,
   RefreshCw, AlertCircle, Package, Boxes, BarChart2,
-  Ticket, FolderTree
+  Ticket, FolderTree, Home
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { getAdminDashboardStats } from '../../services/adminDashboardService';
@@ -263,12 +263,21 @@ export default function Dashboard() {
   return (
     <div className="p-6 max-w-[1440px] mx-auto space-y-6">
       {/* ═══ Header ═══ */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-[#191c1e]">Trang chủ</h1>
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-[#191c1e] flex items-center gap-3">
+            <Home size={30} className="text-[#af101a]" />
+            Trang Chủ
+          </h1>
+          <p className="text-[#5b403d] mt-2">
+            Tổng quan hoạt động kinh doanh, thống kê doanh thu và phân tích hiệu suất bán hàng.
+          </p>
+        </div>
+
         <Button
           onClick={() => { setChartMonthOffset(0); fetchDashboard(0, false); }}
           icon={<RefreshCw size={14} />}
-          className="flex items-center gap-2 text-[#515f74] border-[#d8dadc] hover:border-[#af101a] hover:text-[#af101a]"
+          className="flex items-center gap-2 text-[#515f74] border-[#d8dadc] hover:border-[#af101a] hover:text-[#af101a] h-10 px-4 rounded-lg"
         >
           Làm mới
         </Button>
