@@ -3,12 +3,12 @@ import { Typography, Button, message, Spin } from "antd";
 import { ShoppingCartOutlined, ShopOutlined } from "@ant-design/icons";
 import { Link, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getCart, updateCartItemApi, removeCartItemApi } from "../../services/Cart/apiClient";
-import { createOrder } from "../../services/Order/apiClient";
-import { getAddresses, createAddress } from "../../services/Address/apiClient";
-import type { IAddress } from "../../services/Address/typing";
-import type { Cart as CartType } from "../../services/Cart/typing";
-import type { ICreateOrderRequest } from "../../services/Order/typing";
+import { getCart, updateCartItemApi, removeCartItemApi } from "../../services/client/cart/apiClient";
+import { createOrder } from "../../services/client/order/apiClient";
+import { getAddresses, createAddress } from "../../services/client/address/apiClient";
+import type { IAddress } from "../../services/client/address/typing";
+import type { Cart as CartType } from "../../services/client/cart/typing";
+import type { ICreateOrderRequest } from "../../services/client/order/typing";
 
 // Subcomponents
 import EmptyCart from "./components/EmptyCart";
