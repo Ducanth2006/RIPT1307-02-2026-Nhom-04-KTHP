@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { getClientProducts, getClientProductById, getNewArrivals, getHomepageCollections, getBestSellingProducts } from '../controllers/clientProductController';
+import { addProduct } from '../controllers/adminProductController';
 
 const router = Router();
 
@@ -138,5 +139,6 @@ router.get('/best-sellers', getBestSellingProducts);
  *         description: Lỗi hệ thống
  */
 router.get('/:id', getClientProductById);
+router.post('/', addProduct);
 
 export default router;
