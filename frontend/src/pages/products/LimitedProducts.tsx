@@ -64,21 +64,47 @@ const BestSellingProducts = () => {
 
   return (
     <div style={{ padding: "16px 40px" }} id="best-selling-products">
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 8,
-        }}
-      >
-        <Title level={2} style={{ margin: 0 }}>
-          Sản phẩm bán chạy
-        </Title>
+      {/* Banner thay thế cho tiêu đề chữ */}
+      <div style={{ position: "relative", marginBottom: "28px", borderRadius: "16px", overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.08)" }}>
         <Link to="/best-sellers">
-          <Button type="link" style={{ fontSize: 16, fontWeight: 800, color: "#000", padding: 0 }}>
-            Tất cả sản phẩm bán chạy →
-          </Button>
+          <img
+            src="/best-sellers.png"
+            alt="Sản phẩm bán chạy"
+            style={{
+              width: "100%",
+              height: "auto",
+              display: "block",
+              transition: "transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)",
+              imageRendering: "-webkit-optimize-contrast",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.02)")}
+            onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
+          />
+          <div style={{
+            position: "absolute",
+            bottom: "8%",
+            left: "5%",
+            zIndex: 10
+          }}>
+            <Button
+              size="large"
+              style={{
+                backgroundColor: "#fa541c",
+                color: "#fff",
+                border: "none",
+                borderRadius: "8px",
+                fontWeight: 800,
+                boxShadow: "0 4px 15px rgba(250, 84, 28, 0.4)",
+                display: "flex",
+                alignItems: "center",
+                height: "48px",
+                padding: "0 28px",
+                fontSize: "15px"
+              }}
+            >
+              MUA NGAY →
+            </Button>
+          </div>
         </Link>
       </div>
 
