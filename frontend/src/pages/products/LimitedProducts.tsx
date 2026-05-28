@@ -4,14 +4,14 @@ import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { LeftOutlined, RightOutlined } from "@ant-design/icons";
 import ProductCard from "../../components/product/ProductCard";
-import { getLowStockProducts } from "../../services/Product/apiClient";
+import { getBestSellingProducts } from "../../services/Product/apiClient";
 
 const { Title, Text } = Typography;
 
-const LimitedProducts = () => {
+const BestSellingProducts = () => {
   const { data, isLoading, isFetching } = useQuery({
-    queryKey: ["limitedProducts"],
-    queryFn: () => getLowStockProducts().then((res) => res.data),
+    queryKey: ["bestSellingProducts"],
+    queryFn: () => getBestSellingProducts().then((res) => res.data),
   });
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -63,7 +63,7 @@ const LimitedProducts = () => {
   const showRightBtn = !scrollState.isAtEnd && products.length > 0;
 
   return (
-    <div style={{ padding: "16px 40px" }} id="limited-products">
+    <div style={{ padding: "16px 40px" }} id="best-selling-products">
       <div
         style={{
           display: "flex",
@@ -73,11 +73,11 @@ const LimitedProducts = () => {
         }}
       >
         <Title level={2} style={{ margin: 0 }}>
-          Sản phẩm giới hạn
+          Sản phẩm bán chạy
         </Title>
-        <Link to="/limited-products">
+        <Link to="/best-sellers">
           <Button type="link" style={{ fontSize: 16, fontWeight: 800, color: "#000", padding: 0 }}>
-            Tất cả sản phẩm giới hạn →
+            Tất cả sản phẩm bán chạy →
           </Button>
         </Link>
       </div>
@@ -123,12 +123,12 @@ const LimitedProducts = () => {
         >
           {products.map((product) => (
             <div key={product.id} style={{ minWidth: "280px", flexShrink: 0, scrollSnapAlign: "start" }}>
-              <ProductCard product={product} badge="LIMITED" />
+              <ProductCard product={product} badge="HOT" />
             </div>
           ))}
           {products.length === 0 && !isLoading && (
             <div style={{ width: "100%", textAlign: "center", padding: "100px 0" }}>
-              <Text type="secondary">Chưa có sản phẩm giới hạn nào.</Text>
+              <Text type="secondary">Chưa có sản phẩm bán chạy nào.</Text>
             </div>
           )}
         </div>
@@ -155,4 +155,4 @@ const LimitedProducts = () => {
   );
 };
 
-export default LimitedProducts;
+export default BestSellingProducts;
