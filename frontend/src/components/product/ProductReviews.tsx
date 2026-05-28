@@ -2,8 +2,8 @@ import { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { Row, Col, Typography, Rate, Progress, Avatar, Button, Empty, Spin } from "antd";
 import { UserOutlined, MessageOutlined } from "@ant-design/icons";
-import { getProductReviewsApi } from "../../services/Review/apiClient";
-import type { IReview } from "../../services/Review/typing";
+import { getProductReviewsApi } from "../../services/client/review/apiClient";
+import type { IReview } from "../../services/client/review/typing";
 
 const { Title, Text, Paragraph } = Typography;
 
