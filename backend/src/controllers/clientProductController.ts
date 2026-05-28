@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { fetchClientProducts, fetchClientProductById, fetchNewArrivals, fetchHomepageCollections, fetchLowStockProducts } from '../services/clientProductService';
+import { fetchClientProducts, fetchClientProductById, fetchNewArrivals, fetchHomepageCollections, fetchBestSellingProducts } from '../services/clientProductService';
 
 export const getClientProducts = async (req: Request, res: Response) => {
     try {
@@ -105,18 +105,18 @@ export const getHomepageCollections = async (req: Request, res: Response) => {
     }
 };
 
-export const getLowStockProducts = async (req: Request, res: Response) => {
+export const getBestSellingProducts = async (req: Request, res: Response) => {
     try {
-        const products = await fetchLowStockProducts();
+        const products = await fetchBestSellingProducts();
 
         res.status(200).json({
-            message: "Lấy danh sách sản phẩm sắp hết hàng thành công",
+            message: "Lấy danh sách sản phẩm bán chạy thành công",
             data: products
         });
     } catch (error: any) {
-        console.error("Lỗi getLowStockProducts:", error);
+        console.error("Lỗi getBestSellingProducts:", error);
         res.status(500).json({
-            message: "Lỗi hệ thống khi tải sản phẩm sắp hết hàng",
+            message: "Lỗi hệ thống khi tải sản phẩm bán chạy",
             errorDetails: error.message || error
         });
     }

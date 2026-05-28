@@ -8,7 +8,7 @@ const { Text } = Typography;
 
 interface Props {
   product: Products.IRecord;
-  badge?: "NEW" | "LIMITED";
+  badge?: "NEW" | "LIMITED" | "HOT";
 }
 
 const ProductCard = ({ product, badge }: Props) => {
@@ -28,16 +28,16 @@ const ProductCard = ({ product, badge }: Props) => {
       style={{ height: "100%", borderRadius: 8, overflow: "hidden" }}
       cover={
         <div style={{ position: "relative" }}>
-          <Image src={imageUrl} alt={product.name} style={{ height: 280, objectFit: "cover" }} preview={false} />
+          <Image src={imageUrl} alt={product.name} width="100%" style={{ width: "100%", height: 280, objectFit: "cover" }} preview={false} />
 
-          {/* Badge NEW/LIMITED */}
+          {/* Badge NEW/LIMITED/HOT */}
           {displayBadge && (
             <div
               style={{
                 position: "absolute",
                 top: 12,
                 left: 12,
-                background: displayBadge === "LIMITED" ? "#ff4d4f" : "#f50",
+                background: displayBadge === "LIMITED" ? "#ff4d4f" : (displayBadge === "HOT" ? "#faad14" : "#f50"),
                 color: "#fff",
                 padding: "4px 10px",
                 fontSize: "12px",

@@ -27,7 +27,7 @@ import ClientOrders from "../pages/orders/Orders";
 import Notifications from "../pages/notifications/Notifications";
 import CollectionDetail from "../pages/products/CollectionDetail";
 import NewArrivalsPage from "../pages/products/NewArrivalsPage";
-import LimitedProductsPage from "../pages/products/LimitedProductsPage";
+import BestSellingProductsPage from "../pages/products/LimitedProductsPage";
 
 const router = createBrowserRouter([
   {
@@ -75,8 +75,8 @@ const router = createBrowserRouter([
         element: <NewArrivalsPage />,
       },
       {
-        path: "limited-products",
-        element: <LimitedProductsPage />,
+        path: "best-sellers",
+        element: <BestSellingProductsPage />,
       },
       {
         path: "login",

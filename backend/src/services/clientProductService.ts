@@ -306,9 +306,36 @@ export const fetchHomepageCollections = async () => {
         }
     };
 };
+export const fetchBestSellingProducts = async () => {
+    // 1. Lấy danh sách ID sản phẩm bán nhiều nhất từ bảng order_items
+    const { data: topSales, error: salesError } = await supabaseClient
+        .from('order_items')
+        .select(`
+            quantity,
+            product_variants (
+                product_id
+            )
+        `);
 
-export const fetchLowStockProducts = async () => {
-    const { data, error } = await supabaseClient
+    const productSalesMap: Record<number, number> = {};
+    if (!salesError && topSales) {
+        topSales.forEach((item: any) => {
+            const prodId = item.product_variants?.product_id;
+            const qty = Number(item.quantity || 1);
+            if (prodId) {
+                productSalesMap[prodId] = (productSalesMap[prodId] || 0) + qty;
+            }
+        });
+    }
+
+    // Sắp xếp lấy tối đa 10 ID sản phẩm bán chạy nhất
+    const sortedProductIds = Object.entries(productSalesMap)
+        .sort((a, b) => b[1] - a[1])
+        .map(entry => Number(entry[0]))
+        .slice(0, 10);
+
+    // 2. Lấy thông tin chi tiết các sản phẩm này
+    let query = supabaseClient
         .from('products')
         .select(`
             id,
@@ -327,23 +354,25 @@ export const fetchLowStockProducts = async () => {
                 id,
                 image_url,
                 is_main
-            ),
-            product_variants!inner (
-                id,
-                sku,
-                size,
-                color,
-                price,
-                stock_quantity
             )
         `)
         .is('deleted_at', null)
-        .eq('status', 'Active')
-        .lt('product_variants.stock_quantity', 10)
-        .gt('product_variants.stock_quantity', 0)
-        .limit(10);
+        .eq('status', 'Active');
 
+    if (sortedProductIds.length > 0) {
+        query = query.in('id', sortedProductIds);
+    } else {
+        // Fallback: Nếu chưa có đơn hàng nào, lấy các sản phẩm có giá trị cao nhất làm sản phẩm nổi bật
+        query = query.order('base_price', { ascending: false });
+    }
+
+    const { data, error } = await query.limit(10);
     if (error) throw error;
-    return data;
-};
 
+    // Sắp xếp lại danh sách sản phẩm theo đúng thứ tự bán chạy
+    if (sortedProductIds.length > 0 && data) {
+        return data.sort((a, b) => sortedProductIds.indexOf(a.id) - sortedProductIds.indexOf(b.id));
+    }
+
+    return data || [];
+};

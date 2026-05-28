@@ -4,14 +4,14 @@ import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { LeftOutlined, RightOutlined } from "@ant-design/icons";
 import ProductCard from "../../components/product/ProductCard";
-import { getLowStockProducts } from "../../services/Product/apiClient";
+import { getBestSellingProducts } from "../../services/Product/apiClient";
 
 const { Title, Text } = Typography;
 
-const LimitedProducts = () => {
+const BestSellingProducts = () => {
   const { data, isLoading, isFetching } = useQuery({
-    queryKey: ["limitedProducts"],
-    queryFn: () => getLowStockProducts().then((res) => res.data),
+    queryKey: ["bestSellingProducts"],
+    queryFn: () => getBestSellingProducts().then((res) => res.data),
   });
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -63,22 +63,48 @@ const LimitedProducts = () => {
   const showRightBtn = !scrollState.isAtEnd && products.length > 0;
 
   return (
-    <div style={{ padding: "16px 40px" }} id="limited-products">
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 8,
-        }}
-      >
-        <Title level={2} style={{ margin: 0 }}>
-          Sản phẩm giới hạn
-        </Title>
-        <Link to="/limited-products">
-          <Button type="link" style={{ fontSize: 16, fontWeight: 800, color: "#000", padding: 0 }}>
-            Tất cả sản phẩm giới hạn →
-          </Button>
+    <div style={{ padding: "16px 40px" }} id="best-selling-products">
+      {/* Banner thay thế cho tiêu đề chữ */}
+      <div style={{ position: "relative", marginBottom: "28px", borderRadius: "16px", overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.08)" }}>
+        <Link to="/best-sellers">
+          <img
+            src="/best-sellers.png"
+            alt="Sản phẩm bán chạy"
+            style={{
+              width: "100%",
+              height: "auto",
+              display: "block",
+              transition: "transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)",
+              imageRendering: "-webkit-optimize-contrast",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.02)")}
+            onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
+          />
+          <div style={{
+            position: "absolute",
+            bottom: "8%",
+            left: "5%",
+            zIndex: 10
+          }}>
+            <Button
+              size="large"
+              style={{
+                backgroundColor: "#fa541c",
+                color: "#fff",
+                border: "none",
+                borderRadius: "8px",
+                fontWeight: 800,
+                boxShadow: "0 4px 15px rgba(250, 84, 28, 0.4)",
+                display: "flex",
+                alignItems: "center",
+                height: "48px",
+                padding: "0 28px",
+                fontSize: "15px"
+              }}
+            >
+              MUA NGAY →
+            </Button>
+          </div>
         </Link>
       </div>
 
@@ -123,12 +149,12 @@ const LimitedProducts = () => {
         >
           {products.map((product) => (
             <div key={product.id} style={{ minWidth: "280px", flexShrink: 0, scrollSnapAlign: "start" }}>
-              <ProductCard product={product} badge="LIMITED" />
+              <ProductCard product={product} badge="HOT" />
             </div>
           ))}
           {products.length === 0 && !isLoading && (
             <div style={{ width: "100%", textAlign: "center", padding: "100px 0" }}>
-              <Text type="secondary">Chưa có sản phẩm giới hạn nào.</Text>
+              <Text type="secondary">Chưa có sản phẩm bán chạy nào.</Text>
             </div>
           )}
         </div>
@@ -155,4 +181,4 @@ const LimitedProducts = () => {
   );
 };
 
-export default LimitedProducts;
+export default BestSellingProducts;

@@ -1,31 +1,31 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Row, Col, Typography, Breadcrumb, Spin } from "antd";
-import { getLowStockProducts } from "../../services/Product/apiClient";
+import { getBestSellingProducts } from "../../services/Product/apiClient";
 import type { Products } from "../../services/Product/typing";
 import ProductCard from "../../components/product/ProductCard";
 
 const { Title, Text } = Typography;
 
-const LimitedProductsPage: React.FC = () => {
+const BestSellingProductsPage: React.FC = () => {
   const [products, setProducts] = useState<Products.IRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     window.scrollTo(0, 0);
-    const fetchLimitedProducts = async () => {
+    const fetchBestSellingProducts = async () => {
       try {
-        const response = await getLowStockProducts();
+        const response = await getBestSellingProducts();
         if (response.data && response.data.data) {
           setProducts(response.data.data);
         }
       } catch (error) {
-        console.error("Error fetching limited products:", error);
+        console.error("Error fetching best selling products:", error);
       } finally {
         setLoading(false);
       }
     };
-    fetchLimitedProducts();
+    fetchBestSellingProducts();
   }, []);
 
   if (loading) {
@@ -40,25 +40,25 @@ const LimitedProductsPage: React.FC = () => {
     <div style={{ padding: "40px", maxWidth: 1200, margin: "0 auto" }}>
       <Breadcrumb style={{ marginBottom: "24px" }}>
         <Breadcrumb.Item><Link to="/">Trang chủ</Link></Breadcrumb.Item>
-        <Breadcrumb.Item>Sản phẩm giới hạn</Breadcrumb.Item>
+        <Breadcrumb.Item>Sản phẩm bán chạy</Breadcrumb.Item>
       </Breadcrumb>
 
       <div style={{ textAlign: "center", marginBottom: "40px" }}>
-        <Title level={2}>Sản phẩm giới hạn</Title>
+        <Title level={2}>Sản phẩm bán chạy</Title>
         <Text type="secondary" style={{ fontSize: "16px" }}>
-          Nhanh tay sở hữu các sản phẩm độc đáo số lượng có hạn
+          Khám phá những sản phẩm được yêu thích và bán chạy nhất tại Elite Performance
         </Text>
       </div>
 
       <Row gutter={[24, 24]}>
         {products.map((product) => (
           <Col xs={24} sm={12} md={8} lg={6} key={product.id}>
-            <ProductCard product={product} badge="LIMITED" />
+            <ProductCard product={product} badge="HOT" />
           </Col>
         ))}
         {products.length === 0 && (
           <Col span={24} style={{ textAlign: "center", padding: "40px 0" }}>
-            <Text type="secondary">Chưa có sản phẩm giới hạn nào.</Text>
+            <Text type="secondary">Chưa có sản phẩm bán chạy nào.</Text>
           </Col>
         )}
       </Row>
@@ -66,4 +66,4 @@ const LimitedProductsPage: React.FC = () => {
   );
 };
 
-export default LimitedProductsPage;
+export default BestSellingProductsPage;

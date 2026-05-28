@@ -24,8 +24,8 @@ export function getNewArrivals() {
   return axiosInstance.get<{ message: string; data: Products.IRecord[] }>(`${ip}/products/new-arrivals`);
 }
 
-export function getLowStockProducts() {
-  return axiosInstance.get<{ message: string; data: Products.IRecord[] }>(`${ip}/products/low-stock`);
+export function getBestSellingProducts() {
+  return axiosInstance.get<{ message: string; data: Products.IRecord[] }>(`${ip}/products/best-sellers`);
 }
 
 export function getHomepageCollections() {
