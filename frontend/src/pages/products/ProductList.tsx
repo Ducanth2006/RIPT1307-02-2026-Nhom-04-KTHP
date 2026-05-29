@@ -3,7 +3,7 @@ import { Typography, Button, Row, Col } from "antd";
 import { Link } from "react-router-dom";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import ProductCard from "../../components/product/ProductCard";
-import { getProducts } from "../../services/Product/apiClient";
+import { getProducts } from "../../services/client/product/apiClient";
 import ProductPagination from "../../components/layout/ProductPagination";
 
 const { Text } = Typography;

@@ -8,7 +8,7 @@ import {
   Ticket, FolderTree, Home
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { getAdminDashboardStats } from '../../services/adminDashboardService';
+import { getAdminDashboardStats } from '../../services/admin/dashboardService';
 
 // ═══════════════════════════════════════════════════════════
 // Types

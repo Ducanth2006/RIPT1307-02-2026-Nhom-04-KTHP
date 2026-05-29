@@ -30,7 +30,7 @@ import {
   capNhatCauHinh,
   kiemTraSMTP,
   flushRedisCache,
-} from '../../services/adminSettingsService';
+} from '../../services/admin/settingsService';
 
 export default function SettingsPage() {
   const [form] = Form.useForm();

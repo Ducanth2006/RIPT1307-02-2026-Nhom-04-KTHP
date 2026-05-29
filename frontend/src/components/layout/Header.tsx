@@ -3,9 +3,9 @@ import { Layout, Input, Badge, Button, Popover, Empty, List, Dropdown, Avatar } 
 import { SearchOutlined, ShoppingCartOutlined, UserOutlined, BellOutlined } from "@ant-design/icons";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { getCart } from "../../services/Cart/apiClient";
-import type { Cart as CartType } from "../../services/Cart/typing";
-import { logout } from "../../services/Auth/apiClient";
+import { getCart } from "../../services/client/cart/apiClient";
+import type { Cart as CartType } from "../../services/client/cart/typing";
+import { logout } from "../../services/client/auth/apiClient";
 import NotificationPopover from "./NotificationPopover";
 
 const { Header: AntHeader } = Layout;

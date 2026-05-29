@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Row, Col, Typography, Breadcrumb, Spin } from "antd";
-import { getNewArrivals } from "../../services/Product/apiClient";
-import type { Products } from "../../services/Product/typing";
+import { getNewArrivals } from "../../services/client/product/apiClient";
+import type { Products } from "../../services/client/product/typing";
 import ProductCard from "../../components/product/ProductCard";
 
 const { Title, Text } = Typography;

@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Row, Col, Typography, Button, Rate, Avatar, List, Pagination, Spin, Card, Space, Empty } from "antd";
 import { ArrowLeftOutlined, UserOutlined } from "@ant-design/icons";
-import { getProductById } from "../../services/Product/apiClient";
-import { getProductReviewsApi } from "../../services/Review/apiClient";
-import type { Products } from "../../services/Product/typing";
-import type { IReview } from "../../services/Review/typing";
+import { getProductById } from "../../services/client/product/apiClient";
+import { getProductReviewsApi } from "../../services/client/review/apiClient";
+import type { Products } from "../../services/client/product/typing";
+import type { IReview } from "../../services/client/review/typing";
 
 const { Title, Text, Paragraph } = Typography;
 

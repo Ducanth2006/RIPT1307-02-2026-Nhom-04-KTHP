@@ -41,7 +41,7 @@ import {
   updateAdminVoucher,
   deleteAdminVoucher,
   toggleAdminVoucherStatus,
-} from '../../services/adminVoucherService';
+} from '../../services/admin/voucherService';
 
 // ================= TYPES =================
 interface Voucher {

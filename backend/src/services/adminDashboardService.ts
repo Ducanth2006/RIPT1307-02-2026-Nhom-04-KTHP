@@ -41,9 +41,9 @@ export const fetchDashboardOverview = async (chartMonth?: string) => {
     // ═══════════════════════════════════════════════════════════
     let chartYear: number, chartMonthIndex: number;
     if (chartMonth && /^\d{4}-\d{2}$/.test(chartMonth)) {
-        const [y, m] = chartMonth.split('-').map(Number);
-        chartYear = y;
-        chartMonthIndex = m - 1; // JS month is 0-indexed
+        const parts = chartMonth.split('-').map(Number);
+        chartYear = parts[0] ?? new Date().getFullYear();
+        chartMonthIndex = (parts[1] ?? (new Date().getMonth() + 1)) - 1; // JS month is 0-indexed
     } else {
         const now = new Date();
         chartYear = now.getFullYear();
@@ -219,7 +219,10 @@ export const fetchDashboardOverview = async (chartMonth?: string) => {
         const orderDate = new Date(order.created_at);
         const dayOfMonth = orderDate.getDate();
         if (dayOfMonth >= 1 && dayOfMonth <= daysInMonth) {
-            dailyRevenue[dayOfMonth - 1].revenue += Number(order.final_amount || 0);
+            const dayEntry = dailyRevenue[dayOfMonth - 1];
+            if (dayEntry) {
+                dayEntry.revenue += Number(order.final_amount || 0);
+            }
         }
     });
 

@@ -30,9 +30,9 @@ import {
   StarOutlined,
   ClockCircleOutlined,
 } from "@ant-design/icons";
-import { getOrders, cancelOrder, getOrderById } from "../../services/Order/apiClient";
-import { getMyReviewsApi, createReviewApi } from "../../services/Review/apiClient";
-import type { IOrder, IOrderItem } from "../../services/Order/typing";
+import { getOrders, cancelOrder, getOrderById } from "../../services/client/order/apiClient";
+import { getMyReviewsApi, createReviewApi } from "../../services/client/review/apiClient";
+import type { IOrder, IOrderItem } from "../../services/client/order/typing";
 import "./Orders.less";
 
 const { Title, Text, Paragraph } = Typography;

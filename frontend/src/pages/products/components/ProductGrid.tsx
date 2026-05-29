@@ -3,9 +3,9 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import ProductCard from "../../../components/product/ProductCard";
-import { getProducts } from "../../../services/Product/apiClient";
-import { getCategories } from "../../../services/Category/apiClient";
-import type { ICategory } from "../../../services/Category/typing";
+import { getProducts } from "../../../services/client/product/apiClient";
+import { getCategories } from "../../../services/client/category/apiClient";
+import type { ICategory } from "../../../services/client/category/typing";
 import ProductPagination from "../../../components/layout/ProductPagination";
 import { UnorderedListOutlined } from "@ant-design/icons";
 

@@ -13,7 +13,7 @@ import ProductList from "./products/ProductList";
 import NewArrivals from "./products/NewArrivals";
 import BestSellingProducts from "./products/LimitedProducts";
 import CategoryBar from "../components/layout/CategoryBar";
-import HomepageCollections from "../components/BoSuuTap/HomepageCollections";
+import HomepageCollections from "../components/collections/HomepageCollections";
 
 const { Title, Text } = Typography;
 

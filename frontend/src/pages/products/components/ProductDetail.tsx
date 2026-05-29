@@ -12,9 +12,9 @@ import {
   PlusOutlined,
   ThunderboltOutlined,
 } from "@ant-design/icons";
-import { getProductById } from "../../../services/Product/apiClient";
-import { addToCartApi } from "../../../services/Cart/apiClient";
-import type { Products } from "../../../services/Product/typing";
+import { getProductById } from "../../../services/client/product/apiClient";
+import { addToCartApi } from "../../../services/client/cart/apiClient";
+import type { Products } from "../../../services/client/product/typing";
 import ProductReviews from "../../../components/product/ProductReviews";
 import "./ProductDetail.less";
 
@@ -31,10 +31,29 @@ const ProductDetail = () => {
   const [quantity, setQuantity] = useState(1);
   const [mainImage, setMainImage] = useState("");
 
+  const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  const [selectedSize, setSelectedSize] = useState<string | null>(null);
+
   const selectedVariant = useMemo(
     () => product?.product_variants?.find((v) => v.id === selectedVariantId) || null,
     [product, selectedVariantId],
   );
+
+  const uniqueColors = useMemo(() => {
+    if (!product?.product_variants) return [];
+    const colors = product.product_variants
+      .map((v) => v.color)
+      .filter((c): c is string => !!c);
+    return Array.from(new Set(colors));
+  }, [product]);
+
+  const uniqueSizes = useMemo(() => {
+    if (!product?.product_variants) return [];
+    const sizes = product.product_variants
+      .map((v) => v.size)
+      .filter((s): s is string => !!s);
+    return Array.from(new Set(sizes));
+  }, [product]);
 
   const userStr = localStorage.getItem("user");
   const userObj = userStr ? JSON.parse(userStr) : null;
@@ -79,7 +98,12 @@ const ProductDetail = () => {
         setMainImage(
           data.product_images?.find((i) => i.is_main)?.image_url || data.product_images?.[0]?.image_url || "",
         );
-        if (data.product_variants?.length) setSelectedVariantId(data.product_variants[0].id);
+        if (data.product_variants?.length) {
+          const firstVariant = data.product_variants[0];
+          setSelectedVariantId(firstVariant.id);
+          setSelectedColor(firstVariant.color || null);
+          setSelectedSize(firstVariant.size || null);
+        }
       } catch (err) {
         message.error("Không thể tải sản phẩm");
         console.error(err);
@@ -88,6 +112,50 @@ const ProductDetail = () => {
       }
     })();
   }, [id]);
+
+  // Tìm variant khớp với màu và size đang chọn
+  useEffect(() => {
+    if (!product?.product_variants) return;
+    const match = product.product_variants.find((v) => {
+      const colorMatch = !selectedColor || v.color === selectedColor;
+      const sizeMatch = !selectedSize || v.size === selectedSize;
+      return colorMatch && sizeMatch;
+    });
+    if (match) {
+      setSelectedVariantId(match.id);
+    } else {
+      setSelectedVariantId(null);
+    }
+  }, [selectedColor, selectedSize, product]);
+
+  // Khi chọn màu, tự động chuyển ảnh chính sang ảnh tương ứng với màu đó
+  useEffect(() => {
+    if (!selectedColor || !product?.product_images?.length || !uniqueColors.length) return;
+    
+    // Bước 1: Tìm xem có ảnh nào chứa tên màu trong URL không (bỏ dấu, viết thường)
+    const normalizedColor = selectedColor.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "");
+    
+    const matchedImage = product.product_images.find(img => {
+      const urlLower = img.image_url.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "");
+      return urlLower.includes(normalizedColor);
+    });
+
+    if (matchedImage) {
+      setMainImage(matchedImage.image_url);
+    } else {
+      // Bước 2: Phân bổ ảnh đều theo số lượng màu (Heuristic toán học cực thông minh)
+      const colorIndex = uniqueColors.indexOf(selectedColor);
+      if (colorIndex !== -1) {
+        const imagesPerColor = Math.max(1, Math.floor(product.product_images.length / uniqueColors.length));
+        const targetImageIndex = colorIndex * imagesPerColor;
+        
+        if (product.product_images[targetImageIndex]) {
+          setMainImage(product.product_images[targetImageIndex].image_url);
+        }
+      }
+    }
+  }, [selectedColor, product, uniqueColors]);
+
 
   const formatPrice = (price: number) =>
     new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(price);
@@ -173,6 +241,12 @@ const ProductDetail = () => {
                 isAdding={addToCartMutation.isPending}
                 onBuyNow={handleBuyNow}
                 isBuyingNow={buyNowMutation.isPending}
+                selectedColor={selectedColor}
+                setSelectedColor={setSelectedColor}
+                selectedSize={selectedSize}
+                setSelectedSize={setSelectedSize}
+                uniqueColors={uniqueColors}
+                uniqueSizes={uniqueSizes}
               />
             </Card>
           </Col>
@@ -223,6 +297,12 @@ interface ProductInfoProps {
   isAdding: boolean;
   onBuyNow: () => void;
   isBuyingNow: boolean;
+  selectedColor: string | null;
+  setSelectedColor: (color: string | null) => void;
+  selectedSize: string | null;
+  setSelectedSize: (size: string | null) => void;
+  uniqueColors: string[];
+  uniqueSizes: string[];
 }
 
 const ProductInfo = ({
@@ -237,44 +317,121 @@ const ProductInfo = ({
   isAdding,
   onBuyNow,
   isBuyingNow,
+  selectedColor,
+  setSelectedColor,
+  selectedSize,
+  setSelectedSize,
+  uniqueColors,
+  uniqueSizes,
 }: ProductInfoProps) => {
   const stock = selectedVariant?.stock_quantity || 0;
 
   return (
     <div className="info-panel">
-      <Space direction="vertical" size={24} >
+      <Space direction="vertical" size={24} style={{ width: "100%" }}>
         <div>
           {/* <Tag className="product-tag">{product.categories?.name}</Tag> */}
-          <Title className="product-title">{product.name}</Title>
-          <Text className="brand-text">
-            Thương hiệu: <span>{product.brand}</span>
+          <Title className="product-title" style={{ margin: 0 }}>{product.name}</Title>
+          <Text className="brand-text" style={{ display: "block", marginTop: 8 }}>
+            Thương hiệu: <span style={{ fontWeight: 600, color: "#af101a" }}>{product.brand}</span>
           </Text>
         </div>
         <div>
-          <Text className="des-text">Mô tả sản phẩm: <span>{product.description}</span></Text>
+          <Text className="des-text" style={{ color: "#555" }}>Mô tả sản phẩm: <span>{product.description}</span></Text>
           {/* <Paragraph className="description">{product.description}</Paragraph> */}
         </div>
         <div>
-          <div className="product-price">{formatPrice(selectedVariant?.price || product.base_price)}</div>
-          <Text className={`stock ${stock > 0 ? "in-stock" : "out-stock"}`}>
+          <div className="product-price" style={{ fontSize: 28, fontWeight: 700, color: "#af101a" }}>
+            {formatPrice(selectedVariant?.price || product.base_price)}
+          </div>
+          <Text className={`stock ${stock > 0 ? "in-stock" : "out-stock"}`} style={{ display: "block", marginTop: 4 }}>
             {stock > 0 ? `Sản phẩm có sẵn (${stock})` : "Hết hàng"}
           </Text>
         </div>
         <Divider style={{ marginTop: "0px", marginBottom: "0px" }} />
-        {!!product.product_variants?.length && (
+        
+        {/* BẢNG MÀU SẮC */}
+        {uniqueColors.length > 0 && (
           <div>
-            <Title level={5}>Lựa chọn:</Title>
-            <Radio.Group value={selectedVariantId} onChange={(e) => setSelectedVariantId(e.target.value)}>
-              <div className="variant-list">
-                {product.product_variants.map((v) => (
-                  <Radio.Button key={v.id} value={v.id} className="variant-item">
-                    <div className="variant-size">
-                      {v.size} / {v.color}
-                    </div>
-                  </Radio.Button>
-                ))}
-              </div>
-            </Radio.Group>
+            <Title level={5} style={{ fontSize: 14, color: "#666", marginBottom: 12 }}>MÀU SẮC:</Title>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+              {uniqueColors.map((color) => {
+                const isSelected = selectedColor === color;
+                return (
+                  <button
+                    key={color}
+                    onClick={() => setSelectedColor(color)}
+                    style={{
+                      padding: "8px 16px",
+                      borderRadius: "6px",
+                      border: isSelected ? "2px solid #af101a" : "1px solid #d8dadc",
+                      backgroundColor: isSelected ? "#af101a" : "#fff",
+                      color: isSelected ? "#fff" : "#191c1e",
+                      fontSize: "13px",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      transition: "all 0.2s",
+                      boxShadow: isSelected ? "0 2px 4px rgba(175,16,26,0.2)" : "none"
+                    }}
+                  >
+                    {color}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* BẢNG KÍCH THƯỚC */}
+        {uniqueSizes.length > 0 && (
+          <div>
+            <Title level={5} style={{ fontSize: 14, color: "#666", marginBottom: 12 }}>KÍCH THƯỚC (SIZE):</Title>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+              {uniqueSizes.map((size) => {
+                const isSelected = selectedSize === size;
+                // Kiểm tra xem size này có sẵn cho màu đã chọn không
+                const isAvailable = product.product_variants?.some(
+                  (v) => v.size === size && (!selectedColor || v.color === selectedColor) && (v.stock_quantity || 0) > 0
+                );
+                return (
+                  <button
+                    key={size}
+                    onClick={() => isAvailable && setSelectedSize(size)}
+                    style={{
+                      width: "46px",
+                      height: "46px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderRadius: "6px",
+                      border: isSelected 
+                        ? "2px solid #af101a" 
+                        : !isAvailable 
+                        ? "1px dashed #e4e6e8" 
+                        : "1px solid #d8dadc",
+                      backgroundColor: isSelected 
+                        ? "#af101a" 
+                        : !isAvailable 
+                        ? "#fafbfc" 
+                        : "#fff",
+                      color: isSelected 
+                        ? "#fff" 
+                        : !isAvailable 
+                        ? "#bbb" 
+                        : "#191c1e",
+                      fontSize: "14px",
+                      fontWeight: 700,
+                      cursor: isAvailable ? "pointer" : "not-allowed",
+                      textDecoration: isAvailable ? "none" : "line-through",
+                      transition: "all 0.2s",
+                      boxShadow: isSelected ? "0 2px 4px rgba(175,16,26,0.2)" : "none"
+                    }}
+                  >
+                    {size}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
         <div>

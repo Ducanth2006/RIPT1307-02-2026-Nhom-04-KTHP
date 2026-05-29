@@ -44,7 +44,7 @@ import {
   updateAdminUser,
   toggleAdminUserLock,
   deleteAdminUser
-} from '../../services/adminUserService';
+} from '../../services/admin/userService';
 
 const { RangePicker } = DatePicker;
 

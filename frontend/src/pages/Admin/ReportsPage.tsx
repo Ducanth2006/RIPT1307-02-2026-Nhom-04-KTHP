@@ -9,7 +9,7 @@ import {
   LineChart, Line, BarChart, Bar, ComposedChart, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, Legend
 } from 'recharts';
-import { getAdminReportData } from '../../services/adminReportService';
+import { getAdminReportData } from '../../services/admin/reportService';
 import dayjs from 'dayjs';
 
 const { RangePicker } = DatePicker;

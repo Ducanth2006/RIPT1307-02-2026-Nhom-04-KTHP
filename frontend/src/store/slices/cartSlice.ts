@@ -1,5 +1,5 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
-import type { Cart } from "../../services/Cart/typing";
+import type { Cart } from "../../services/client/cart/typing";
 
 const initialState: Cart.ICartState = {
   items: JSON.parse(localStorage.getItem("cart_items") || "[]"),
