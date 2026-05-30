@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Row, Col, Typography, Button, Tag, Space, Divider, Spin, message, Radio, Card } from "antd";
+import { Row, Col, Typography, Button, Tag, Space, Divider, Spin, message, Radio, Card, Image } from "antd";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ShoppingCartOutlined,
@@ -269,7 +269,20 @@ interface ProductGalleryProps {
 const ProductGallery = ({ mainImage, images, setMainImage, productName }: ProductGalleryProps) => (
   <div className="gallery">
     <div className="gallery__main">
-      <img src={mainImage} alt={productName} />
+      <Image
+        src={mainImage}
+        alt={productName}
+        width="100%"
+        height={400}
+        style={{ objectFit: "cover", display: "block" }}
+        preview={{
+          mask: (
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 15, fontWeight: 500 }}>
+              🔍 Click để phóng to
+            </div>
+          ),
+        }}
+      />
     </div>
     <div className="gallery__thumbs">
       {images?.map((img) => (

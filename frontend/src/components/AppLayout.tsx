@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Outlet, Link, useLocation, useNavigate, Navigate } from "react-router-dom";
 import {
   Home,
@@ -20,18 +20,46 @@ import {
 import { Avatar, Dropdown, Popover, FloatButton, message } from "antd";
 import NotificationPanel from "./NotificationPanel";
 import { logout } from "../services/client/auth/apiClient";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getNotificationsApi } from "../services/client/notification/apiClient";
+import { socket } from "../utils/socket";
 
 export default function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const currentPath = location.pathname;
+  const queryClient = useQueryClient();
 
   const token = localStorage.getItem("accessToken");
   const userStr = localStorage.getItem("user");
   const userObj = userStr ? JSON.parse(userStr) : null;
   const userId = userObj?.id;
+
+  // Real-time: Đăng nhập vào phòng socket
+  useEffect(() => {
+    if (userId) {
+      socket.emit("join", { userId, role: userObj?.role });
+      console.log(`📡 Admin/Staff #${userId} đã tham gia các phòng socket`);
+    }
+  }, [userId, userObj?.role]);
+
+  // Real-time: Lắng nghe sự kiện để cập nhật số lượng thông báo (quả chuông)
+  useEffect(() => {
+    if (!userId) return;
+
+    const refreshNotifications = () => {
+      console.log("📡 Admin nhận được sự kiện mới, tự động làm mới quả chuông thông báo...");
+      queryClient.invalidateQueries({ queryKey: ["notifications", userId] });
+    };
+
+    socket.on('admin:orderCreated', refreshNotifications);
+    socket.on('admin:orderCancelled', refreshNotifications);
+
+    return () => {
+      socket.off('admin:orderCreated', refreshNotifications);
+      socket.off('admin:orderCancelled', refreshNotifications);
+    };
+  }, [userId, queryClient]);
 
   const { data: notificationsRes } = useQuery({
     queryKey: ["notifications", userId],

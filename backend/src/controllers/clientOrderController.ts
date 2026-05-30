@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { checkoutOrder, getUserOrders, getOrderDetails, cancelOrder } from '../services/clientOrderService';
+import { getIO } from '../config/socket';
 
 export const createOrder = async (req: Request, res: Response): Promise<any> => {
     // Bắt đầu đếm thời gian thực thi (Performance tracking)
@@ -33,6 +34,14 @@ export const createOrder = async (req: Request, res: Response): Promise<any> => 
             voucherCode,
             cartItemIds
         });
+
+        // Phát tín hiệu Real-time báo cho phía Admin là có đơn hàng mới
+        try {
+            getIO().to('admins').emit('admin:orderCreated', order);
+            console.log(`📡 Đã phát sự kiện admin:orderCreated cho đơn hàng #${order.id}`);
+        } catch (socketError) {
+            console.error('❌ Lỗi khi gửi sự kiện socket (admin:orderCreated):', socketError);
+        }
 
         // Kết thúc đếm thời gian
         const endTime = performance.now();
@@ -115,6 +124,24 @@ export const cancelOrderById = async (req: Request, res: Response): Promise<any>
         }
 
         const result = await cancelOrder(Number(orderId), Number(userId), cancelReason);
+
+        // Phát tín hiệu Real-time báo cho admin và client
+        try {
+            const status = result?.status || 'CancelRequested';
+            getIO().to('admins').emit('admin:orderCancelled', {
+                orderId: Number(orderId),
+                userId: Number(userId),
+                status: status
+            });
+            getIO().to(`user:${userId}`).emit('client:orderStatusUpdated', {
+                orderId: Number(orderId),
+                status: status,
+                userId: Number(userId)
+            });
+            console.log(`📡 Đã phát sự kiện hủy đơn hàng #${orderId} (Trạng thái mới: ${status})`);
+        } catch (socketError) {
+            console.error('❌ Lỗi khi gửi sự kiện socket (orderCancelled):', socketError);
+        }
 
         return res.status(200).json({
             message: "Hủy đơn hàng thành công.",

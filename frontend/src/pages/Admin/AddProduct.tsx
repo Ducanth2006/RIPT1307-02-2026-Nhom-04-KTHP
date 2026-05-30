@@ -69,6 +69,9 @@ export default function AddProduct() {
     { key: 1, size: 'M', color: 'Đen', price: 0, stock: 10, cost_price: 0 }
   ]);
 
+  const [selectedParentId, setSelectedParentId] =
+    useState<number | null>(null);
+
   // =========================
   // FETCH CATEGORY
   // =========================
@@ -254,7 +257,7 @@ export default function AddProduct() {
                       </Form.Item>
                     </Col>
 
-                    <Col xs={24} md={12}>
+                    <Col xs={24} md={8}>
                       <Form.Item
                         name="brand"
                         label="Thương hiệu"
@@ -266,29 +269,55 @@ export default function AddProduct() {
                       </Form.Item>
                     </Col>
 
-                    <Col xs={24} md={12}>
+                    <Col xs={24} md={8}>
                       <Form.Item
-                        name="category_id"
-                        label="Danh mục"
+                        name="parent_category_id"
+                        label="Danh mục hàng"
                         rules={[
                           {
                             required: true,
-                            message:
-                              'Vui lòng chọn danh mục'
+                            message: 'Vui lòng chọn danh mục hàng'
                           }
                         ]}
                       >
                         <Select
                           size="large"
-                          placeholder="Chọn danh mục"
-                          options={categories.map(
-                            (item) => ({
-                              value:
-                                item.id,
-                              label:
-                                item.name
-                            })
-                          )}
+                          placeholder="Chọn danh mục hàng..."
+                          options={categories
+                            .filter((c) => c.parent_id === null)
+                            .map((item) => ({
+                              value: item.id,
+                              label: item.name
+                            }))}
+                          onChange={(val) => {
+                            setSelectedParentId(val);
+                            form.setFieldValue('category_id', undefined);
+                          }}
+                        />
+                      </Form.Item>
+                    </Col>
+
+                    <Col xs={24} md={8}>
+                      <Form.Item
+                        name="category_id"
+                        label="Danh mục sản phẩm"
+                        rules={[
+                          {
+                            required: true,
+                            message: 'Vui lòng chọn danh mục sản phẩm'
+                          }
+                        ]}
+                      >
+                        <Select
+                          size="large"
+                          placeholder={selectedParentId ? "Chọn danh mục sản phẩm..." : "Chọn danh mục hàng trước"}
+                          disabled={!selectedParentId}
+                          options={categories
+                            .filter((c) => c.parent_id === selectedParentId)
+                            .map((item) => ({
+                              value: item.id,
+                              label: item.name
+                            }))}
                         />
                       </Form.Item>
                     </Col>
