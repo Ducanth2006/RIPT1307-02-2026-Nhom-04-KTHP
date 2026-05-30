@@ -158,6 +158,9 @@ export default function Products() {
     { key: number; id?: number; size: string; color: string; price: number; stock: number; cost_price: number }[]
   >([]);
 
+  const [editingParentId, setEditingParentId] =
+    useState<number | null>(null);
+
   const [form] = Form.useForm();
 
   // =========================
@@ -322,10 +325,16 @@ export default function Products() {
     })) || [];
     setEditingVariants(varts);
 
+    // Tìm parent_id của danh mục sản phẩm hiện tại
+    const currentCategory = allCategories.find((c) => c.id === product.category_id);
+    const parentId = currentCategory ? currentCategory.parent_id : null;
+    setEditingParentId(parentId);
+
     form.setFieldsValue({
       name: product.name,
       brand: product.brand,
       base_price: product.base_price,
+      parent_category_id: parentId,
       category_id: product.category_id,
       description: product.description || '',
       status: product.status === 'Active'
@@ -1207,21 +1216,49 @@ export default function Products() {
               </div>
 
               <Form.Item
-                name="category_id"
-                label={<span className="font-semibold text-[#5b403d]">Danh mục sản phẩm</span>}
+                name="parent_category_id"
+                label={<span className="font-semibold text-[#5b403d]">Danh mục hàng</span>}
                 rules={[
                   {
                     required: true,
-                    message: 'Vui lòng chọn danh mục'
+                    message: 'Vui lòng chọn danh mục hàng'
                   }
                 ]}
               >
                 <Select
                   size="large"
-                  placeholder="Chọn danh mục..."
+                  placeholder="Chọn danh mục hàng..."
                   className="rounded-lg"
                   options={allCategories
-                    .filter((c) => c.parent_id !== null)
+                    .filter((c) => c.parent_id === null)
+                    .map((item) => ({
+                      value: item.id,
+                      label: item.name
+                    }))}
+                  onChange={(val) => {
+                    setEditingParentId(val);
+                    form.setFieldValue('category_id', undefined);
+                  }}
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="category_id"
+                label={<span className="font-semibold text-[#5b403d]">Danh mục sản phẩm</span>}
+                rules={[
+                  {
+                    required: true,
+                    message: 'Vui lòng chọn danh mục sản phẩm'
+                  }
+                ]}
+              >
+                <Select
+                  size="large"
+                  placeholder={editingParentId ? "Chọn danh mục sản phẩm..." : "Chọn danh mục hàng trước"}
+                  className="rounded-lg"
+                  disabled={!editingParentId}
+                  options={allCategories
+                    .filter((c) => c.parent_id === editingParentId)
                     .map((item) => ({
                       value: item.id,
                       label: item.name

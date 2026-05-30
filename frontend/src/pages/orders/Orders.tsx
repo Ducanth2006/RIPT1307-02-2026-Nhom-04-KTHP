@@ -33,6 +33,7 @@ import {
 import { getOrders, cancelOrder, getOrderById } from "../../services/client/order/apiClient";
 import { getMyReviewsApi, createReviewApi } from "../../services/client/review/apiClient";
 import type { IOrder, IOrderItem } from "../../services/client/order/typing";
+import { socket } from "../../utils/socket";
 import "./Orders.less";
 
 const { Title, Text, Paragraph } = Typography;
@@ -121,6 +122,30 @@ const Orders = () => {
       }
     }
   }, [openOrderId, orders, setSearchParams, searchParams]);
+
+  useEffect(() => {
+    if (!userId) return;
+
+    // Lắng nghe sự kiện cập nhật trạng thái đơn hàng từ Admin
+    socket.on('client:orderStatusUpdated', (data) => {
+      console.log('📡 Nhận cập nhật trạng thái đơn hàng real-time:', data);
+      
+      // Hiển thị thông báo nổi
+      message.success(`Trạng thái đơn hàng #${data.orderId} của bạn vừa được cập nhật!`);
+
+      // Tải lại danh sách đơn hàng (Refetch bằng cách vô hiệu hóa cache)
+      queryClient.invalidateQueries({ queryKey: ["orders", userId] });
+
+      // Nếu khách đang xem lộ trình đơn hàng này trong modal, tải lại cả lộ trình
+      if (trackingOrderId === Number(data.orderId)) {
+        queryClient.invalidateQueries({ queryKey: ["orderTracking", trackingOrderId, userId] });
+      }
+    });
+
+    return () => {
+      socket.off('client:orderStatusUpdated');
+    };
+  }, [userId, trackingOrderId, queryClient]);
 
   if (!userId) {
     return <Navigate to="/login" replace />;

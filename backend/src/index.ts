@@ -1,6 +1,8 @@
 import express from 'express';
 import type { Request, Response } from 'express';
 import cors from 'cors';
+import { createServer } from 'http';
+import { initSocket } from './config/socket';
 import supabaseClient from './config/supabase';
 import swaggerUi from 'swagger-ui-express';
 import { clientSwaggerSpec, adminSwaggerSpec } from './config/swagger';
@@ -128,7 +130,10 @@ app.use((err: any, req: Request, res: Response, next: express.NextFunction) => {
     res.status(500).json({ message: "Lỗi hệ thống (Internal Server Error)", error: err.message });
 });
 
-app.listen(port, () => {
+const server = createServer(app);
+initSocket(server);
+
+server.listen(port, () => {
     console.log(`✅ Server đang chạy tại: http://localhost:${port}`);
     console.log(`📚 Swagger Admin:  http://localhost:${port}/api/docs/admin`);
     console.log(`📚 Swagger Client: http://localhost:${port}/api/docs/client`);

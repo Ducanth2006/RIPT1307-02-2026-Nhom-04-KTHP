@@ -56,6 +56,7 @@ import type { ColumnsType } from 'antd/es/table';
 
 import axiosInstance from '../../utils/axiosConfig';
 import ip from '../../utils/ip';
+import { socket } from '../../utils/socket';
 
 // =========================
 // TYPES
@@ -445,6 +446,41 @@ export default function Orders() {
     taiThongKe();
     taiDanhSachDonHang();
   }, []);
+
+  useEffect(() => {
+    // Lắng nghe sự kiện khách hàng đặt đơn hàng mới
+    socket.on('admin:orderCreated', (newOrder) => {
+      console.log('📡 Nhận tín hiệu đơn hàng mới:', newOrder);
+      messageApi.info(`Có đơn hàng mới #${newOrder.id} vừa được đặt! Tự động cập nhật...`);
+      taiDanhSachDonHang();
+      taiThongKe();
+    });
+
+    // Lắng nghe sự kiện khách hàng yêu cầu hủy đơn hoặc hủy đơn hàng
+    socket.on('admin:orderCancelled', (data) => {
+      console.log('📡 Nhận tín hiệu hủy/yêu cầu hủy đơn hàng:', data);
+      if (data.status === 'CancelRequested') {
+        messageApi.warning(`Đơn hàng #${data.orderId} vừa gửi yêu cầu hủy! Tự động cập nhật...`);
+      } else {
+        messageApi.error(`Đơn hàng #${data.orderId} đã bị hủy! Tự động cập nhật...`);
+      }
+      taiDanhSachDonHang();
+      taiThongKe();
+    });
+
+    // Lắng nghe sự kiện trạng thái đơn hàng được cập nhật từ Admin/Staff khác
+    socket.on('admin:orderStatusUpdated', (data) => {
+      console.log('📡 Nhận tín hiệu cập nhật trạng thái đơn hàng:', data);
+      taiDanhSachDonHang();
+      taiThongKe();
+    });
+
+    return () => {
+      socket.off('admin:orderCreated');
+      socket.off('admin:orderCancelled');
+      socket.off('admin:orderStatusUpdated');
+    };
+  }, [messageApi]);
 
   useEffect(() => {
     if (openOrderId && orders.length > 0) {
