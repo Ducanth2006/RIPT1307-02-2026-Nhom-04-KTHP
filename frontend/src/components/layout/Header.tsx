@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Layout, Input, Badge, Button, Popover, Empty, List, Dropdown, Avatar } from "antd";
 import { SearchOutlined, ShoppingCartOutlined, UserOutlined, BellOutlined } from "@ant-design/icons";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -36,8 +36,26 @@ const Header = () => {
     });
   };
 
-  const userStr = localStorage.getItem("user");
-  const userObj = userStr ? JSON.parse(userStr) : null;
+  const [userObj, setUserObj] = useState(() => {
+    const userStr = localStorage.getItem("user");
+    return userStr ? JSON.parse(userStr) : null;
+  });
+
+  useEffect(() => {
+    const handleUserUpdate = () => {
+      const userStr = localStorage.getItem("user");
+      setUserObj(userStr ? JSON.parse(userStr) : null);
+    };
+
+    window.addEventListener("userUpdated", handleUserUpdate);
+    window.addEventListener("storage", handleUserUpdate);
+
+    return () => {
+      window.removeEventListener("userUpdated", handleUserUpdate);
+      window.removeEventListener("storage", handleUserUpdate);
+    };
+  }, []);
+
   const userId = userObj?.id;
   const hasToken = !!userId;
 
