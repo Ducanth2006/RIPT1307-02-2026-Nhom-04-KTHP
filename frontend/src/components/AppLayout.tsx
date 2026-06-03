@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Outlet, Link, useLocation, useNavigate, Navigate } from "react-router-dom";
 import {
   Home,
@@ -31,8 +31,26 @@ export default function AppLayout() {
   const queryClient = useQueryClient();
 
   const token = localStorage.getItem("accessToken");
-  const userStr = localStorage.getItem("user");
-  const userObj = userStr ? JSON.parse(userStr) : null;
+  const [userObj, setUserObj] = useState(() => {
+    const userStr = localStorage.getItem("user");
+    return userStr ? JSON.parse(userStr) : null;
+  });
+
+  useEffect(() => {
+    const handleUserUpdate = () => {
+      const userStr = localStorage.getItem("user");
+      setUserObj(userStr ? JSON.parse(userStr) : null);
+    };
+
+    window.addEventListener("userUpdated", handleUserUpdate);
+    window.addEventListener("storage", handleUserUpdate);
+
+    return () => {
+      window.removeEventListener("userUpdated", handleUserUpdate);
+      window.removeEventListener("storage", handleUserUpdate);
+    };
+  }, []);
+
   const userId = userObj?.id;
 
   // Real-time: Đăng nhập vào phòng socket
@@ -215,7 +233,7 @@ export default function AppLayout() {
                 <span className="text-sm font-medium hidden sm:block">
                   {userObj?.full_name || (userObj?.role === "Admin" ? "Quản trị viên" : userObj?.role === "Staff" ? "Nhân viên" : "Khách hàng")}
                 </span>
-                <Avatar src={`https://ui-avatars.com/api/?name=${encodeURIComponent(userObj?.full_name || userObj?.role || 'Admin')}&background=0D8ABC&color=fff`} size="small" />
+                <Avatar src={userObj?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(userObj?.full_name || userObj?.role || 'Admin')}&background=0D8ABC&color=fff`} size="small" />
               </button>
             </Dropdown>
           </div>
