@@ -148,6 +148,15 @@ const ProfileForm = ({ profile, userId }: { profile: IProfile; userId: number })
     mutationFn: (data: IUpdateProfileRequest) => updateProfile(data),
     onSuccess: () => {
       message.success("Cập nhật hồ sơ thành công!");
+      
+      const updatedUser = {
+        ...JSON.parse(localStorage.getItem("user") || "{}"),
+        full_name: form.getFieldValue("full_name"),
+        avatar: avatarUrl,
+      };
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+      window.dispatchEvent(new Event("userUpdated"));
+
       queryClient.invalidateQueries({ queryKey: ["profile", userId] });
     },
     onError: () => {
