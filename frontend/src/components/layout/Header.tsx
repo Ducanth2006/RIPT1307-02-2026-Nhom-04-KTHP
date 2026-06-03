@@ -192,6 +192,12 @@ const Header = () => {
                     key: "orders",
                     label: <Link to="/orders">Đơn hàng của tôi</Link>,
                   },
+                  ...(userObj?.role === "Admin" || userObj?.role === "Staff" ? [
+                    {
+                      key: "admin",
+                      label: <Link to="/admin/dashboard">Trang quản trị</Link>,
+                    }
+                  ] : []),
                   { type: "divider" },
                   {
                     key: "logout",
