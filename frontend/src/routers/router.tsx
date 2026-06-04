@@ -18,6 +18,7 @@ import Inventory from "../pages/Admin/Inventory";
 import AccountProfile from "../pages/Admin/AccountProfile";
 import HelpCenter from "../pages/Admin/HelpCenter";
 import AddProduct from "../pages/Admin/AddProduct";
+import ChatPage from "../pages/Admin/ChatPage";
 import ProductGrid from "../pages/products/components/ProductGrid";
 import ProductDetail from "../pages/products/components/ProductDetail";
 import ProductReviewsPage from "../pages/products/ProductReviewsPage";
@@ -151,6 +152,10 @@ const router = createBrowserRouter([
       {
         path: "help",
         element: <HelpCenter />,
+      },
+      {
+        path: "chat",
+        element: <ChatPage />,
       },
     ],
   },

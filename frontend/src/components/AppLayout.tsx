@@ -15,7 +15,8 @@ import {
   LogOut,
   BarChart2,
   Ticket,
-  Boxes
+  Boxes,
+  MessageCircle
 } from "lucide-react";
 import { Avatar, Dropdown, Popover, FloatButton, message } from "antd";
 import NotificationPanel from "./NotificationPanel";
@@ -104,6 +105,7 @@ export default function AppLayout() {
     { name: "Voucher", path: "/admin/vouchers", icon: Ticket },
     ...(userObj?.role === "Admin" ? [{ name: "Báo cáo", path: "/admin/reports", icon: BarChart2 }] : []),
     { name: "Khiếu nại", path: "/admin/complaints", icon: Headset },
+    { name: "Hỗ trợ chat", path: "/admin/chat", icon: MessageCircle },
     ...(userObj?.role === "Admin" ? [{ name: "Cài đặt", path: "/admin/settings", icon: SettingsIcon }] : []),
   ];
 
