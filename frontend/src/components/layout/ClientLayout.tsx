@@ -3,6 +3,7 @@ import { Outlet, useLocation } from "react-router-dom";
 import { FloatButton } from "antd";
 import Header from "./Header";
 import Footer from "./Footer";
+import ChatWidget from "./ChatWidget";
 import { colorPrimary } from "@/src/constants";
 import { socket } from "../../utils/socket";
 import { useQueryClient } from "@tanstack/react-query";
@@ -46,6 +47,8 @@ const ClientLayout = () => {
       <main style={{ minHeight: "100vh", background: "#ffffff" }}>
         <Outlet />
       </main>
+
+      {!hideHeader && <ChatWidget />}
 
       {!hideHeader && <Footer />}
 
