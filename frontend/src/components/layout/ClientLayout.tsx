@@ -1,14 +1,17 @@
 import { useEffect } from "react";
-import { Outlet, useLocation } from "react-router-dom";
-import { FloatButton } from "antd";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { FloatButton, notification } from "antd";
 import Header from "./Header";
 import Footer from "./Footer";
 import { colorPrimary } from "@/src/constants";
 import { socket } from "../../utils/socket";
 import { useQueryClient } from "@tanstack/react-query";
+import { playNotificationSound } from "../../utils/notificationSound";
+import AIChatbot from "../AIChatbot";
 
 const ClientLayout = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const hideHeader = ["/login", "/register", "/forgot-password"].includes(location.pathname);
   const queryClient = useQueryClient();
 
@@ -27,8 +30,31 @@ const ClientLayout = () => {
   useEffect(() => {
     if (!userId) return;
 
-    const refreshClientNotifications = () => {
-      console.log("📡 Khách hàng nhận được cập nhật trạng thái đơn hàng, tự động tải lại quả chuông thông báo...");
+    const refreshClientNotifications = (data: any) => {
+      console.log("📡 Khách hàng nhận được cập nhật trạng thái đơn hàng:", data);
+      playNotificationSound();
+      
+      const displayStatusMap: Record<string, string> = {
+        'Pending': 'Chờ duyệt',
+        'Confirmed': 'Đã xác nhận',
+        'Packing': 'Đang đóng gói',
+        'Shipping': 'Đang giao hàng',
+        'Completed': 'Đã hoàn thành',
+        'Cancelled': 'Đã hủy',
+        'CancelRequested': 'Yêu cầu hủy'
+      };
+      const vietnameseStatus = displayStatusMap[data.status] || data.status;
+      
+      notification.info({
+        message: "📦 Cập nhật đơn hàng",
+        description: `Đơn hàng #${data.orderId} của bạn đã thay đổi trạng thái sang: "${vietnameseStatus}". Bấm để xem chi tiết.`,
+        placement: "bottomRight",
+        duration: 6,
+        onClick: () => {
+          navigate(`/orders?openOrderId=${data.orderId}`);
+        },
+        style: { cursor: 'pointer' }
+      });
       queryClient.invalidateQueries({ queryKey: ["notifications", userId] });
     };
 
@@ -48,6 +74,8 @@ const ClientLayout = () => {
       </main>
 
       {!hideHeader && <Footer />}
+
+      <AIChatbot />
 
       <FloatButton.BackTop
         style={{ right: 24, bottom: 24, backgroundColor: colorPrimary, color: "#f5f5f5" }}
