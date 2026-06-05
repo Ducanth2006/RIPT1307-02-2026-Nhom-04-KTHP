@@ -396,23 +396,14 @@ export default function AddProduct() {
                         >
                           <div className="w-full md:w-1/6">
                             <label className="text-xs font-semibold text-[#5b403d] mb-1 block">Size</label>
-                            <Select
+                            <Input
                               value={item.size}
-                              onChange={(val) => {
+                              onChange={(e) => {
                                 const updated = [...variants];
-                                updated[index].size = val;
+                                updated[index].size = e.target.value;
                                 setVariants(updated);
                               }}
-                              className="w-full"
-                              placeholder="Chọn size"
-                              options={[
-                                { value: 'S', label: 'Size S' },
-                                { value: 'M', label: 'Size M' },
-                                { value: 'L', label: 'Size L' },
-                                { value: 'XL', label: 'Size XL' },
-                                { value: 'XXL', label: 'Size XXL' },
-                                { value: 'Freesize', label: 'Freesize' }
-                              ]}
+                              placeholder="Nhập size..."
                             />
                           </div>
 
