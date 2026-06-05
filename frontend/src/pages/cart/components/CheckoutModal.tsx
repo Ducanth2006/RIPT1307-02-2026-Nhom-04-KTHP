@@ -228,11 +228,8 @@ const CheckoutModal = ({
         </div>
         <Form.Item name="paymentMethod">
           <Radio.Group style={{ width: "100%" }}>
-            <Radio value="COD" style={{ display: "block", marginBottom: 12 }}>
+            <Radio value="COD" style={{ display: "block" }}>
               Thanh toán khi nhận hàng (COD)
-            </Radio>
-            <Radio value="Banking" style={{ display: "block" }}>
-              Chuyển khoản ngân hàng (Qua thẻ ngân hàng/Ví điện tử)
             </Radio>
           </Radio.Group>
         </Form.Item>
