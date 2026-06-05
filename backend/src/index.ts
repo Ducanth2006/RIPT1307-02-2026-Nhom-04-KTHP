@@ -19,6 +19,7 @@ import adminUserRoutes from './routes/adminUserRoutes';
 import adminComplaintRoutes from './routes/adminComplaintRoutes';
 import adminSettingRoutes from './routes/adminSettingRoutes';
 import adminReportRoutes from './routes/adminReportRoutes';
+import adminChatRoutes from './routes/adminChatRoutes';
 
 // ── Client Routes (Khách mua hàng) ────────────────────────────
 import clientProductRoutes from './routes/clientProductRoutes';
@@ -32,6 +33,7 @@ import clientNotificationRoutes from './routes/clientNotificationRoutes';
 import clientAuthRoutes from './routes/clientAuthRoutes';
 import clientVoucherRoutes from './routes/clientVoucherRoutes';
 import clientOrderRoutes from './routes/clientOrderRoutes';
+import clientChatRoutes from './routes/clientChatRoutes';
 import clientChatbotRoutes from './routes/clientChatbotRoutes';
 
 const app = express();
@@ -132,6 +134,7 @@ app.use('/api/admin/users', adminUserRoutes);
 app.use('/api/admin/complaints', adminComplaintRoutes);
 app.use('/api/admin/settings', adminSettingRoutes);
 app.use('/api/admin/reports', adminReportRoutes);
+app.use('/api/admin/chat', adminChatRoutes);
 
 // =============================================================
 // 🛍️ CLIENT APIs - Dành cho giao diện Khách mua hàng
@@ -149,6 +152,7 @@ app.use('/api/complaints', clientComplaintRoutes);
 app.use('/api/notifications', clientNotificationRoutes);
 app.use('/api/auth', clientAuthRoutes);
 app.use('/api/vouchers', clientVoucherRoutes);
+app.use('/api/chat', clientChatRoutes);
 app.use('/api/chatbot', clientChatbotRoutes);
 
 // =============================================================

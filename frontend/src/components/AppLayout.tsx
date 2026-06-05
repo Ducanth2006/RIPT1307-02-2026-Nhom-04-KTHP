@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Outlet, Link, useLocation, useNavigate, Navigate } from "react-router-dom";
 import {
   Home,
@@ -14,7 +14,8 @@ import {
   LogOut,
   BarChart2,
   Ticket,
-  Boxes
+  Boxes,
+  MessageCircle
 } from "lucide-react";
 import { Avatar, Dropdown, Popover, FloatButton, message, notification } from "antd";
 import NotificationPanel from "./NotificationPanel";
@@ -23,6 +24,7 @@ import { logout } from "../services/client/auth/apiClient";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getNotificationsApi } from "../services/client/notification/apiClient";
 import { socket } from "../utils/socket";
+import { getAdminRooms } from "../services/admin/chatService";
 
 export default function AppLayout() {
   const location = useLocation();
@@ -52,6 +54,78 @@ export default function AppLayout() {
   }, []);
 
   const userId = userObj?.id;
+  const [unreadChatsCount, setUnreadChatsCount] = useState(0);
+
+  const updateUnreadChatsCount = useCallback(async () => {
+    if (userObj?.role !== "Admin") return;
+    try {
+      const res = await getAdminRooms();
+      const rooms = res.data || [];
+      const totalUnread = rooms.reduce((sum: number, room: any) => sum + (room.unread_count || 0), 0);
+      setUnreadChatsCount(totalUnread);
+    } catch (err) {
+      console.error("Lỗi khi tải số tin nhắn chưa đọc:", err);
+    }
+  }, [userObj?.role]);
+
+  // Tải số lượng tin nhắn chưa đọc lần đầu
+  useEffect(() => {
+    if (userObj?.role === "Admin") {
+      updateUnreadChatsCount();
+    }
+  }, [userObj?.role, updateUnreadChatsCount]);
+
+  // Real-time: Chat notifications cho Staff (Toast) và Admin (Badge)
+  useEffect(() => {
+    if (!userId) return;
+
+    const handleChatNewMessage = (msg: any) => {
+      // 1. Cho Staff: Hiển thị thông báo nổi (Messenger-like toast)
+      if (userObj?.role === "Staff" && Number(msg.sender_id) !== Number(userId)) {
+        const activeRoomId = (window as any).activeChatRoomId;
+        const isCurrentActiveRoom = Number(activeRoomId) === Number(msg.room_id);
+        if (location.pathname !== "/admin/chat" || !isCurrentActiveRoom) {
+          // Luôn hiển thị tên Khách hàng — không hiển thị tên Bot khi bot reply
+          const BOT_USER_ID = 999999;
+          const isFromBot = Number(msg.sender_id) === BOT_USER_ID;
+          const senderName = isFromBot
+            ? "Khách hàng" // Bot reply → vẫn hiển thị "Khách hàng" để Staff biết cần vào hỗ trợ
+            : (msg.sender?.full_name || "Khách hàng");
+          const description = isFromBot
+            ? "🤖 AI đã trả lời tạm thời. Khách hàng đang chờ hỗ trợ."
+            : (msg.content || (msg.message_type === 'product' ? '🛍️ [Đã gửi thẻ sản phẩm]' : 'Có tin nhắn mới'));
+
+          notification.info({
+            message: `Tin nhắn mới từ ${senderName}`,
+            description,
+            placement: 'bottomRight',
+            duration: 4,
+            style: { cursor: 'pointer' },
+            onClick: () => { navigate('/admin/chat'); }
+          });
+        }
+      }
+
+      // 2. Cho Admin: Cập nhật Badge
+      if (userObj?.role === "Admin") {
+        updateUnreadChatsCount();
+      }
+    };
+
+    const handleChatReadStatus = () => {
+      if (userObj?.role === "Admin") {
+        updateUnreadChatsCount();
+      }
+    };
+
+    socket.on("chat:newMessage", handleChatNewMessage);
+    socket.on("chat:readStatus", handleChatReadStatus);
+
+    return () => {
+      socket.off("chat:newMessage", handleChatNewMessage);
+      socket.off("chat:readStatus", handleChatReadStatus);
+    };
+  }, [userId, userObj?.role, location.pathname, updateUnreadChatsCount, navigate]);
 
   // Real-time: Đăng nhập vào phòng socket
   useEffect(() => {
@@ -147,6 +221,7 @@ export default function AppLayout() {
     { name: "Voucher", path: "/admin/vouchers", icon: Ticket },
     ...(userObj?.role === "Admin" ? [{ name: "Báo cáo", path: "/admin/reports", icon: BarChart2 }] : []),
     { name: "Khiếu nại", path: "/admin/complaints", icon: Headset },
+    { name: "Hỗ trợ chat", path: "/admin/chat", icon: MessageCircle },
     ...(userObj?.role === "Admin" ? [{ name: "Cài đặt", path: "/admin/settings", icon: SettingsIcon }] : []),
   ];
 
@@ -176,7 +251,12 @@ export default function AppLayout() {
                 }`}
               >
                 <Icon size={20} className={isActive ? "text-[#af101a]" : ""} />
-                <span className="text-sm">{item.name}</span>
+                <span className="text-sm flex-1">{item.name}</span>
+                {item.path === "/admin/chat" && userObj?.role === "Admin" && unreadChatsCount > 0 && (
+                  <span className="bg-[#af101a] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[16px] h-[16px] flex items-center justify-center shadow-sm">
+                    {unreadChatsCount}
+                  </span>
+                )}
               </Link>
             );
           })}
