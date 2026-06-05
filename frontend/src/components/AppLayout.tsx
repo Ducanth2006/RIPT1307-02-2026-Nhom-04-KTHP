@@ -8,7 +8,6 @@ import {
   Headset,
   Settings as SettingsIcon,
   Bell,
-  HelpCircle,
   Menu,
   FolderTree,
   User,
@@ -17,8 +16,9 @@ import {
   Ticket,
   Boxes
 } from "lucide-react";
-import { Avatar, Dropdown, Popover, FloatButton, message } from "antd";
+import { Avatar, Dropdown, Popover, FloatButton, message, notification } from "antd";
 import NotificationPanel from "./NotificationPanel";
+import { playNotificationSound } from "../utils/notificationSound";
 import { logout } from "../services/client/auth/apiClient";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getNotificationsApi } from "../services/client/notification/apiClient";
@@ -65,17 +65,44 @@ export default function AppLayout() {
   useEffect(() => {
     if (!userId) return;
 
-    const refreshNotifications = () => {
-      console.log("📡 Admin nhận được sự kiện mới, tự động làm mới quả chuông thông báo...");
+    const handleOrderCreated = (order: any) => {
+      console.log("📡 Admin nhận được sự kiện đơn hàng mới:", order);
+      playNotificationSound();
+      notification.info({
+        message: "🛒 Đơn hàng mới chờ duyệt",
+        description: `Đơn hàng #${order.id} vừa được đặt thành công. Bấm để xem chi tiết.`,
+        placement: "bottomRight",
+        duration: 6,
+        onClick: () => {
+          navigate(`/admin/orders?openOrderId=${order.id}`);
+        },
+        style: { cursor: 'pointer' }
+      });
       queryClient.invalidateQueries({ queryKey: ["notifications", userId] });
     };
 
-    socket.on('admin:orderCreated', refreshNotifications);
-    socket.on('admin:orderCancelled', refreshNotifications);
+    const handleOrderCancelled = (data: any) => {
+      console.log("📡 Admin nhận được sự kiện yêu cầu hủy đơn hàng:", data);
+      playNotificationSound();
+      notification.warning({
+        message: "⚠️ Yêu cầu hủy đơn hàng",
+        description: `Đơn hàng #${data.orderId} có yêu cầu hủy mới. Bấm để xem chi tiết.`,
+        placement: "bottomRight",
+        duration: 6,
+        onClick: () => {
+          navigate(`/admin/orders?openOrderId=${data.orderId}`);
+        },
+        style: { cursor: 'pointer' }
+      });
+      queryClient.invalidateQueries({ queryKey: ["notifications", userId] });
+    };
+
+    socket.on('admin:orderCreated', handleOrderCreated);
+    socket.on('admin:orderCancelled', handleOrderCancelled);
 
     return () => {
-      socket.off('admin:orderCreated', refreshNotifications);
-      socket.off('admin:orderCancelled', refreshNotifications);
+      socket.off('admin:orderCreated', handleOrderCreated);
+      socket.off('admin:orderCancelled', handleOrderCancelled);
     };
   }, [userId, queryClient]);
 
@@ -108,9 +135,7 @@ export default function AppLayout() {
     return <Navigate to="/admin/dashboard" replace />;
   }
 
-  const handleHelp = () => {
-    navigate("/admin/help");
-  };
+
 
   const navItems = [
     { name: "Trang chủ", path: "/admin/dashboard", icon: Home },
@@ -130,11 +155,9 @@ export default function AppLayout() {
       {/* Sidebar */}
       <aside className="hidden md:flex flex-col w-64 bg-[#f7f9fb] border-r border-[#e4beba] h-full py-6 z-40 shrink-0">
         <div className="px-6 mb-8 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-[#d32f2f] text-white flex items-center justify-center font-bold text-lg">
-            P
-          </div>
+          <img src="/favicon.svg" alt="SportStride Logo" className="w-10 h-10 object-contain" />
           <div>
-            <h1 className="text-2xl font-bold text-[#af101a] leading-tight">ProSports ERP</h1>
+            <h1 className="text-2xl font-bold text-[#af101a] leading-tight">SportStride ERP</h1>
             <p className="text-xs text-[#5b403d] mt-1">Admin Console</p>
           </div>
         </div>
@@ -186,9 +209,7 @@ export default function AppLayout() {
                 )}
               </button>
             </Popover>
-            <button className="text-[#5b403d] hover:text-[#af101a] hidden sm:block" onClick={handleHelp}>
-              <HelpCircle size={20} />
-            </button>
+
             <Link to="/" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#e4beba] text-[#5b403d] hover:text-[#af101a] hover:bg-[#ffdad6]/20 transition-all text-xs font-semibold hidden sm:flex">
               <ShoppingCart size={14} />
               <span>Trang bán hàng</span>

@@ -46,7 +46,7 @@ const BestSellingProductsPage: React.FC = () => {
       <div style={{ textAlign: "center", marginBottom: "40px" }}>
         <Title level={2}>Sản phẩm bán chạy</Title>
         <Text type="secondary" style={{ fontSize: "16px" }}>
-          Khám phá những sản phẩm được yêu thích và bán chạy nhất tại Elite Performance
+          Khám phá những sản phẩm được yêu thích và bán chạy nhất tại SportStride
         </Text>
       </div>
 

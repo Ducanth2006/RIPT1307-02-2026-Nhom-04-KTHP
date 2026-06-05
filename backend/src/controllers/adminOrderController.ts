@@ -6,6 +6,7 @@ import {
     capNhatTrangThaiDonHang,
 } from '../services/adminOrderService';
 import { getIO } from '../config/socket';
+import { sendOrderStatusEmailToClient } from '../services/emailService';
 
 const traVeLoi = (
     res: Response,
@@ -138,6 +139,11 @@ export const capNhatTrangThaiDonHangController = async (
             console.log(`📡 Đã phát sự kiện admin:orderStatusUpdated cho đơn hàng #${ketQua.id}`);
         } catch (socketError) {
             console.error('❌ Lỗi khi gửi sự kiện socket (orderStatusUpdated):', socketError);
+        }
+
+        // Gửi Gmail thông báo trạng thái cho khách hàng nếu trạng thái là Confirmed, Shipping, Completed, hoặc Cancelled
+        if (ketQua && ketQua.id && ['Confirmed', 'Shipping', 'Completed', 'Cancelled'].includes(ketQua.status)) {
+            sendOrderStatusEmailToClient(Number(ketQua.id), ketQua.status).catch(err => console.error("Lỗi gửi email cập nhật trạng thái đơn hàng:", err));
         }
 
         return res.status(200).json({

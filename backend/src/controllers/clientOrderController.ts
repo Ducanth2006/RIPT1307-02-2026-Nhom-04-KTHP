@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { checkoutOrder, getUserOrders, getOrderDetails, cancelOrder } from '../services/clientOrderService';
 import { getIO } from '../config/socket';
+import { sendNewOrderEmailToAdmins, sendCancelRequestEmailToAdmins } from '../services/emailService';
 
 export const createOrder = async (req: Request, res: Response): Promise<any> => {
     // Bắt đầu đếm thời gian thực thi (Performance tracking)
@@ -41,6 +42,11 @@ export const createOrder = async (req: Request, res: Response): Promise<any> => 
             console.log(`📡 Đã phát sự kiện admin:orderCreated cho đơn hàng #${order.id}`);
         } catch (socketError) {
             console.error('❌ Lỗi khi gửi sự kiện socket (admin:orderCreated):', socketError);
+        }
+
+        // Gửi Gmail thông báo đơn hàng mới cho Admin/Staff
+        if (order && order.id) {
+            sendNewOrderEmailToAdmins(Number(order.id)).catch(err => console.error("Lỗi gửi email đơn hàng mới cho admin:", err));
         }
 
         // Kết thúc đếm thời gian
@@ -124,6 +130,11 @@ export const cancelOrderById = async (req: Request, res: Response): Promise<any>
         }
 
         const result = await cancelOrder(Number(orderId), Number(userId), cancelReason);
+
+        // Gửi Gmail báo yêu cầu hủy đơn hàng cho các Admin
+        sendCancelRequestEmailToAdmins(Number(orderId), cancelReason || 'Khách hàng gửi yêu cầu hủy').catch(err => 
+            console.error("Lỗi gửi email yêu cầu hủy đơn hàng cho Admin:", err)
+        );
 
         // Phát tín hiệu Real-time báo cho admin và client
         try {

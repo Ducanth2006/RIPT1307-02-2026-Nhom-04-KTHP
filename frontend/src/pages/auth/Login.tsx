@@ -128,7 +128,7 @@ const Login = () => {
         <div className="header-container">
           <div className="logo-section">
             <Link to="/" className="logo-link">
-              ELITE PERFORMANCE
+              SportStride
             </Link>
             <div className="divider"></div>
             <span className="page-title">Đăng nhập</span>
@@ -185,7 +185,7 @@ const Login = () => {
               </div>
 
               <div className="switch-auth">
-                Bạn mới biết đến Elite Performance?{" "}
+                Bạn mới biết đến SportStride?{" "}
                 <Link to="/register" className="link">
                   Đăng ký
                 </Link>
@@ -204,7 +204,7 @@ const Login = () => {
             <span>CHÍNH SÁCH VẬN CHUYỂN</span>
             <span>CHÍNH SÁCH TRẢ HÀNG VÀ HOÀN TIỀN</span>
           </div>
-          <div className="copyright">© 2026 Elite Performance. Tất cả các quyền được bảo lưu.</div>
+          <div className="copyright">© 2026 SportStride. Tất cả các quyền được bảo lưu.</div>
         </div>
       </footer>
     </div>
