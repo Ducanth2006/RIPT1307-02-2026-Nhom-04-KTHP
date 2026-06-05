@@ -8,7 +8,6 @@ import { colorPrimary } from "@/src/constants";
 import { socket } from "../../utils/socket";
 import { useQueryClient } from "@tanstack/react-query";
 import { playNotificationSound } from "../../utils/notificationSound";
-import AIChatbot from "../AIChatbot";
 
 const ClientLayout = () => {
   const location = useLocation();
@@ -78,10 +77,8 @@ const ClientLayout = () => {
 
       {!hideHeader && <Footer />}
 
-      <AIChatbot />
-
       <FloatButton.BackTop
-        style={{ right: 24, bottom: 24, backgroundColor: colorPrimary, color: "#f5f5f5" }}
+        style={{ right: 24, bottom: 90, backgroundColor: colorPrimary, color: "#f5f5f5" }}
         duration={500}
       />
     </>

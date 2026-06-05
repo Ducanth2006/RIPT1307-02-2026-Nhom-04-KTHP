@@ -81,19 +81,27 @@ export default function AppLayout() {
 
     const handleChatNewMessage = (msg: any) => {
       // 1. Cho Staff: Hiển thị thông báo nổi (Messenger-like toast)
-      if (userObj?.role === "Staff" && msg.sender_id !== userId) {
+      if (userObj?.role === "Staff" && Number(msg.sender_id) !== Number(userId)) {
         const activeRoomId = (window as any).activeChatRoomId;
-        const isCurrentActiveRoom = activeRoomId === msg.room_id;
+        const isCurrentActiveRoom = Number(activeRoomId) === Number(msg.room_id);
         if (location.pathname !== "/admin/chat" || !isCurrentActiveRoom) {
+          // Luôn hiển thị tên Khách hàng — không hiển thị tên Bot khi bot reply
+          const BOT_USER_ID = 999999;
+          const isFromBot = Number(msg.sender_id) === BOT_USER_ID;
+          const senderName = isFromBot
+            ? "Khách hàng" // Bot reply → vẫn hiển thị "Khách hàng" để Staff biết cần vào hỗ trợ
+            : (msg.sender?.full_name || "Khách hàng");
+          const description = isFromBot
+            ? "🤖 AI đã trả lời tạm thời. Khách hàng đang chờ hỗ trợ."
+            : (msg.content || (msg.message_type === 'product' ? '🛍️ [Đã gửi thẻ sản phẩm]' : 'Có tin nhắn mới'));
+
           notification.info({
-            message: `Tin nhắn mới từ ${msg.sender?.full_name || "Khách hàng"}`,
-            description: msg.content || (msg.message_type === 'product' ? '🛍️ [Đã gửi thẻ sản phẩm]' : 'Có tin nhắn mới'),
+            message: `Tin nhắn mới từ ${senderName}`,
+            description,
             placement: 'bottomRight',
             duration: 4,
             style: { cursor: 'pointer' },
-            onClick: () => {
-              navigate('/admin/chat');
-            }
+            onClick: () => { navigate('/admin/chat'); }
           });
         }
       }

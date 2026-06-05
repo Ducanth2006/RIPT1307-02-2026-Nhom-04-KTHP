@@ -7,8 +7,12 @@ import {
   LockOutlined,
   CloseCircleOutlined,
   CheckCircleOutlined,
-  InfoCircleOutlined
+  InfoCircleOutlined,
+  RobotOutlined
 } from "@ant-design/icons";
+
+// ID của Bot User — phải khớp với BOT_USER_ID trong backend .env
+const BOT_USER_ID = 999999;
 import { socket } from "../../utils/socket";
 import {
   getAdminRooms,
@@ -84,27 +88,27 @@ export default function ChatPage() {
     // Lắng nghe các sự kiện socket real-time
     const handleNewMessage = (msg: any) => {
       // 1. Thêm tin nhắn mới vào phòng hiện tại nếu khớp
-      if (activeRoom && msg.room_id === activeRoom.id) {
+      if (activeRoom && Number(msg.room_id) === Number(activeRoom.id)) {
         setMessages((prev) => {
           if (prev.some((m) => m.id === msg.id)) return prev;
           return [...prev, msg];
         });
         // Tự động đánh dấu đã xem tin nhắn nếu đang mở phòng đó
-        if (msg.sender_id !== userId) {
+        if (Number(msg.sender_id) !== Number(userId)) {
           markAdminMessagesRead(activeRoom.id, userId);
         }
       }
-
+ 
       // 2. Cập nhật tin nhắn cuối cùng trong danh sách phòng
       setRooms((prevRooms) => {
-        const exists = prevRooms.some((r) => r.id === msg.room_id);
+        const exists = prevRooms.some((r) => Number(r.id) === Number(msg.room_id));
         if (!exists) {
           // Phòng chưa có trong danh sách -> gọi loadRooms() để đồng bộ lại toàn bộ danh sách phòng mới
           loadRooms();
           return prevRooms;
         }
         return prevRooms.map((r) => {
-          if (r.id === msg.room_id) {
+          if (Number(r.id) === Number(msg.room_id)) {
             return {
               ...r,
               updated_at: msg.created_at,
@@ -116,9 +120,9 @@ export default function ChatPage() {
               },
               // Tăng số tin chưa đọc từ Client gửi
               unread_count:
-                activeRoom && activeRoom.id === msg.room_id
+                activeRoom && Number(activeRoom.id) === Number(msg.room_id)
                   ? 0
-                  : msg.sender_id !== userId
+                  : Number(msg.sender_id) !== Number(userId)
                   ? r.unread_count + 1
                   : r.unread_count
             };
@@ -326,9 +330,10 @@ export default function ChatPage() {
             <List
               dataSource={filteredRooms}
               renderItem={(room) => {
-                const isActive = activeRoom?.id === room.id;
+                const isActive = Number(activeRoom?.id) === Number(room.id);
                 const lastMsg = room.last_message;
-                const isClientMsg = lastMsg?.sender_id === room.client_id;
+                const isClientMsg = lastMsg && Number(lastMsg.sender_id) === Number(room.client_id);
+                const isBotMsg = lastMsg && Number(lastMsg.sender_id) === BOT_USER_ID;
                 
                 return (
                   <List.Item
@@ -351,7 +356,7 @@ export default function ChatPage() {
                           style={{ backgroundColor: "#87d068" }}
                         />
                       </Badge>
-
+ 
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
                           <span style={{ fontWeight: 600, color: "#262626", fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -361,14 +366,14 @@ export default function ChatPage() {
                             {lastMsg ? new Date(lastMsg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ""}
                           </span>
                         </div>
-
+ 
                         {/* Tin nhắn cuối cùng */}
                         <div style={{ fontSize: 12, color: "#8c8c8c", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           {lastMsg ? (
                             lastMsg.message_type === 'product' ? (
                               "🛍️ [Gửi thẻ sản phẩm]"
                             ) : (
-                              `${isClientMsg ? "Khách: " : "Bạn: "}${lastMsg.content}`
+                              `${isClientMsg ? "Khách: " : isBotMsg ? "AI: " : "Bạn: "}${lastMsg.content}`
                             )
                           ) : (
                             "Chưa có tin nhắn"
@@ -378,10 +383,15 @@ export default function ChatPage() {
                         {/* Status Tag */}
                         <div style={{ marginTop: 6, display: "flex", gap: 6, alignItems: "center" }}>
                           {room.status === "waiting" ? (
-                            <Tag color="orange" style={{ margin: 0, fontSize: 10 }}>Đang chờ</Tag>
+                            <>
+                              <Tag color="orange" style={{ margin: 0, fontSize: 10 }}>Đang chờ</Tag>
+                              <Tag color="blue" style={{ margin: 0, fontSize: 10 }}>
+                                <RobotOutlined style={{ marginRight: 2 }} />AI hỗ trợ
+                              </Tag>
+                            </>
                           ) : (
                             <Tag color="green" style={{ margin: 0, fontSize: 10 }}>
-                              {room.staff?.id === userId ? "Bạn đang hỗ trợ" : `Staff: ${room.staff?.full_name || "Khác"}`}
+                              {Number(room.staff?.id) === Number(userId) ? "Bạn đang hỗ trợ" : `Staff: ${room.staff?.full_name || "Khác"}`}
                             </Tag>
                           )}
                         </div>
@@ -454,9 +464,13 @@ export default function ChatPage() {
                     
                     {isWaiting ? (
                       <>
+                        <div style={{ marginBottom: 12, padding: "8px 16px", backgroundColor: "#e6f4ff", border: "1px solid #91caff", borderRadius: 8, display: "flex", alignItems: "center", gap: 8, justifyContent: "center" }}>
+                          <RobotOutlined style={{ color: "#1677ff", fontSize: 16 }} />
+                          <span style={{ color: "#1677ff", fontSize: 12, fontWeight: 500 }}>Trợ lý AI đang tự động hỗ trợ khách hàng</span>
+                        </div>
                         <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 8px 0" }}>Khách hàng đang chờ hỗ trợ</h3>
                         <p style={{ color: "#595959", fontSize: 13, marginBottom: 20 }}>
-                          Phòng chat này chưa được nhân viên nào tiếp nhận. Bấm vào nút bên dưới để gán bản thân và bắt đầu trò chuyện với khách hàng.
+                          AI Bot đang hỗ trợ tạm thời. Bấm vào nút bên dưới để tiếp quản và bắt đầu trò chuyện trực tiếp với khách hàng.
                         </p>
                         <Button type="primary" size="large" icon={<CheckCircleOutlined />} onClick={handleAssignMe} style={{ backgroundColor: "#389e0d", borderColor: "#389e0d" }}>
                           Nhận Hỗ Trợ Phòng Này
@@ -497,7 +511,8 @@ export default function ChatPage() {
                         );
                       }
 
-                      const isOwn = msg.sender_id === userId;
+                      const isOwn = Number(msg.sender_id) === Number(userId);
+                      const isBot = Number(msg.sender_id) === BOT_USER_ID;
                       return (
                         <div
                           key={msg.id}
@@ -510,8 +525,8 @@ export default function ChatPage() {
                           }}
                         >
                           {/* Tên người gửi */}
-                          <span style={{ fontSize: 10, color: "#8c8c8c", marginBottom: 2 }}>
-                            {isOwn ? `Bạn (${userRole})` : msg.sender?.full_name || "Khách hàng"}
+                          <span style={{ fontSize: 10, color: isBot ? "#1677ff" : "#8c8c8c", marginBottom: 2, display: "flex", alignItems: "center", gap: 3 }}>
+                            {isOwn ? `Bạn (${userRole})` : isBot ? <><RobotOutlined /> Trợ lý AI</> : msg.sender?.full_name || "Khách hàng"}
                           </span>
 
                           {/* Bong bóng chat */}
@@ -522,18 +537,23 @@ export default function ChatPage() {
                               styles={{ body: { padding: 10 } }}
                               style={{
                                 borderRadius: 8,
-                                border: "1px solid #d9d9d9",
+                                border: isBot ? "1px solid #91caff" : "1px solid #d9d9d9",
+                                backgroundColor: isBot ? "#f0f7ff" : "#fff",
                                 width: 240,
                                 cursor: "pointer"
                               }}
                               onClick={() => {
-                                // Mở trang sản phẩm ở tab mới
                                 window.open(`/products/${msg.product.id}`, "_blank");
                               }}
                             >
+                              {isBot && (
+                                <div style={{ fontSize: 10, color: "#1677ff", marginBottom: 6, display: "flex", alignItems: "center", gap: 3 }}>
+                                  <RobotOutlined /> Gợi ý từ AI
+                                </div>
+                              )}
                               <div style={{ display: "flex", gap: 10 }}>
                                 <img
-                                  src={msg.product.image_url}
+                                  src={msg.product.image_url || "/placeholder.jpg"}
                                   alt=""
                                   style={{ width: 56, height: 56, objectFit: "cover", borderRadius: 4, flexShrink: 0 }}
                                 />
@@ -552,8 +572,9 @@ export default function ChatPage() {
                             /* TIN NHẮN VĂN BẢN */
                             <div
                               style={{
-                                backgroundColor: isOwn ? "#af101a" : "#ffffff",
+                                backgroundColor: isOwn ? "#af101a" : isBot ? "#f0f7ff" : "#ffffff",
                                 color: isOwn ? "#ffffff" : "#1f1f1f",
+                                border: isBot ? "1px solid #91caff" : "none",
                                 padding: "10px 14px",
                                 borderRadius: 12,
                                 fontSize: 13,

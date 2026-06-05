@@ -2,6 +2,79 @@ import type { Request, Response } from 'express';
 import * as chatService from '../services/chatService';
 import { getIO } from '../config/socket';
 import supabaseClient from '../config/supabase';
+import { generateBotReply, ensureBotUserExists } from '../services/aiService';
+
+// ID của Bot User trong DB (configurable qua .env)
+const BOT_USER_ID = Number(process.env.BOT_USER_ID || '999999');
+
+/**
+ * Helper nội bộ: Gọi AI Bot tự động trả lời khi phòng ở trạng thái waiting.
+ * Chạy bất đồng bộ, KHÔNG block response trả về cho client.
+ */
+async function triggerBotReply(roomId: number, clientId: number): Promise<void> {
+    try {
+        // 1. Đảm bảo Bot User tồn tại trong DB
+        await ensureBotUserExists();
+
+        // 2. Lấy lịch sử tin nhắn gần nhất làm context cho AI
+        const history = await chatService.getRoomMessages(roomId);
+        const recentHistory = history.slice(-10);
+
+        // 3. Lấy tin nhắn cuối cùng của client để làm input
+        const lastClientMsg = [...recentHistory]
+            .reverse()
+            .find((m: any) => m.sender_id === clientId);
+
+        if (!lastClientMsg?.content && lastClientMsg?.message_type !== 'product') {
+            console.log('⚠️ Bot: Không tìm thấy tin nhắn client để xử lý.');
+            return;
+        }
+
+        // Nếu client gửi thẻ sản phẩm, tạo context cho AI từ tên sản phẩm
+        const userInput = lastClientMsg.message_type === 'product' && lastClientMsg.product
+            ? `Tôi muốn hỏi về sản phẩm: ${lastClientMsg.product.name}`
+            : (lastClientMsg.content || '');
+
+        // 4. Gọi Gemini AI để sinh câu trả lời
+        const { text: botText, recommendedProductId } = await generateBotReply(
+            userInput,
+            recentHistory
+        );
+
+        // 5. Lưu tin nhắn bot vào DB (dùng sendChatMessage như Staff gửi bình thường)
+        // Dùng conditional spread để tránh lỗi exactOptionalPropertyTypes:
+        // khi không có sản phẩm, key 'product_id' hoàn toàn vắng mặt (absent) thay vì gán undefined
+        let validProductId: number | undefined = undefined;
+        if (recommendedProductId) {
+            const { data: prodExists } = await supabaseClient
+                .from('products')
+                .select('id')
+                .eq('id', recommendedProductId)
+                .maybeSingle();
+            if (prodExists) {
+                validProductId = recommendedProductId;
+            } else {
+                console.warn(`⚠️ Bot suggested non-existent product ID: ${recommendedProductId}`);
+            }
+        }
+
+        const botMessage = await chatService.sendChatMessage(roomId, BOT_USER_ID, {
+            message_type: validProductId ? 'product' : 'text',
+            content: botText,
+            ...(validProductId ? { product_id: validProductId } : {})
+        });
+
+        // 6. Emit socket cho client nhận được tin nhắn bot real-time
+        const io = getIO();
+        io.to(`user:${clientId}`).emit('chat:newMessage', botMessage);
+        // Cũng emit tới admins để ChatPage & badge của Admin/Staff cập nhật real-time
+        io.to('admins').emit('chat:newMessage', botMessage);
+
+        console.log(`🤖 Bot đã trả lời phòng #${roomId}: "${botText.substring(0, 60)}..."`);
+    } catch (err: any) {
+        console.error(`⚠️ Lỗi Bot reply cho phòng #${roomId}:`, err.message);
+    }
+}
 
 /**
  * Lấy hoặc Khởi tạo phòng chat của Khách hàng
@@ -77,10 +150,10 @@ export const sendClientMessage = async (req: Request, res: Response): Promise<an
             return res.status(400).json({ message: 'Thiếu thông tin bắt buộc (roomId, userId, message_type).' });
         }
 
-        // Lấy thông tin phòng chat để xác định nhân viên được gán
+        // Lấy thông tin phòng chat để xác định trạng thái & nhân viên được gán
         const { data: room, error: roomErr } = await supabaseClient
             .from('chat_rooms')
-            .select('assigned_staff_id, client_id')
+            .select('assigned_staff_id, client_id, status')
             .eq('id', roomId)
             .maybeSingle();
 
@@ -108,6 +181,17 @@ export const sendClientMessage = async (req: Request, res: Response): Promise<an
 
         // 3. Gửi tới tất cả Admin/Staff qua phòng 'admins' để cập nhật danh sách chờ
         io.to('admins').emit('chat:newMessage', message);
+
+        // ─────────────────────────────────────────────────────────────
+        // 🤖 AI BOT AUTO-REPLY: Chỉ kích hoạt khi phòng đang "waiting"
+        // (Chưa có Staff nào nhận — Bot đóng vai trò hỗ trợ tạm thời)
+        // ─────────────────────────────────────────────────────────────
+        if (room.status === 'waiting') {
+            // Chạy bất đồng bộ không block response — client nhận response ngay
+            triggerBotReply(Number(roomId), Number(userId)).catch(err =>
+                console.error('⚠️ Không thể kích hoạt Bot reply:', err)
+            );
+        }
 
         return res.status(201).json({
             message: 'Gửi tin nhắn thành công.',
