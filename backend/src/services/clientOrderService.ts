@@ -286,9 +286,9 @@ export const checkoutOrder = async (data: CheckoutRequest) => {
     return newOrder;
 };
 
-// -------------------------------------------------------------
+
 // GET ORDER HISTORY
-// -------------------------------------------------------------
+
 
 export const getUserOrders = async (userId: number) => {
     const { data: orders, error } = await supabaseClient
@@ -330,9 +330,8 @@ export const getUserOrders = async (userId: number) => {
     return (orders as any[]).map(dinhDangDonHangChoClient);
 };
 
-// -------------------------------------------------------------
 // GET ORDER DETAILS
-// -------------------------------------------------------------
+
 
 export const getOrderDetails = async (orderId: number, userId: number) => {
     const { data: order, error } = await supabaseClient
@@ -379,9 +378,9 @@ export const getOrderDetails = async (orderId: number, userId: number) => {
     return dinhDangDonHangChoClient(order);
 };
 
-// -------------------------------------------------------------
+
 // CANCEL ORDER
-// -------------------------------------------------------------
+
 
 // Các trạng thái cho phép hủy
 const CANCELLABLE_STATUSES = ['Pending', 'Confirmed', 'Packing'];
