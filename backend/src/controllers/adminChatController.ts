@@ -251,6 +251,7 @@ export const markAdminMessagesRead = async (req: Request, res: Response): Promis
 
         if (room) {
             getIO().to(`user:${room.client_id}`).emit('chat:readStatus', { roomId, userId });
+            getIO().to('admins').emit('chat:readStatus', { roomId, userId });
         }
 
         return res.status(200).json({ message: 'Đã đánh dấu xem tin nhắn.' });
