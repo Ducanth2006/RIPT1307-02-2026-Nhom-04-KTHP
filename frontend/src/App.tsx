@@ -10,7 +10,6 @@ import ComplaintsPage from "./pages/Admin/ComplaintsPage";
 import SettingsPage from "./pages/Admin/SettingsPage";
 import AddProduct from "./pages/Admin/AddProduct";
 import AccountProfile from "./pages/Admin/AccountProfile";
-import HelpCenter from "./pages/Admin/HelpCenter";
 import ReportsPage from "./pages/Admin/ReportsPage";
 // import Register from "./pages/Admin/Register";
 import VouchersPage from "./pages/Admin/VouchersPage";
@@ -32,7 +31,7 @@ export default function App() {
             <Route path="complaints" element={<ComplaintsPage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="account" element={<AccountProfile />} />
-            <Route path="help" element={<HelpCenter />} />
+
             <Route path="reports" element={<ReportsPage />} />
           </Route>
         </Routes>
