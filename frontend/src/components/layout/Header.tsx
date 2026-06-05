@@ -80,7 +80,7 @@ const Header = () => {
             itemLayout="horizontal"
             dataSource={cartItems.slice(0, 5)}
             renderItem={(item) => {
-              const img = item.imageUrl || "/placeholder.jpg";
+              const img = item.imageUrl || "/placeholder.svg";
               return (
                 <List.Item>
                   <List.Item.Meta
