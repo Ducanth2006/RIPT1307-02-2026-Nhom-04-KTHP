@@ -13,7 +13,30 @@ export const initClientRoom = async (req: Request, res: Response): Promise<any> 
             return res.status(400).json({ message: 'Vui lòng cung cấp userId khách hàng.' });
         }
 
+        // Kiểm tra xem phòng đã tồn tại trước đó chưa
+        const { data: existingRoom } = await supabaseClient
+            .from('chat_rooms')
+            .select('id')
+            .eq('client_id', userId)
+            .maybeSingle();
+
         const room = await chatService.getOrCreateRoom(Number(userId));
+
+        // Nếu phòng chưa tồn tại (tức là vừa được tạo mới), phát socket báo cho admin
+        if (!existingRoom) {
+            try {
+                const io = getIO();
+                const roomData = {
+                    ...room,
+                    last_message: null,
+                    unread_count: 0
+                };
+                io.to('admins').emit('chat:roomCreated', roomData);
+            } catch (socketErr) {
+                console.error('⚠️ Lỗi phát socket chat:roomCreated:', socketErr);
+            }
+        }
+
         return res.status(200).json({
             message: 'Khởi tạo phòng chat thành công.',
             data: room

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { List, Avatar, Badge, Card, Input, Button, Tabs, Tag, Result, Spin, message, Modal } from "antd";
 import {
   MessageOutlined,
@@ -38,7 +38,8 @@ export default function ChatPage() {
   const userRole = userObj?.role; // 'Admin' | 'Staff' | 'Client'
 
   // 1. Tải danh sách phòng chat khi load trang
-  const loadRooms = async () => {
+  // 1. Tải danh sách phòng chat khi load trang
+  const loadRooms = useCallback(async () => {
     try {
       setLoadingRooms(true);
       const res = await getAdminRooms();
@@ -48,7 +49,30 @@ export default function ChatPage() {
     } finally {
       setLoadingRooms(false);
     }
-  };
+  }, []);
+
+  // 2. Tải lịch sử chat
+  const loadHistory = useCallback(async (roomId: number) => {
+    try {
+      setLoadingMessages(true);
+      const res = await getAdminMessages(roomId, userId, userRole);
+      setMessages(res.data);
+
+      // Xóa số lượng tin nhắn chưa đọc của phòng này trên UI danh sách phòng
+      setRooms((prevRooms) =>
+        prevRooms.map((r) => (r.id === roomId ? { ...r, unread_count: 0 } : r))
+      );
+    } catch (err: any) {
+      if (err.response?.status === 403) {
+        // Lỗi phân quyền đã khóa nội dung (ROOM_WAITING hoặc ROOM_LOCKED)
+        setMessages([]);
+      } else {
+        message.error("Lỗi khi tải lịch sử cuộc trò chuyện.");
+      }
+    } finally {
+      setLoadingMessages(false);
+    }
+  }, [userId, userRole]);
 
   useEffect(() => {
     if (!userId) return;
@@ -72,8 +96,14 @@ export default function ChatPage() {
       }
 
       // 2. Cập nhật tin nhắn cuối cùng trong danh sách phòng
-      setRooms((prevRooms) =>
-        prevRooms.map((r) => {
+      setRooms((prevRooms) => {
+        const exists = prevRooms.some((r) => r.id === msg.room_id);
+        if (!exists) {
+          // Phòng chưa có trong danh sách -> gọi loadRooms() để đồng bộ lại toàn bộ danh sách phòng mới
+          loadRooms();
+          return prevRooms;
+        }
+        return prevRooms.map((r) => {
           if (r.id === msg.room_id) {
             return {
               ...r,
@@ -94,8 +124,15 @@ export default function ChatPage() {
             };
           }
           return r;
-        }).sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
-      );
+        }).sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+      });
+    };
+
+    const handleRoomCreated = (newRoom: any) => {
+      setRooms((prevRooms) => {
+        if (prevRooms.some((r) => r.id === newRoom.id)) return prevRooms;
+        return [newRoom, ...prevRooms];
+      });
     };
 
     const handleRoomAssigned = (data: { roomId: number; assigned_staff_id: number; status: string; staffName: string }) => {
@@ -139,44 +176,31 @@ export default function ChatPage() {
       }
     };
 
+    socket.on("chat:roomCreated", handleRoomCreated);
     socket.on("chat:newMessage", handleNewMessage);
     socket.on("chat:roomAssigned", handleRoomAssigned);
     socket.on("chat:roomDeleted", handleRoomDeleted);
 
     return () => {
+      socket.off("chat:roomCreated", handleRoomCreated);
       socket.off("chat:newMessage", handleNewMessage);
       socket.off("chat:roomAssigned", handleRoomAssigned);
       socket.off("chat:roomDeleted", handleRoomDeleted);
     };
-  }, [userId, activeRoom, userRole]);
+  }, [userId, activeRoom, userRole, loadRooms, loadHistory]);
 
   // Cuộn xuống cuối tin nhắn
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // 2. Tải lịch sử chat
-  const loadHistory = async (roomId: number) => {
-    try {
-      setLoadingMessages(true);
-      const res = await getAdminMessages(roomId, userId, userRole);
-      setMessages(res.data);
-
-      // Xóa số lượng tin nhắn chưa đọc của phòng này trên UI danh sách phòng
-      setRooms((prevRooms) =>
-        prevRooms.map((r) => (r.id === roomId ? { ...r, unread_count: 0 } : r))
-      );
-    } catch (err: any) {
-      if (err.response?.status === 403) {
-        // Lỗi phân quyền đã khóa nội dung (ROOM_WAITING hoặc ROOM_LOCKED)
-        setMessages([]);
-      } else {
-        message.error("Lỗi khi tải lịch sử cuộc trò chuyện.");
-      }
-    } finally {
-      setLoadingMessages(false);
-    }
-  };
+  // Đồng bộ activeRoom.id vào window để AppLayout biết phòng nào đang mở
+  useEffect(() => {
+    (window as any).activeChatRoomId = activeRoom?.id || null;
+    return () => {
+      (window as any).activeChatRoomId = null;
+    };
+  }, [activeRoom]);
 
   const handleSelectRoom = (room: any) => {
     setActiveRoom(room);
