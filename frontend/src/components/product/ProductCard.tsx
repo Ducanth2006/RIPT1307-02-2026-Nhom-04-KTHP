@@ -18,7 +18,7 @@ const ProductCard = ({ product, badge }: Props) => {
   const imageUrl =
     product.product_images?.find((img) => img.is_main)?.image_url ||
     product.product_images?.[0]?.image_url ||
-    "/placeholder.jpg";
+    "/placeholder.svg";
 
   const displayBadge = badge || (product.status === "NEW" ? "NEW" : null);
 
@@ -27,8 +27,14 @@ const ProductCard = ({ product, badge }: Props) => {
       hoverable
       style={{ height: "100%", borderRadius: 8, overflow: "hidden" }}
       cover={
-        <div style={{ position: "relative" }}>
-          <Image src={imageUrl} alt={product.name} width="100%" style={{ width: "100%", height: 280, objectFit: "cover" }} preview={false} />
+        <div style={{ position: "relative", height: 280, width: "100%", overflow: "hidden", background: "#f8f9fa", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <Image
+            src={imageUrl}
+            alt={product.name}
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            preview={false}
+            fallback="/placeholder.svg"
+          />
 
           {/* Badge NEW/LIMITED/HOT */}
           {displayBadge && (
