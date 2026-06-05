@@ -34,7 +34,7 @@ const Register = () => {
         <div className="header-container">
           <div className="logo-section">
             <Link to="/" className="logo-link">
-              ELITE PERFORMANCE
+              SportStride
             </Link>
             <div className="divider"></div>
             <span className="page-title">Đăng ký</span>
@@ -82,7 +82,7 @@ const Register = () => {
               </Button>
 
               <div style={{ textAlign: "center", marginTop: 12, fontSize: 12, color: "#888" }}>
-                Bằng việc đăng ký, bạn đã đồng ý với Elite Performance về
+                Bằng việc đăng ký, bạn đã đồng ý với SportStride về
                 <span style={{ color: "#af101a" }}> Điều khoản dịch vụ</span> &
                 <span style={{ color: "#af101a" }}> Chính sách bảo mật</span>
               </div>
@@ -116,7 +116,7 @@ const Register = () => {
             <span>CHÍNH SÁCH VẬN CHUYỂN</span>
             <span>CHÍNH SÁCH TRẢ HÀNG VÀ HOÀN TIỀN</span>
           </div>
-          <div className="copyright">© 2026 Elite Performance. Tất cả các quyền được bảo lưu.</div>
+          <div className="copyright">© 2026 SportStride. Tất cả các quyền được bảo lưu.</div>
         </div>
       </footer>
     </div>
