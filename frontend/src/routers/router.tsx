@@ -16,7 +16,6 @@ import SettingsPage from "../pages/Admin/SettingsPage";
 import ComplaintsPage from "../pages/Admin/ComplaintsPage";
 import Inventory from "../pages/Admin/Inventory";
 import AccountProfile from "../pages/Admin/AccountProfile";
-import HelpCenter from "../pages/Admin/HelpCenter";
 import AddProduct from "../pages/Admin/AddProduct";
 import ChatPage from "../pages/Admin/ChatPage";
 import ProductGrid from "../pages/products/components/ProductGrid";

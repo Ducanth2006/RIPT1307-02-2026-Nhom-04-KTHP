@@ -5,6 +5,7 @@ import {
     confirmComplaint,
     replyComplaint
 } from '../services/adminComplaintService';
+import { sendComplaintReplyEmailToClient } from '../services/emailService';
 
 // ==========================================
 // GET /api/admin/complaints
@@ -91,6 +92,12 @@ export const replyComplaintHandler = async (req: Request, res: Response): Promis
         }
 
         const result = await replyComplaint(String(id), replyText);
+
+        // Gửi Gmail phản hồi khiếu nại cho khách hàng
+        if (result && result.id) {
+            sendComplaintReplyEmailToClient(Number(result.id)).catch(err => console.error("Lỗi gửi email phản hồi khiếu nại:", err));
+        }
+
         res.status(200).json({
             message: "Hồi đáp khiếu nại thành công!",
             data: result

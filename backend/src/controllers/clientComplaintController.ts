@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { createComplaint, getComplaintsByUserId, getComplaintById } from '../services/clientComplaintService';
+import { sendNewComplaintEmailToAdmins } from '../services/emailService';
 
 export const postComplaint = async (req: Request, res: Response): Promise<any> => {
     try {
@@ -17,6 +18,11 @@ export const postComplaint = async (req: Request, res: Response): Promise<any> =
             content,
             images: Array.isArray(images) ? images : []
         });
+
+        // Gửi email thông báo cho Admin/Staff khi có khiếu nại mới
+        if (data && data.id) {
+            sendNewComplaintEmailToAdmins(Number(data.id)).catch(err => console.error("Lỗi gửi email khiếu nại cho admin:", err));
+        }
 
         return res.status(201).json({ message: 'Gửi khiếu nại thành công', data });
     } catch (error: any) {

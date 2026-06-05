@@ -255,7 +255,7 @@ const Home = () => {
               marginRight: "auto",
             }}
           >
-            Hãy trở thành thành viên của ELITE PERFORMANCE và nhận ngay Voucher 15%.
+            Hãy trở thành thành viên của SportStride và nhận ngay Voucher 15%.
           </Text>
           <Button
             size="large"
