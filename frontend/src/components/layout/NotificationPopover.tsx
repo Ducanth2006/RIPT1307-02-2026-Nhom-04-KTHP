@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Popover, List, Typography, Button, Badge, Modal, Space, Empty, message } from "antd";
-import { BellOutlined, CheckOutlined, ClockCircleOutlined, EyeOutlined } from "@ant-design/icons";
+import { BellOutlined, CheckOutlined, ClockCircleOutlined, EyeOutlined, SoundOutlined, AudioMutedOutlined } from "@ant-design/icons";
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getNotificationsApi, readAllNotificationsApi, readNotificationApi } from "../../services/client/notification/apiClient";
@@ -22,6 +22,17 @@ const NotificationPopover = ({ children }: NotificationPopoverProps) => {
 
   const [visible, setVisible] = useState(false);
   const [selectedNotif, setSelectedNotif] = useState<NotificationType.INotificationItem | null>(null);
+
+  const [soundEnabled, setSoundEnabled] = useState(() => {
+    return localStorage.getItem("notification_sound_enabled") !== "false";
+  });
+
+  const toggleSound = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const newValue = !soundEnabled;
+    setSoundEnabled(newValue);
+    localStorage.setItem("notification_sound_enabled", String(newValue));
+  };
 
   // Fetch notifications (only if user is logged in)
   const { data, refetch } = useQuery({
@@ -120,9 +131,19 @@ const NotificationPopover = ({ children }: NotificationPopoverProps) => {
           backgroundColor: "#fafafa",
         }}
       >
-        <Text strong style={{ fontSize: 14, color: "#666" }}>
-          Thông báo mới nhận
-        </Text>
+        <Space size={8}>
+          <Text strong style={{ fontSize: 14, color: "#666" }}>
+            Thông báo mới nhận
+          </Text>
+          <Button
+            type="text"
+            size="small"
+            icon={soundEnabled ? <SoundOutlined style={{ fontSize: 14 }} /> : <AudioMutedOutlined style={{ fontSize: 14 }} />}
+            onClick={toggleSound}
+            title={soundEnabled ? "Tắt âm thanh thông báo" : "Bật âm thanh thông báo"}
+            style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 24, height: 24 }}
+          />
+        </Space>
         {unreadCount > 0 && (
           <Button
             type="link"
