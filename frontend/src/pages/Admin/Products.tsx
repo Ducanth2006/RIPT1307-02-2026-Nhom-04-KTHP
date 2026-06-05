@@ -1135,9 +1135,6 @@ export default function Products() {
                   keys
                 )
             }}
-            scroll={{
-              x: 1300
-            }}
             pagination={{
               pageSize: 10
             }}
