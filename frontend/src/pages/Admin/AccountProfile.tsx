@@ -91,6 +91,9 @@ export default function AccountProfile() {
           };
           localStorage.setItem('user', JSON.stringify(updatedUser));
           
+          // Dispatch event to update other layout elements instantly
+          window.dispatchEvent(new Event('userUpdated'));
+          
           // Refresh lại profile
           fetchProfile();
         }

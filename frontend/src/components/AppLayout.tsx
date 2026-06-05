@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Outlet, Link, useLocation, useNavigate, Navigate } from "react-router-dom";
 import {
   Home,
@@ -20,18 +20,64 @@ import {
 import { Avatar, Dropdown, Popover, FloatButton, message } from "antd";
 import NotificationPanel from "./NotificationPanel";
 import { logout } from "../services/client/auth/apiClient";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getNotificationsApi } from "../services/client/notification/apiClient";
+import { socket } from "../utils/socket";
 
 export default function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const currentPath = location.pathname;
+  const queryClient = useQueryClient();
 
   const token = localStorage.getItem("accessToken");
-  const userStr = localStorage.getItem("user");
-  const userObj = userStr ? JSON.parse(userStr) : null;
+  const [userObj, setUserObj] = useState(() => {
+    const userStr = localStorage.getItem("user");
+    return userStr ? JSON.parse(userStr) : null;
+  });
+
+  useEffect(() => {
+    const handleUserUpdate = () => {
+      const userStr = localStorage.getItem("user");
+      setUserObj(userStr ? JSON.parse(userStr) : null);
+    };
+
+    window.addEventListener("userUpdated", handleUserUpdate);
+    window.addEventListener("storage", handleUserUpdate);
+
+    return () => {
+      window.removeEventListener("userUpdated", handleUserUpdate);
+      window.removeEventListener("storage", handleUserUpdate);
+    };
+  }, []);
+
   const userId = userObj?.id;
+
+  // Real-time: Đăng nhập vào phòng socket
+  useEffect(() => {
+    if (userId) {
+      socket.emit("join", { userId, role: userObj?.role });
+      console.log(`📡 Admin/Staff #${userId} đã tham gia các phòng socket`);
+    }
+  }, [userId, userObj?.role]);
+
+  // Real-time: Lắng nghe sự kiện để cập nhật số lượng thông báo (quả chuông)
+  useEffect(() => {
+    if (!userId) return;
+
+    const refreshNotifications = () => {
+      console.log("📡 Admin nhận được sự kiện mới, tự động làm mới quả chuông thông báo...");
+      queryClient.invalidateQueries({ queryKey: ["notifications", userId] });
+    };
+
+    socket.on('admin:orderCreated', refreshNotifications);
+    socket.on('admin:orderCancelled', refreshNotifications);
+
+    return () => {
+      socket.off('admin:orderCreated', refreshNotifications);
+      socket.off('admin:orderCancelled', refreshNotifications);
+    };
+  }, [userId, queryClient]);
 
   const { data: notificationsRes } = useQuery({
     queryKey: ["notifications", userId],
@@ -143,6 +189,10 @@ export default function AppLayout() {
             <button className="text-[#5b403d] hover:text-[#af101a] hidden sm:block" onClick={handleHelp}>
               <HelpCircle size={20} />
             </button>
+            <Link to="/" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#e4beba] text-[#5b403d] hover:text-[#af101a] hover:bg-[#ffdad6]/20 transition-all text-xs font-semibold hidden sm:flex">
+              <ShoppingCart size={14} />
+              <span>Trang bán hàng</span>
+            </Link>
             <div className="h-6 w-px bg-[#e4beba] mx-2 hidden sm:block"></div>
             <Dropdown
               menu={{
@@ -152,6 +202,14 @@ export default function AppLayout() {
                     label: (
                       <Link to="/admin/account" className="flex items-center gap-2">
                         <User size={14} /> Tài khoản của tôi
+                      </Link>
+                    ),
+                  },
+                  {
+                    key: "shop",
+                    label: (
+                      <Link to="/" className="flex items-center gap-2">
+                        <ShoppingCart size={14} /> Xem trang bán hàng
                       </Link>
                     ),
                   },
@@ -175,7 +233,7 @@ export default function AppLayout() {
                 <span className="text-sm font-medium hidden sm:block">
                   {userObj?.full_name || (userObj?.role === "Admin" ? "Quản trị viên" : userObj?.role === "Staff" ? "Nhân viên" : "Khách hàng")}
                 </span>
-                <Avatar src={`https://ui-avatars.com/api/?name=${encodeURIComponent(userObj?.full_name || userObj?.role || 'Admin')}&background=0D8ABC&color=fff`} size="small" />
+                <Avatar src={userObj?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(userObj?.full_name || userObj?.role || 'Admin')}&background=0D8ABC&color=fff`} size="small" />
               </button>
             </Dropdown>
           </div>

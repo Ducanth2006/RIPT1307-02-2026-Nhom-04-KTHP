@@ -51,10 +51,20 @@ const getCroppedImg = (imageSrc: string, pixelCrop: Area): Promise<Blob> =>
   });
 
 const uploadToSupabase = async (blob: Blob): Promise<string> => {
-  const fileName = `products/${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`;
+  const contentType = blob.type || "image/jpeg";
+  let extension = "jpg";
+  if (contentType.includes("png")) {
+    extension = "png";
+  } else if (contentType.includes("webp")) {
+    extension = "webp";
+  } else if (contentType.includes("gif")) {
+    extension = "gif";
+  }
+
+  const fileName = `products/${Date.now()}_${Math.random().toString(36).slice(2)}.${extension}`;
   const { error } = await supabase.storage
     .from("product-images")
-    .upload(fileName, blob, { contentType: "image/jpeg", upsert: false });
+    .upload(fileName, blob, { contentType, upsert: false });
 
   if (error) throw new Error("Upload ảnh thất bại: " + error.message);
 
@@ -90,25 +100,100 @@ const ProductImageUploader = ({ value = [], onChange, maxImages = 5 }: Props) =>
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   /** Khi user chọn file */
-  const handleFileSelect = async (file: File) => {
-    if (!file.type.startsWith("image/")) {
-      message.error("Chỉ chấp nhận file ảnh!");
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      message.error("Ảnh không được vượt quá 5MB!");
-      return;
-    }
-    if (value.length >= maxImages) {
-      message.warning(`Tối đa ${maxImages} ảnh!`);
+  const handleFilesSelect = async (fileList: FileList) => {
+    const files = Array.from(fileList);
+    if (files.length === 0) return;
+
+    // Nếu chỉ chọn 1 file, giữ nguyên luồng crop cũ để đảm bảo tính năng cắt ảnh hoạt động
+    if (files.length === 1) {
+      const file = files[0];
+      if (!file.type.startsWith("image/")) {
+        message.error("Chỉ chấp nhận file ảnh!");
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        message.error("Ảnh không được vượt quá 5MB!");
+        return;
+      }
+      if (value.length >= maxImages) {
+        message.warning(`Tối đa ${maxImages} ảnh!`);
+        return;
+      }
+
+      const dataUrl = await readFileAsDataURL(file);
+      setCurrentSrc(dataUrl);
+      setCrop({ x: 0, y: 0 });
+      setZoom(1);
+      setCropModalOpen(true);
       return;
     }
 
-    const dataUrl = await readFileAsDataURL(file);
-    setCurrentSrc(dataUrl);
-    setCrop({ x: 0, y: 0 });
-    setZoom(1);
-    setCropModalOpen(true);
+    // Nếu chọn nhiều file cùng lúc: Tiến hành tải lên trực tiếp hàng loạt (không qua crop để tiết kiệm thời gian)
+    setUploading(true);
+    const validFiles: File[] = [];
+    let hasSizeError = false;
+    let hasTypeError = false;
+
+    // Kiểm tra giới hạn số lượng ảnh còn lại có thể upload
+    const spotsLeft = maxImages - value.length;
+    if (spotsLeft <= 0) {
+      message.warning(`Đã đạt giới hạn tối đa ${maxImages} ảnh!`);
+      setUploading(false);
+      return;
+    }
+
+    const filesToProcess = files.slice(0, spotsLeft);
+    if (files.length > spotsLeft) {
+      message.warning(`Chỉ có thể thêm tối đa ${spotsLeft} ảnh nữa. Hệ thống đã lược bớt các ảnh dư thừa.`);
+    }
+
+    for (const file of filesToProcess) {
+      if (!file.type.startsWith("image/")) {
+        hasTypeError = true;
+        continue;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        hasSizeError = true;
+        continue;
+      }
+      validFiles.push(file);
+    }
+
+    if (hasTypeError) {
+      message.error("Một số file bị bỏ qua do không phải là ảnh hợp lệ.");
+    }
+    if (hasSizeError) {
+      message.error("Một số ảnh bị bỏ qua do vượt quá dung lượng cho phép (tối đa 5MB).");
+    }
+
+    if (validFiles.length === 0) {
+      setUploading(false);
+      return;
+    }
+
+    try {
+      const uploadPromises = validFiles.map(async (file) => {
+        const url = await uploadToSupabase(file);
+        return url;
+      });
+
+      // Tải lên song song để tối ưu tốc độ
+      const uploadedUrls = await Promise.all(uploadPromises);
+
+      // Thêm các ảnh mới vào danh sách hiện tại
+      let currentImages = [...value];
+      uploadedUrls.forEach((url) => {
+        const isMain = currentImages.length === 0;
+        currentImages.push({ image_url: url, is_main: isMain });
+      });
+
+      onChange(currentImages);
+      message.success(`Đã tải lên thành công ${uploadedUrls.length} ảnh!`);
+    } catch (err: any) {
+      message.error(err.message || "Tải một số ảnh lên thất bại.");
+    } finally {
+      setUploading(false);
+    }
   };
 
   const onCropComplete = useCallback((_: Area, areaPixels: Area) => {
@@ -302,7 +387,7 @@ const ProductImageUploader = ({ value = [], onChange, maxImages = 5 }: Props) =>
 
       {/* Hint */}
       <div style={{ fontSize: 12, color: "#aaa" }}>
-        Tối đa {maxImages} ảnh · Tỉ lệ crop 1:1 · JPG, PNG · Tối đa 5MB mỗi ảnh
+        Tối đa {maxImages} ảnh · Có thể chọn nhiều ảnh cùng lúc · Tỉ lệ crop 1:1 (khi chọn 1 ảnh) · JPG, PNG, WEBP · Tối đa 5MB mỗi ảnh
       </div>
 
       {/* Hidden file input */}
@@ -310,10 +395,11 @@ const ProductImageUploader = ({ value = [], onChange, maxImages = 5 }: Props) =>
         ref={fileInputRef}
         type="file"
         accept="image/*"
+        multiple
         style={{ display: "none" }}
         onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) handleFileSelect(file);
+          const files = e.target.files;
+          if (files && files.length > 0) handleFilesSelect(files);
           e.target.value = "";
         }}
       />

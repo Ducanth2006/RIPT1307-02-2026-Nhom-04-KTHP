@@ -5,6 +5,7 @@ import {
     chiTietDonHang,
     capNhatTrangThaiDonHang,
 } from '../services/adminOrderService';
+import { getIO } from '../config/socket';
 
 const traVeLoi = (
     res: Response,
@@ -117,6 +118,27 @@ export const capNhatTrangThaiDonHangController = async (
         }
 
         const ketQua = await capNhatTrangThaiDonHang(orderId, status);
+
+        // Phát tín hiệu Real-time báo cho khách hàng và các admin/staff khác
+        try {
+            if (ketQua && ketQua.user_id) {
+                getIO().to(`user:${ketQua.user_id}`).emit('client:orderStatusUpdated', {
+                    orderId: ketQua.id,
+                    status: ketQua.status,
+                    userId: ketQua.user_id
+                });
+                console.log(`📡 Đã phát sự kiện client:orderStatusUpdated cho User #${ketQua.user_id}, đơn #${ketQua.id}`);
+            }
+
+            // Đồng thời phát cho các admin/staff đang trực dashboard để tự động tải lại danh sách
+            getIO().to('admins').emit('admin:orderStatusUpdated', {
+                orderId: ketQua.id,
+                status: ketQua.status
+            });
+            console.log(`📡 Đã phát sự kiện admin:orderStatusUpdated cho đơn hàng #${ketQua.id}`);
+        } catch (socketError) {
+            console.error('❌ Lỗi khi gửi sự kiện socket (orderStatusUpdated):', socketError);
+        }
 
         return res.status(200).json({
             message: 'Cập nhật trạng thái đơn hàng thành công',
