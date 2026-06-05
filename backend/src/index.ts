@@ -68,22 +68,54 @@ app.use('/api/docs/admin', swaggerUi.serveFiles(adminSwaggerSpec), swaggerUi.set
 // 🔍 TEST KẾT NỐI DATABASE
 // =============================================================
 app.get('/api/test-db', async (req: Request, res: Response) => {
-    const { data: orderData, error: fetchError } = await supabaseClient
-        .from('orders')
-        .select('*')
-        .limit(1);
+    try {
+        const results = [];
 
-    if (fetchError) {
-        return res.status(500).json({
-            message: "Lỗi kết nối Supabase",
-            errorDetails: fetchError
+        results.push("=== HEALING INVENTORY_LOGS SEQUENCE ===");
+        const { data: maxLogs } = await supabaseClient
+            .from('inventory_logs')
+            .select('id')
+            .order('id', { ascending: false })
+            .limit(1);
+        const maxLogId = maxLogs?.[0]?.id || 0;
+        results.push(`Max InventoryLog ID in DB: ${maxLogId}`);
+
+        for (let i = 1; i <= 100; i++) {
+            const { data, error } = await supabaseClient
+                .from('inventory_logs')
+                .insert([{
+                    variant_id: 22, // Use existing variant id
+                    action_type: 'IMPORT',
+                    quantity: 0,
+                    cost_price: 0
+                }])
+                .select();
+
+            if (error) {
+                results.push(`Attempt ${i}: Failed with: "${error.message}"`);
+            } else {
+                const insertedId = data?.[0]?.id;
+                results.push(`Attempt ${i}: Succeeded! Inserted ID: ${insertedId}`);
+                await supabaseClient.from('inventory_logs').delete().eq('id', insertedId);
+
+                if (insertedId > maxLogId) {
+                    results.push(`Successfully advanced inventory_logs sequence past max ID (${insertedId} > ${maxLogId})`);
+                    break;
+                }
+            }
+        }
+
+        res.status(200).json({
+            message: "Inventory Logs Sequence healing completed!",
+            results
+        });
+    } catch (err: any) {
+        res.status(500).json({
+            message: "Error during sequence healing",
+            error: err.message,
+            stack: err.stack
         });
     }
-
-    res.status(200).json({
-        message: "Kết nối Database Supabase thành công rực rỡ!",
-        data: orderData
-    });
 });
 
 // =============================================================
