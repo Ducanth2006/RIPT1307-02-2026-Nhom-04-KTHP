@@ -84,7 +84,7 @@ const HomepageCollections: React.FC = () => {
           >
             {collectionKeys.map((key) => {
               const collection = collections[key];
-              let bgImage = "/placeholder.jpg";
+              let bgImage = "/placeholder.svg";
               if (collection.products && collection.products.length > 0) {
                 const randomProduct = collection.products[Math.floor(Math.random() * collection.products.length)];
                 const mainImg = randomProduct.product_images?.find((img) => img.is_main);

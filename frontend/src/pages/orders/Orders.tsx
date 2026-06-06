@@ -311,7 +311,7 @@ const Orders = () => {
                 <div className="order-items">
                   {order.items?.map((item: IOrderItem) => (
                     <div key={item.id} className="order-item-row">
-                      <img src={item.imageUrl || "/placeholder.jpg"} alt={item.productName} className="item-image" />
+                      <img src={item.imageUrl || "/placeholder.svg"} alt={item.productName} className="item-image" />
                       <div className="item-details">
                         <Text strong className="item-name">
                           {item.productName}
@@ -698,7 +698,7 @@ const Orders = () => {
                 <Row gutter={16} align="top">
                   <Col span={4}>
                     <img
-                      src={item.imageUrl || "/placeholder.jpg"}
+                      src={item.imageUrl || "/placeholder.svg"}
                       alt={item.productName}
                       style={{
                         width: "100%",

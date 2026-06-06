@@ -18,7 +18,7 @@ const ProductCard = ({ product, badge }: Props) => {
   const imageUrl =
     product.product_images?.find((img) => img.is_main)?.image_url ||
     product.product_images?.[0]?.image_url ||
-    "/placeholder.jpg";
+    "/placeholder.svg";
 
   const displayBadge = badge || (product.status === "NEW" ? "NEW" : null);
 

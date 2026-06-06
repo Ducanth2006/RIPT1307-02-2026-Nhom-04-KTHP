@@ -21,7 +21,7 @@ const CartItem = ({
   checked,
   onToggle,
 }: CartItemProps) => {
-  const img = item.imageUrl || "/placeholder.jpg";
+  const img = item.imageUrl || "/placeholder.svg";
   const price = item.price;
 
   return (
