@@ -353,7 +353,7 @@ export default function UsersPage() {
       title: 'Ngày tạo',
       dataIndex: 'createdAt',
       render: (val: string) => (
-        <span className="text-[#5b403d]">{dayjs(val).format('DD/MM/YYYY HH:mm')}</span>
+        <span className="text-[#5b403d]">{dayjs(val).format('DD/MM/YYYY')}</span>
       )
     },
     {

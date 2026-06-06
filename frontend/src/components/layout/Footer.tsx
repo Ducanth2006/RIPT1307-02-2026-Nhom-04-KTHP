@@ -6,11 +6,14 @@ const Footer = () => {
       <div style={{ maxWidth: 1200, margin: "0 auto" }}>
         <Row gutter={[40, 40]}>
           <Col xs={24} sm={6}>
-            <h4 style={{ color: "#fff", marginBottom: 20, fontSize: 18 }}>ELITE PERFORMANCE</h4>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+              <img src="/favicon.svg" alt="SportStride Logo" style={{ height: 30, width: 30 }} />
+              <h4 style={{ color: "#fff", margin: 0, fontSize: 18, fontWeight: 700 }}>SportStride</h4>
+            </div>
             <p style={{ fontSize: 14, lineHeight: 1.7 }}>
               Được thiết kế cho những người không ngừng nỗ lực.
               <br />
-              Thời trang cao cấp
+              Thời trang thể thao cao cấp.
             </p>
           </Col>
           <Col xs={24} sm={4}>
@@ -73,7 +76,7 @@ const Footer = () => {
             opacity: 0.6,
           }}
         >
-          © 2026 ELITE PERFORMANCE. ALL RIGHTS RESERVED.
+          © 2026 SportStride. ALL RIGHTS RESERVED.
         </div>
       </div>
     </footer>

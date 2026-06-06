@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Button, List, Spin } from 'antd';
-import { Package, AlertTriangle, ShieldAlert, CheckCircle, Clock, CheckCheck, Trash2, Bell } from 'lucide-react';
+import { Package, AlertTriangle, ShieldAlert, CheckCircle, Clock, CheckCheck, Trash2, Bell, Volume2, VolumeX } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getNotificationsApi, readNotificationApi, readAllNotificationsApi } from '../services/client/notification/apiClient';
 
@@ -23,6 +23,16 @@ export default function NotificationPanel() {
   const [activeTab, setActiveTab] = useState('all');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  const [soundEnabled, setSoundEnabled] = useState(() => {
+    return localStorage.getItem("notification_sound_enabled") !== "false";
+  });
+
+  const toggleSound = () => {
+    const newValue = !soundEnabled;
+    setSoundEnabled(newValue);
+    localStorage.setItem("notification_sound_enabled", String(newValue));
+  };
 
   const userStr = localStorage.getItem("user");
   const userObj = userStr ? JSON.parse(userStr) : null;
@@ -161,6 +171,14 @@ export default function NotificationPanel() {
             )}
           </div>
           <div className="flex gap-1">
+            <Button 
+              type="text" 
+              size="small" 
+              icon={soundEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />} 
+              onClick={toggleSound} 
+              className="text-[#5b403d] hover:text-[#191c1e]" 
+              title={soundEnabled ? "Tắt âm thanh thông báo" : "Bật âm thanh thông báo"}
+            />
             <Button 
               type="text" 
               size="small" 

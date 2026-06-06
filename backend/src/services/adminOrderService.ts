@@ -1,4 +1,5 @@
 import supabaseClient from '../config/supabase';
+import { sendCancelRejectionEmailToClient } from './emailService';
 
 type LoiDichVu = Error & {
     code?: string;
@@ -438,6 +439,12 @@ export const capNhatTrangThaiDonHang = async (
                 .select()
                 .single();
             if (loiCapNhat) throw loiCapNhat;
+
+            // Gửi email từ chối hủy cho khách hàng
+            sendCancelRejectionEmailToClient(Number(orderId)).catch(err => 
+                console.error("Lỗi gửi email từ chối hủy đơn cho khách hàng:", err)
+            );
+
             return dinhDangDonHangChoAdmin(donCapNhat);
         }
         throw new Error(

@@ -80,7 +80,7 @@ const Header = () => {
             itemLayout="horizontal"
             dataSource={cartItems.slice(0, 5)}
             renderItem={(item) => {
-              const img = item.imageUrl || "/placeholder.jpg";
+              const img = item.imageUrl || "/placeholder.svg";
               return (
                 <List.Item>
                   <List.Item.Meta
@@ -155,7 +155,8 @@ const Header = () => {
             .header-logo { font-size: 18px !important; }
           }
         `}</style>
-        <Link to="/" style={{ textDecoration: "none" }}>
+        <Link to="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 10 }}>
+          <img src="/favicon.svg" alt="SportStride Logo" style={{ height: 32, width: 32 }} />
           <div
             className="header-logo"
             style={{
@@ -165,7 +166,7 @@ const Header = () => {
               letterSpacing: -1,
             }}
           >
-            ELITE PERFORMANCE
+            SportStride
           </div>
         </Link>
 

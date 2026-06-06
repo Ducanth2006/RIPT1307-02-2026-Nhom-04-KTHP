@@ -27,7 +27,7 @@ export const initSocket = (server: HTTPServer) => {
                 socket.join(roomName);
                 console.log(`👤 User ${data.userId} đã tham gia phòng: ${roomName}`);
             }
-            if (data.role === 'admin' || data.role === 'Staff' || data.role === 'staff') {
+            if (data.role === 'admin' || data.role === 'Admin' || data.role === 'Staff' || data.role === 'staff') {
                 socket.join('admins');
                 console.log(`👑 Admin/Staff đã tham gia phòng: admins`);
             }

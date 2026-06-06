@@ -151,7 +151,7 @@ const BestSellingProducts = () => {
           className="hide-scrollbar"
         >
           {products.map((product) => (
-            <div key={product.id} style={{ minWidth: "280px", flexShrink: 0, scrollSnapAlign: "start" }}>
+            <div key={product.id} style={{ width: "280px", minWidth: "280px", flexShrink: 0, scrollSnapAlign: "start" }}>
               <ProductCard product={product} badge="HOT" />
             </div>
           ))}
