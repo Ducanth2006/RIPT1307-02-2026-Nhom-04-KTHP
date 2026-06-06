@@ -156,6 +156,17 @@ app.use('/api/chat', clientChatRoutes);
 app.use('/api/chatbot', clientChatbotRoutes);
 
 // =============================================================
+// 🏥 HEALTH CHECK & ROOT PATH
+// =============================================================
+app.get('/', (req: Request, res: Response) => {
+    res.status(200).send("SportStride API Server is running");
+});
+
+app.get('/healthz', (req: Request, res: Response) => {
+    res.status(200).send("OK");
+});
+
+// =============================================================
 // ❌ XỬ LÝ LỖI TẬP TRUNG
 // =============================================================
 // Middleware xử lý lỗi 404 (Route không tồn tại)
