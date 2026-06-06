@@ -9,6 +9,7 @@ export interface ISendMessageRequest {
   message_type: 'text' | 'product' | 'image';
   content?: string;
   product_id?: number;
+  active_product_id?: number;
 }
 
 export const initClientRoom = async (userId: number) => {

@@ -17,7 +17,7 @@ import {
   Boxes,
   MessageCircle
 } from "lucide-react";
-import { Avatar, Dropdown, Popover, FloatButton, message, notification } from "antd";
+import { Avatar, Dropdown, Popover, FloatButton, message, notification, Drawer } from "antd";
 import NotificationPanel from "./NotificationPanel";
 import { playNotificationSound } from "../utils/notificationSound";
 import { logout } from "../services/client/auth/apiClient";
@@ -55,6 +55,7 @@ export default function AppLayout() {
 
   const userId = userObj?.id;
   const [unreadChatsCount, setUnreadChatsCount] = useState(0);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const updateUnreadChatsCount = useCallback(async () => {
     if (userObj?.role !== "Admin") return;
@@ -226,7 +227,7 @@ export default function AppLayout() {
   ];
 
   return (
-    <div className="flex h-screen bg-[#f7f9fb] font-sans text-[#191c1e] overflow-hidden">
+    <div className="flex h-screen h-[100dvh] bg-[#f7f9fb] font-sans text-[#191c1e] overflow-hidden">
       {/* Sidebar */}
       <aside className="hidden md:flex flex-col w-64 bg-[#f7f9fb] border-r border-[#e4beba] h-full py-6 z-40 shrink-0">
         <div className="px-6 mb-8 flex items-center gap-3">
@@ -264,11 +265,11 @@ export default function AppLayout() {
       </aside>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 h-screen h-[100dvh] overflow-hidden">
         {/* Header */}
         <header className="bg-white sticky top-0 z-30 border-b border-[#e4beba] shadow-sm flex justify-between items-center h-16 px-6 shrink-0">
           <div className="flex items-center gap-4 flex-1">
-            <button className="md:hidden text-[#5b403d]">
+            <button className="md:hidden text-[#5b403d]" onClick={() => setIsMobileMenuOpen(true)}>
               <Menu size={24} />
             </button>
           </div>
@@ -346,6 +347,47 @@ export default function AppLayout() {
         </main>
         <FloatButton.BackTop style={{ right: 24, bottom: 24 }} />
       </div>
+
+      {/* Mobile Menu Drawer */}
+      <Drawer
+        title={
+          <div className="flex items-center gap-3">
+            <img src="/favicon.svg" alt="SportStride Logo" className="w-8 h-8 object-contain" />
+            <span className="font-bold text-[#af101a] text-lg">SportStride ERP</span>
+          </div>
+        }
+        placement="left"
+        onClose={() => setIsMobileMenuOpen(false)}
+        open={isMobileMenuOpen}
+        width={260}
+        styles={{ body: { padding: "12px 8px" } }}
+      >
+        <nav className="flex flex-col gap-1">
+          {navItems.map((item) => {
+            const isActive = currentPath.startsWith(item.path);
+            const Icon = item.icon;
+
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors ${
+                  isActive ? "text-[#af101a] font-bold bg-[#ffdad6]/50" : "text-[#5b403d] hover:bg-[#e0e3e5]"
+                }`}
+              >
+                <Icon size={18} className={isActive ? "text-[#af101a]" : ""} />
+                <span className="text-sm flex-1">{item.name}</span>
+                {item.path === "/admin/chat" && userObj?.role === "Admin" && unreadChatsCount > 0 && (
+                  <span className="bg-[#af101a] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[16px] h-[16px] flex items-center justify-center shadow-sm">
+                    {unreadChatsCount}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
+        </nav>
+      </Drawer>
     </div>
   );
 }
