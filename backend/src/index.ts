@@ -42,13 +42,25 @@ const PORT = Number(process.env.PORT) || 5001;
 // =============================================================
 // 🌐 CORS - Cho phép Frontend gọi API từ domain khác
 // =============================================================
+const allowedOrigins = [
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://localhost:3000',
+    'https://clothingstore-backend-oa20.onrender.com',
+    'https://ript-1307-02-2026-nhom-04-kthp-fron.vercel.app'
+];
+
 app.use(cors({
-    origin: [
-        'http://localhost:5173',  // Vite dev server (Frontend)
-        'http://localhost:5174',  // Vite fallback port
-        'http://localhost:3000',  // Fallback nếu dùng CRA
-        'https://clothingstore-backend-oa20.onrender.com'// deploy render
-    ],
+    origin: (origin, callback) => {
+        if (!origin) return callback(null, true);
+        const isAllowed = allowedOrigins.includes(origin) || 
+                          origin.endsWith('.vercel.app');
+        if (isAllowed) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true
