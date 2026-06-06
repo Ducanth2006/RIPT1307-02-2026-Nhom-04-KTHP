@@ -1,468 +1,959 @@
-import React, { useState, useMemo } from 'react';
-import { 
-  Button, Input, Table, Tag, Space, 
-  Modal, Form, Select, Upload, Switch, message, Popconfirm 
+import React, {
+  useState,
+  useMemo,
+  useEffect
+} from 'react';
+
+import axiosInstance from '../../utils/axiosConfig';
+import ip from '../../utils/ip';
+
+import {
+  Button,
+  Input,
+  Table,
+  Tag,
+  Space,
+  Modal,
+  Form,
+  Select,
+  Switch,
+  message,
+  Popconfirm,
+  Card,
+  Statistic,
+  Empty
 } from 'antd';
-import { 
-  Plus, Search, Edit2, Trash2, 
-  Upload as UploadIcon, Filter 
+
+import {
+  Plus,
+  Search,
+  Edit2,
+  Trash2,
+  FolderTree,
+  Activity
 } from 'lucide-react';
+
 import type { ColumnsType } from 'antd/es/table';
-import type { UploadFile } from 'antd/es/upload/interface';
 
 interface Category {
-  key: string;
+  id: number;
   name: string;
-  description: string;
-  productCount: number;
-  displayOrder: number;
-  status: 'active' | 'inactive';
-  parentId?: string;
-  thumbnail?: string;
+  description: string | null;
+  items: number;
+  status: 'Active' | 'Draft';
+  parent_id: number | null;
   slug: string;
-  metaTitle?: string;
-  metaDescription?: string;
+  created_at: string;
   children?: Category[];
 }
 
-const generateSlug = (text: string) => {
+const generateSlug = (
+  text: string
+) => {
   return text
     .toLowerCase()
-    .replace(/[^\w\s-]/g, '')
-    .replace(/[\s_-]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+    .normalize('NFD')
+    .replace(
+      /[\u0300-\u036f]/g,
+      ''
+    )
+    .replace(
+      /[^\w\s-]/g,
+      ''
+    )
+    .replace(
+      /[\s_-]+/g,
+      '-'
+    )
+    .replace(
+      /^-+|-+$/g,
+      ''
+    );
 };
 
-const initialData: Category[] = [
-  {
-    key: '1',
-    name: 'Football Shoes',
-    description: 'All kinds of football shoes',
-    productCount: 150,
-    displayOrder: 1,
-    status: 'active',
-    slug: 'football-shoes',
-    metaTitle: 'Authentic Football Shoes',
-    metaDescription: 'Buy high quality football shoes',
-    children: [
-      {
-        key: '1-1',
-        parentId: '1',
-        name: 'Artificial Turf Shoes',
-        description: 'TF Turf Shoes',
-        productCount: 80,
-        displayOrder: 1,
-        status: 'active',
-        slug: 'artificial-turf-shoes',
-      },
-      {
-        key: '1-2',
-        parentId: '1',
-        name: 'Natural Grass Shoes',
-        description: 'FG/SG Cleats',
-        productCount: 70,
-        displayOrder: 2,
-        status: 'active',
-        slug: 'natural-grass-shoes',
-      }
-    ]
-  },
-  {
-    key: '2',
-    name: 'Sports Apparel',
-    description: 'Training and competition apparel',
-    productCount: 320,
-    displayOrder: 2,
-    status: 'active',
-    slug: 'sports-apparel',
-  },
-  {
-    key: '3',
-    name: 'Accessories',
-    description: 'Socks, bands, shin guards',
-    productCount: 0,
-    displayOrder: 3,
-    status: 'inactive',
-    slug: 'accessories',
-  }
-];
-
 export default function Categories() {
-  const [categories, setCategories] = useState<Category[]>(initialData);
-  const [searchText, setSearchText] = useState('');
-  const [levelFilter, setLevelFilter] = useState<string>('all');
-  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
-  
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  // =========================
+  // STATE
+  // =========================
+
+  const [categories, setCategories] =
+    useState<Category[]>([]);
+
+  const [stats, setStats] =
+    useState({
+      parent_categories: 0,
+      child_categories: 0,
+      active_items: 0
+    });
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [searchText, setSearchText] =
+    useState('');
+
+  const [
+    isModalVisible,
+    setIsModalVisible
+  ] = useState(false);
+
+  const [
+    editingCategory,
+    setEditingCategory
+  ] =
+    useState<Category | null>(
+      null
+    );
+
   const [form] = Form.useForm();
-  const [fileList, setFileList] = useState<UploadFile[]>([]);
 
-  // Computed flat list for dropdown parent selection
-  const flatCategories = useMemo(() => {
-    const result: { label: string; value: string }[] = [];
-    const traverse = (cats: Category[], prefix = '') => {
-      cats.forEach(c => {
-        result.push({ label: prefix + c.name, value: c.key });
-        if (c.children) {
-          traverse(c.children, prefix + '-- ');
-        }
-      });
-    };
-    traverse(categories);
-    return result;
-  }, [categories]);
+  // =========================
+  // EFFECT
+  // =========================
 
-  // Filtering
-  const filteredData = useMemo(() => {
-    let result = categories;
+  useEffect(() => {
+    fetchCategories();
+  }, []);
 
-    // We deep clone to filter children safely
-    const cloneAndFilter = (items: Category[]): Category[] => {
-      return items.map(item => ({ ...item })).filter(item => {
-        const matchSearch = item.name.toLowerCase().includes(searchText.toLowerCase()) || 
-                            item.slug.toLowerCase().includes(searchText.toLowerCase());
-        
-        let matchLevel = true;
-        if (levelFilter === 'parent') matchLevel = !item.parentId;
-        if (levelFilter === 'child') matchLevel = !!item.parentId;
+  // =========================
+  // COMPUTED
+  // =========================
 
-        if (item.children) {
-          item.children = cloneAndFilter(item.children);
-          // If a child matches but parent doesn't, we still want to keep the parent if searching
-          if (item.children.length > 0 && levelFilter === 'all') {
-            return true;
+  const activeCategoriesCount =
+    useMemo(() => {
+      let count = 0;
+
+      const traverse = (
+        items: Category[]
+      ) => {
+        items.forEach(
+          (item) => {
+            if (
+              item.status ===
+              'Active'
+            ) {
+              count++;
+            }
+
+            if (
+              item.children
+            ) {
+              traverse(
+                item.children
+              );
+            }
           }
+        );
+      };
+
+      traverse(categories);
+
+      return count;
+    }, [categories]);
+
+  const parentCategoryOptions =
+    useMemo(() => {
+      return categories.map(
+        (c) => ({
+          label: c.name,
+          value: c.id
+        })
+      );
+    }, [categories]);
+
+  // =========================
+  // BUILD TREE
+  // =========================
+
+  const buildCategoryTree = (
+    flatList: Category[]
+  ) => {
+    const listMap: Record<
+      number,
+      Category
+    > = {};
+
+    const rootNodes: Category[] =
+      [];
+
+    flatList.forEach(
+      (item) => {
+        listMap[item.id] = {
+          ...item,
+          children:
+            undefined
+        };
+      }
+    );
+
+    flatList.forEach(
+      (item) => {
+        const node =
+          listMap[item.id];
+
+        if (
+          node.parent_id &&
+          listMap[
+            node.parent_id
+          ]
+        ) {
+          const parent =
+            listMap[
+              node.parent_id
+            ];
+
+          if (
+            !parent.children
+          ) {
+            parent.children = [];
+          }
+
+          parent.children.push(
+            node
+          );
+        } else {
+          rootNodes.push(node);
         }
+      }
+    );
 
-        return (matchSearch && matchLevel) || (item.children && item.children.length > 0 && matchLevel);
-      });
-    };
-
-    if (searchText || levelFilter !== 'all') {
-      result = cloneAndFilter(result);
-    }
-
-    return result;
-  }, [categories, searchText, levelFilter]);
-
-
-  const handleDelete = (category: Category) => {
-    if (category.productCount > 0) {
-      message.error(`Cannot delete "${category.name}" because it contains ${category.productCount} products. Please move them to a different category first.`);
-      return;
-    }
-    
-    // Recursive delete
-    const deleteFromList = (list: Category[]): Category[] => {
-      return list.filter(item => {
-        if (item.key === category.key) return false;
-        if (item.children) {
-          item.children = deleteFromList(item.children);
-        }
-        return true;
-      });
-    };
-    
-    setCategories(deleteFromList(categories));
-    message.success('Category deleted.');
+    return rootNodes;
   };
 
-  const handleBulkStatusChange = (status: 'active' | 'inactive') => {
-    if (selectedRowKeys.length === 0) return;
-    
-    const updateStatus = (list: Category[]): Category[] => {
-      return list.map(item => {
-        let newItem = { ...item };
-        if (selectedRowKeys.includes(item.key)) {
-          newItem.status = status;
+  // =========================
+  // API
+  // =========================
+
+  const fetchCategories =
+    async () => {
+      setLoading(true);
+
+      try {
+        const response =
+          await axiosInstance.get(
+            `${ip}/admin/categories`
+          );
+
+        if (
+          response.status ===
+            200 &&
+          response.data.data
+        ) {
+          setCategories(
+            buildCategoryTree(
+              response.data.data
+            )
+          );
         }
-        if (newItem.children) {
-          newItem.children = updateStatus(newItem.children);
+
+        const statsRes =
+          await axiosInstance.get(
+            `${ip}/admin/categories/stats`
+          );
+
+        if (
+          statsRes.status ===
+            200 &&
+          statsRes.data.data
+        ) {
+          setStats(
+            statsRes.data.data
+          );
         }
-        return newItem;
-      });
+      } catch (error: any) {
+        console.log(error);
+
+        message.error(
+          error.response?.data
+            ?.message ||
+            'Tải danh mục thất bại'
+        );
+      } finally {
+        setLoading(false);
+      }
     };
 
-    setCategories(updateStatus(categories));
-    message.success(`Updated status for ${selectedRowKeys.length} categories.`);
-    setSelectedRowKeys([]);
-  };
+  // =========================
+  // FILTER
+  // =========================
 
-  const openModal = (category?: Category) => {
+  const filteredData =
+    useMemo(() => {
+      let result =
+        categories;
+
+      const cloneAndFilter =
+        (
+          items: Category[]
+        ): Category[] => {
+          return items
+            .map((item) => ({
+              ...item
+            }))
+            .filter(
+              (item) => {
+                const match =
+                  item.name
+                    .toLowerCase()
+                    .includes(
+                      searchText.toLowerCase()
+                    ) ||
+                  item.slug
+                    .toLowerCase()
+                    .includes(
+                      searchText.toLowerCase()
+                    );
+
+                if (
+                  item.children
+                ) {
+                  item.children =
+                    cloneAndFilter(
+                      item.children
+                    );
+
+                  if (
+                    item.children
+                      .length > 0
+                  ) {
+                    return true;
+                  }
+                }
+
+                return (
+                  match ||
+                  (item.children &&
+                    item
+                      .children
+                      .length > 0)
+                );
+              }
+            );
+        };
+
+      if (searchText) {
+        result =
+          cloneAndFilter(
+            result
+          );
+      }
+
+      return result;
+    }, [
+      categories,
+      searchText
+    ]);
+
+  // =========================
+  // ACTIONS
+  // =========================
+
+  const handleDelete =
+    async (
+      category: Category
+    ) => {
+      try {
+        await axiosInstance.delete(
+          `${ip}/admin/categories/${category.id}`
+        );
+
+        message.success(
+          'Xóa danh mục thành công'
+        );
+
+        fetchCategories();
+      } catch (error: any) {
+        message.error(
+          error.response?.data
+            ?.message ||
+            'Xóa thất bại'
+        );
+      }
+    };
+
+  const handleToggleStatus =
+    async (
+      category: Category,
+      checked: boolean
+    ) => {
+      try {
+        await axiosInstance.patch(
+          `${ip}/admin/categories/${category.id}`,
+          {
+            status:
+              checked
+                ? 'Active'
+                : 'Draft'
+          }
+        );
+
+        message.success(
+          'Cập nhật trạng thái thành công'
+        );
+
+        fetchCategories();
+      } catch (error) {
+        message.error(
+          'Cập nhật trạng thái thất bại'
+        );
+
+        fetchCategories();
+      }
+    };
+
+  // =========================
+  // MODAL
+  // =========================
+
+  const openModal = (
+    category?: Category
+  ) => {
     if (category) {
-      setEditingCategory(category);
+      setEditingCategory(
+        category
+      );
+
       form.setFieldsValue({
-        ...category,
+        name: category.name,
+        slug: category.slug,
+        parent_id:
+          category.parent_id,
+        description:
+          category.description,
+        status:
+          category.status ===
+          'Active'
       });
     } else {
-      setEditingCategory(null);
+      setEditingCategory(
+        null
+      );
+
       form.resetFields();
     }
+
     setIsModalVisible(true);
   };
 
   const onModalOk = () => {
-    form.validateFields().then(values => {
-      const newNode: Category = {
-        key: editingCategory ? editingCategory.key : Date.now().toString(),
-        name: values.name,
-        description: values.description || '',
-        slug: values.slug || generateSlug(values.name),
-        parentId: values.parentId,
-        status: values.status ? 'active' : 'inactive',
-        displayOrder: values.displayOrder || 1,
-        productCount: editingCategory ? editingCategory.productCount : 0,
-        metaTitle: values.metaTitle,
-        metaDescription: values.metaDescription,
-      };
-
-      if (editingCategory) {
-        // Update
-        const updateInList = (list: Category[]): Category[] => {
-          return list.map(item => {
-            if (item.key === editingCategory.key) {
-              return { ...item, ...newNode };
-            }
-            if (item.children) {
-              return { ...item, children: updateInList(item.children) };
-            }
-            return item;
+    form
+      .validateFields()
+      .then(
+        async (values) => {
+          message.loading({
+            content:
+              'Đang lưu...',
+            key: 'saveCat'
           });
-        };
-        setCategories(updateInList(categories));
-        message.success('Category updated successfully.');
-      } else {
-        // Create
-        if (newNode.parentId) {
-          const insertToParent = (list: Category[]): Category[] => {
-            return list.map(item => {
-              if (item.key === newNode.parentId) {
-                return { ...item, children: [...(item.children || []), newNode] };
-              }
-              if (item.children) {
-                return { ...item, children: insertToParent(item.children) };
-              }
-              return item;
-            });
+
+          const payload = {
+            name: values.name,
+
+            description:
+              values.description ||
+              null,
+
+            slug:
+              values.slug ||
+              generateSlug(
+                values.name
+              ),
+
+            parent_id:
+              values.parent_id ||
+              null,
+
+            status:
+              values.status
+                ? 'Active'
+                : 'Draft'
           };
-          setCategories(insertToParent(categories));
-        } else {
-          setCategories([...categories, newNode]);
+
+          try {
+            if (
+              editingCategory
+            ) {
+              await axiosInstance.patch(
+                `${ip}/admin/categories/${editingCategory.id}`,
+                payload
+              );
+
+              message.success(
+                {
+                  content:
+                    'Cập nhật thành công',
+                  key: 'saveCat'
+                }
+              );
+            } else {
+              await axiosInstance.post(
+                `${ip}/admin/categories`,
+                payload
+              );
+
+              message.success(
+                {
+                  content:
+                    'Tạo danh mục thành công',
+                  key: 'saveCat'
+                }
+              );
+            }
+
+            setIsModalVisible(
+              false
+            );
+
+            fetchCategories();
+          } catch (error: any) {
+            message.error({
+              content:
+                error.response
+                  ?.data
+                  ?.message ||
+                'Lưu thất bại',
+              key: 'saveCat'
+            });
+          }
         }
-        message.success('New category added successfully.');
-      }
-      setIsModalVisible(false);
-    });
+      );
   };
 
-  const columns: ColumnsType<Category> = [
-    {
-      title: 'Category Name',
-      dataIndex: 'name',
-      key: 'name',
-      render: (text, record) => (
-        <div>
-          <div className="font-medium text-[#191c1e]">{text}</div>
-          <div className="text-xs text-[#5b403d] font-mono">/{record.slug}</div>
-        </div>
-      ),
-    },
-    {
-      title: 'Description',
-      dataIndex: 'description',
-      key: 'description',
-      ellipsis: true,
-      className: 'text-[#5b403d]',
-    },
-    {
-      title: 'Products',
-      dataIndex: 'productCount',
-      key: 'productCount',
-      width: 120,
-      render: (count) => (
-        <Tag color={count === 0 ? 'default' : 'green'}>{count} items</Tag>
-      ),
-    },
-    {
-      title: 'Order',
-      dataIndex: 'displayOrder',
-      key: 'displayOrder',
-      width: 100,
-      align: 'center',
-    },
-    {
-      title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
-      width: 120,
-      render: (status) => (
-        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-          status === 'active' ? 'bg-[#d5fcde] text-[#2a7a40]' : 'bg-[#eceef0] text-[#5b403d]'
-        }`}>
-          {status === 'active' ? 'Active' : 'Inactive'}
-        </span>
-      ),
-    },
-    {
-      title: 'Actions',
-      key: 'action',
-      width: 120,
-      render: (_, record) => (
-        <Space size="middle">
-          <Button type="text" icon={<Edit2 size={16} />} onClick={() => openModal(record)} className="text-[#00799c] hover:bg-[#e0f2fe]" />
-          <Popconfirm 
-            title="Delete Category" 
-            description={`Are you sure you want to delete "${record.name}"?`}
-            onConfirm={() => handleDelete(record)}
-            okText="Delete"
-            cancelText="Cancel"
-            okButtonProps={{ danger: true }}
-          >
-            <Button type="text" danger icon={<Trash2 size={16} />} />
-          </Popconfirm>
-        </Space>
-      ),
-    },
-  ];
+  // =========================
+  // TABLE
+  // =========================
+
+  const columns: ColumnsType<Category> =
+    [
+      {
+        title:
+          'Tên danh mục',
+
+        dataIndex: 'name',
+
+        key: 'name',
+
+        render: (
+          text,
+          record
+        ) => (
+          <div>
+            <div className="font-semibold text-[15px] text-[#191c1e]">
+              {text}
+            </div>
+
+            <div className="text-[#5b403d] text-sm mt-1">
+              {record.slug}
+            </div>
+          </div>
+        )
+      },
+
+      {
+        title: 'Mô tả',
+
+        dataIndex:
+          'description',
+
+        key: 'description',
+
+        render: (v) =>
+          v || '-'
+      },
+
+      {
+        title: 'Sản phẩm',
+
+        key: 'items',
+
+        render: (
+          _,
+          record
+        ) => {
+          if (
+            record.parent_id ===
+            null
+          ) {
+            return (
+              <Tag color="processing">
+              </Tag>
+            );
+          }
+
+          if (
+            record.items > 0
+          ) {
+            return (
+              <Tag color="green">
+                Có sản phẩm (
+                {
+                  record.items
+                }
+                )
+              </Tag>
+            );
+          }
+
+          return (
+            <Tag color="default">
+              Chưa có sản phẩm
+            </Tag>
+          );
+        }
+      },
+
+      {
+        title:
+          'Trạng thái',
+
+        dataIndex: 'status',
+
+        key: 'status',
+
+        render: (
+          status,
+          record
+        ) => (
+          <Space>
+            <Switch
+              checked={
+                status ===
+                'Active'
+              }
+              onChange={(
+                checked
+              ) =>
+                handleToggleStatus(
+                  record,
+                  checked
+                )
+              }
+            />
+
+            {status ===
+            'Active' ? (
+              <Tag color="green">
+                Active
+              </Tag>
+            ) : (
+              <Tag>
+                Draft
+              </Tag>
+            )}
+          </Space>
+        )
+      },
+
+      {
+        title:
+          'Ngày tạo',
+
+        dataIndex:
+          'created_at',
+
+        key: 'created_at',
+
+        render: (
+          date
+        ) => {
+          if (!date)
+            return '-';
+
+          return new Date(
+            date
+          ).toLocaleString(
+            'vi-VN',
+            {
+              day: '2-digit',
+              month:
+                '2-digit',
+              year: 'numeric',
+              hour: '2-digit',
+              minute:
+                '2-digit'
+            }
+          );
+        }
+      },
+
+      {
+        title:
+          'Hành động',
+
+        key: 'action',
+
+        width: 120,
+
+        render: (
+          _,
+          record
+        ) => (
+          <Space>
+            <Button
+              type="text"
+              icon={
+                <Edit2
+                  size={16}
+                />
+              }
+              onClick={() =>
+                openModal(
+                  record
+                )
+              }
+            />
+
+            <Popconfirm
+              title="Xóa danh mục"
+              description={`Bạn có chắc muốn xóa "${record.name}"?`}
+              onConfirm={() =>
+                handleDelete(
+                  record
+                )
+              }
+              okText="Xóa"
+              cancelText="Hủy"
+              okButtonProps={{
+                danger: true
+              }}
+            >
+              <Button
+                type="text"
+                danger
+                icon={
+                  <Trash2
+                    size={16}
+                  />
+                }
+              />
+            </Popconfirm>
+          </Space>
+        )
+      }
+    ];
+
+  // =========================
+  // UI
+  // =========================
 
   return (
-    <div className="p-4 md:p-6 max-w-[1440px] mx-auto space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="p-4 md:p-6 max-w-[1600px] mx-auto space-y-6">
+      {/* HEADER */}
+
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-[#191c1e]">Product Categories</h1>
-          <p className="text-sm text-[#5b403d] mt-1">Manage product groups and taxonomies.</p>
+          <h1 className="text-3xl font-bold text-[#191c1e] flex items-center gap-3">
+            <FolderTree
+              size={30}
+              className="text-[#af101a]"
+            />
+            Quản Lý Danh Mục
+          </h1>
+
+          <p className="text-[#5b403d] mt-2">
+            Quản lý danh mục ngành hàng và danh
+            mục sản phẩm trong hệ thống.
+          </p>
         </div>
-        <Button 
-          type="primary" 
-          icon={<Plus size={18} />} 
-          className="bg-[#d32f2f] hover:bg-[#ba1a20] h-10"
-          onClick={() => openModal()}
-        >
-          Add Category
-        </Button>
+
+        <Space wrap>
+          <Button
+            size="large"
+            onClick={fetchCategories}
+            icon={<Activity size={16} />}
+          >
+            Làm mới
+          </Button>
+
+          <Button
+            type="primary"
+            size="large"
+            icon={<Plus size={18} />}
+            className="bg-[#af101a] hover:!bg-[#930010] border-none"
+            onClick={() => openModal()}
+          >
+            Tạo Danh Mục
+          </Button>
+        </Space>
       </div>
 
-      <div className="bg-white border border-[#d8dadc] rounded-xl shadow-sm">
-        <div className="p-4 border-b border-[#d8dadc] flex flex-col md:flex-row justify-between gap-4">
-          <div className="flex flex-1 gap-4">
-            <Input 
-              placeholder="Search by name or slug..." 
-              prefix={<Search size={16} className="text-[#8f6f6c]" />}
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              className="max-w-sm rounded-lg"
-              allowClear
-            />
-            <Select 
-              value={levelFilter} 
-              onChange={setLevelFilter}
-              className="w-48 rounded-lg"
-              options={[
-                { value: 'all', label: 'All levels' },
-                { value: 'parent', label: 'Parent Category' },
-                { value: 'child', label: 'Child Category' },
-              ]}
-            />
-          </div>
-          {selectedRowKeys.length > 0 && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-[#5b403d]">Selected {selectedRowKeys.length}</span>
-              <Button onClick={() => handleBulkStatusChange('active')} size="small" className="border-green-500 text-green-600">Show</Button>
-              <Button onClick={() => handleBulkStatusChange('inactive')} size="small" danger>Hide</Button>
+      {/* STATS */}
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        {/* Danh mục ngành hàng */}
+        <div className="bg-white border border-[#e4beba] border-t-2 border-t-[#af101a] rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-[11px] font-bold text-[#5b403d] uppercase tracking-wider">
+              Danh mục ngành hàng
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-[#fff2f0] flex items-center justify-center">
+              <FolderTree size={16} className="text-[#af101a]" />
             </div>
-          )}
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <h2 className="text-2xl font-black text-[#191c1e]">
+              {stats.parent_categories}
+            </h2>
+          </div>
         </div>
-        
-        <Table<Category>
-          columns={columns}
-          dataSource={filteredData}
-          rowSelection={{
-            selectedRowKeys,
-            onChange: setSelectedRowKeys,
-          }}
-          pagination={false}
-          className="overflow-x-auto custom-table"
-        />
+
+        {/* Danh mục sản phẩm */}
+        <div className="bg-white border border-[#e4beba] rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-[11px] font-bold text-[#5b403d] uppercase tracking-wider">
+              Danh mục sản phẩm
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-[#eff6ff] flex items-center justify-center">
+              <FolderTree size={16} className="text-[#2563eb]" />
+            </div>
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <h2 className="text-2xl font-black text-[#191c1e]">
+              {stats.child_categories}
+            </h2>
+          </div>
+        </div>
+
+        {/* Đang hoạt động */}
+        <div className="bg-white border border-[#e4beba] rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-[11px] font-bold text-[#5b403d] uppercase tracking-wider">
+              Đang hoạt động
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-[#f0fdf4] flex items-center justify-center">
+              <Activity size={16} className="text-[#16a34a]" />
+            </div>
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <h2 className="text-2xl font-black text-[#191c1e]">
+              {activeCategoriesCount}
+            </h2>
+          </div>
+        </div>
       </div>
 
-      {/* Add / Edit Category Modal */}
+      {/* MAIN */}
+
+      <div className="bg-white border border-[#e4beba] rounded-xl shadow-sm overflow-hidden">
+        {/* FILTER */}
+
+        <div className="p-5 border-b border-[#f1dede]">
+          <Input
+            size="large"
+            placeholder="Tìm theo tên hoặc slug..."
+            prefix={<Search size={16} />}
+            value={searchText}
+            onChange={(e) =>
+              setSearchText(e.target.value)
+            }
+            allowClear
+            className="max-w-md"
+          />
+        </div>
+
+        {/* TABLE */}
+
+        <div className="p-4">
+          <Table<Category>
+            rowKey="id"
+            columns={columns}
+            dataSource={filteredData}
+            loading={loading}
+            pagination={{
+              pageSize: 10
+            }}
+            scroll={{
+              x: 1200
+            }}
+            locale={{
+              emptyText: (
+                <Empty description="Không có dữ liệu danh mục" />
+              )
+            }}
+          />
+        </div>
+      </div>
+
+      {/* MODAL */}
+
       <Modal
-        title={<span className="text-lg font-bold">{editingCategory ? 'Edit Category' : 'Add New Category'}</span>}
+        title={
+          editingCategory
+            ? 'Chỉnh sửa danh mục'
+            : 'Thêm danh mục mới'
+        }
         open={isModalVisible}
         onOk={onModalOk}
-        onCancel={() => setIsModalVisible(false)}
+        onCancel={() =>
+          setIsModalVisible(false)
+        }
         width={700}
-        okText="Save"
-        cancelText="Cancel"
-        okButtonProps={{ className: "bg-[#00799c] hover:bg-[#006280]" }}
+        okText="Lưu thay đổi"
+        cancelText="Hủy"
+        okButtonProps={{
+          className:
+            'bg-[#af101a] border-none hover:!bg-[#930010]'
+        }}
       >
-        <Form 
-          form={form} 
-          layout="vertical" 
-          className="mt-6 text-[#191c1e]"
-          initialValues={{ status: true, displayOrder: 1 }}
+        <Form
+          form={form}
+          layout="vertical"
+          initialValues={{
+            status: true
+          }}
+          className="mt-5"
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
-            <Form.Item 
-              name="name" 
-              label="Category Name" 
-              rules={[{ required: true, message: 'Please enter category name!' }]}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Form.Item
+              name="name"
+              label="Tên danh mục"
+              rules={[
+                {
+                  required: true,
+                  message:
+                    'Vui lòng nhập tên danh mục'
+                }
+              ]}
             >
-              <Input 
-                onChange={(e) => {
-                  if (!editingCategory) {
-                    form.setFieldsValue({ slug: generateSlug(e.target.value) });
-                  }
-                }}
-              />
+              <Input size="large" />
             </Form.Item>
 
-            <Form.Item name="slug" label="Slug">
-              <Input prefix="/" placeholder="auto-generated-from-name" />
-            </Form.Item>
-
-            <Form.Item name="parentId" label="Parent Category (Optional)">
-              <Select 
+            <Form.Item
+              name="parent_id"
+              label="Danh mục"
+            >
+              <Select
+                size="large"
                 allowClear
-                placeholder="As Root Category"
-                options={flatCategories.filter(c => c.value !== editingCategory?.key)}
+                placeholder="Làm danh mục gốc"
+                options={parentCategoryOptions.filter(
+                  (c) =>
+                    c.value !==
+                    editingCategory?.id
+                )}
               />
             </Form.Item>
 
-            <Form.Item name="displayOrder" label="Display Order">
-              <Input type="number" min={1} />
+            <Form.Item
+              name="status"
+              label="Trạng thái"
+              valuePropName="checked"
+            >
+              <Switch
+                checkedChildren="Active"
+                unCheckedChildren="Draft"
+              />
             </Form.Item>
           </div>
 
-          <Form.Item name="description" label="Description">
-            <Input.TextArea rows={3} />
-          </Form.Item>
-
-          <div className="bg-[#f7f9fb] p-4 rounded-lg mb-6 border border-[#eceef0]">
-            <h4 className="font-semibold mb-4 text-[#5b403d]">SEO & Display</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
-              <Form.Item name="metaTitle" label="Meta Title">
-                <Input placeholder="Page Title (Meta Title)" />
-              </Form.Item>
-              <Form.Item name="status" label="Status" valuePropName="checked" className="md:row-span-2">
-                <Switch checkedChildren="Active" unCheckedChildren="Inactive" />
-              </Form.Item>
-              <Form.Item name="metaDescription" label="Meta Description">
-                <Input.TextArea rows={2} placeholder="SEO Description..." />
-              </Form.Item>
-            </div>
-          </div>
-
-          <Form.Item label="Thumbnail/Icon">
-            <Upload listType="picture-card" fileList={fileList} onChange={({ fileList: newFileList }) => setFileList(newFileList)}>
-              {fileList.length >= 1 ? null : (
-                <div>
-                  <UploadIcon size={20} className="mx-auto text-gray-400" />
-                  <div className="mt-2 text-xs text-gray-500">Upload</div>
-                </div>
-              )}
-            </Upload>
+          <Form.Item
+            name="description"
+            label="Mô tả"
+          >
+            <Input.TextArea
+              rows={4}
+              placeholder="Nhập mô tả danh mục..."
+            />
           </Form.Item>
         </Form>
       </Modal>

@@ -1,44 +1,180 @@
 import type { Request, Response } from 'express';
-import { fetchAllOrders, updateOrderStatus } from '../services/adminOrderService';
+import {
+    thongKeDonHang,
+    danhSachDonHang,
+    chiTietDonHang,
+    capNhatTrangThaiDonHang,
+} from '../services/adminOrderService';
+import { getIO } from '../config/socket';
+import { sendOrderStatusEmailToClient } from '../services/emailService';
 
-// Controller 1: Xử lý yêu cầu lấy danh sách
-export const getAllOrders = async (req: Request, res: Response) => {
+const traVeLoi = (
+    res: Response,
+    maTrangThai: number,
+    message: string,
+    errorDetails: unknown = null
+) => {
+    return res.status(maTrangThai).json({
+        message,
+        data: null,
+        errorDetails,
+    });
+};
+
+export const thongKeDonHangController = async (
+    req: Request,
+    res: Response
+) => {
     try {
-        const ordersData = await fetchAllOrders();
-
-        res.status(200).json({
-            message: "Lấy danh sách đơn hàng thành công!",
-            data: ordersData
+        const ketQua = await thongKeDonHang();
+        return res.status(200).json({
+            message: 'Lấy thống kê đơn hàng thành công',
+            data: ketQua,
+            errorDetails: null,
         });
-    } catch (error) {
-        res.status(500).json({
-            message: "Lỗi hệ thống khi lấy danh sách đơn hàng.",
-            errorDetails: error
-        });
+    } catch (error: any) {
+        return traVeLoi(
+            res,
+            500,
+            'Lỗi hệ thống khi lấy thống kê đơn hàng',
+            error?.message || error
+        );
     }
 };
 
-export const changeOrderStatus = async (req: Request, res: Response): Promise<any> => {
+export const danhSachDonHangController = async (
+    req: Request,
+    res: Response
+) => {
+    try {
+        const ketQua = await danhSachDonHang();
+        return res.status(200).json({
+            message: 'Lấy danh sách đơn hàng thành công',
+            data: ketQua,
+            errorDetails: null,
+        });
+    } catch (error: any) {
+        return traVeLoi(
+            res,
+            500,
+            'Lỗi hệ thống khi lấy danh sách đơn hàng',
+            error?.message || error
+        );
+    }
+};
+
+export const chiTietDonHangController = async (
+    req: Request,
+    res: Response
+) => {
     try {
         const orderId = req.params.id as string;
-        const newStatus = req.body.status as string;
-
-        if (!newStatus) {
-            return res.status(400).json({
-                message: "Vui lòng cung cấp trạng thái mới cho đơn hàng."
-            });
+        if (!orderId) {
+            return traVeLoi(
+                res,
+                400,
+                'Vui lòng cung cấp id đơn hàng'
+            );
         }
 
-        const result = await updateOrderStatus(orderId, newStatus);
-
-        res.status(200).json({
-            message: "Cập nhật trạng thái đơn hàng thành công!",
-            data: result
+        const ketQua = await chiTietDonHang(orderId);
+        return res.status(200).json({
+            message: 'Lấy chi tiết đơn hàng thành công',
+            data: ketQua,
+            errorDetails: null,
         });
-    } catch (error) {
-        res.status(500).json({
-            message: "Lỗi hệ thống khi cập nhật trạng thái đơn.",
-            errorDetails: error
+    } catch (error: any) {
+        if (error?.code === 'NOT_FOUND') {
+            return traVeLoi(
+                res,
+                404,
+                error?.message || 'Không tìm thấy đơn hàng',
+                error?.errorDetails ?? null
+            );
+        }
+
+        return traVeLoi(
+            res,
+            500,
+            'Lỗi hệ thống khi lấy chi tiết đơn hàng',
+            error?.message || error
+        );
+    }
+};
+
+export const capNhatTrangThaiDonHangController = async (
+    req: Request,
+    res: Response
+) => {
+    try {
+        const orderId = req.params.id as string;
+        const { status } = req.body as { status?: string };
+
+        if (!orderId) {
+            return traVeLoi(res, 400, 'Vui lòng cung cấp id đơn hàng');
+        }
+
+        if (!status) {
+            return traVeLoi(res, 400, 'Vui lòng cung cấp status');
+        }
+
+        const ketQua = await capNhatTrangThaiDonHang(orderId, status);
+
+        // Phát tín hiệu Real-time báo cho khách hàng và các admin/staff khác
+        try {
+            if (ketQua && ketQua.user_id) {
+                getIO().to(`user:${ketQua.user_id}`).emit('client:orderStatusUpdated', {
+                    orderId: ketQua.id,
+                    status: ketQua.status,
+                    userId: ketQua.user_id
+                });
+                console.log(`📡 Đã phát sự kiện client:orderStatusUpdated cho User #${ketQua.user_id}, đơn #${ketQua.id}`);
+            }
+
+            // Đồng thời phát cho các admin/staff đang trực dashboard để tự động tải lại danh sách
+            getIO().to('admins').emit('admin:orderStatusUpdated', {
+                orderId: ketQua.id,
+                status: ketQua.status
+            });
+            console.log(`📡 Đã phát sự kiện admin:orderStatusUpdated cho đơn hàng #${ketQua.id}`);
+        } catch (socketError) {
+            console.error('❌ Lỗi khi gửi sự kiện socket (orderStatusUpdated):', socketError);
+        }
+
+        // Gửi Gmail thông báo trạng thái cho khách hàng nếu trạng thái là Confirmed, Shipping, Completed, hoặc Cancelled
+        if (ketQua && ketQua.id && ['Confirmed', 'Shipping', 'Completed', 'Cancelled'].includes(ketQua.status)) {
+            sendOrderStatusEmailToClient(Number(ketQua.id), ketQua.status).catch(err => console.error("Lỗi gửi email cập nhật trạng thái đơn hàng:", err));
+        }
+
+        return res.status(200).json({
+            message: 'Cập nhật trạng thái đơn hàng thành công',
+            data: ketQua,
+            errorDetails: null,
+        });
+    } catch (error: any) {
+        if (error?.code === 'NOT_FOUND') {
+            return traVeLoi(
+                res,
+                404,
+                error?.message || 'Không tìm thấy đơn hàng',
+                error?.errorDetails ?? null
+            );
+        }
+
+        return res.status(400).json({
+            message: error?.message || 'Cập nhật trạng thái đơn hàng thất bại',
+            data: null,
+            errorDetails: error?.errorDetails ?? error,
         });
     }
 };
+
+// Export theo đúng tên mà route đang import
+export {
+    thongKeDonHangController as thongKeDonHang,
+    danhSachDonHangController as danhSachDonHang,
+    chiTietDonHangController as chiTietDonHang,
+    capNhatTrangThaiDonHangController as capNhatTrangThaiDonHang,
+};
+
+

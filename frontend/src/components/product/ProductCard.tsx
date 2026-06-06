@@ -2,39 +2,62 @@ import { Card, Image, Button, Typography } from "antd";
 import { HeartOutlined, HeartFilled } from "@ant-design/icons";
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import type { Products } from "../../services/Product/typing";
+import type { Products } from "../../services/client/product/typing";
 
 const { Text } = Typography;
 
 interface Props {
   product: Products.IRecord;
+  badge?: "NEW" | "LIMITED" | "HOT";
 }
 
-const ProductCard = ({ product }: Props) => {
+const ProductCard = ({ product, badge }: Props) => {
   const [liked, setLiked] = useState(false);
 
   // Lấy ảnh chính hoặc ảnh đầu tiên, nếu không có dùng placeholder
   const imageUrl =
     product.product_images?.find((img) => img.is_main)?.image_url ||
     product.product_images?.[0]?.image_url ||
-    "/placeholder.jpg";
+    "/placeholder.svg";
+
+  const displayBadge = badge || (product.status === "NEW" ? "NEW" : null);
 
   return (
     <Card
       hoverable
       style={{ height: "100%", borderRadius: 8, overflow: "hidden" }}
       cover={
-        <div style={{ position: "relative" }}>
-          <Image src={imageUrl} alt={product.name} style={{ height: 280, objectFit: "cover" }} preview={false} />
+        <div
+          style={{
+            position: "relative",
+            height: 280,
+            backgroundColor: "#f9f9f9",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            overflow: "hidden",
+          }}
+        >
+          <Image
+            src={imageUrl}
+            alt={product.name}
+            style={{
+              maxWidth: "100%",
+              maxHeight: "100%",
+              objectFit: "contain",
+              padding: 12,
+            }}
+            preview={false}
+          />
 
-          {/* Badge NEW/BEST SELLER có thể thêm logic ở đây nếu API trả về */}
-          {product.status === "NEW" && (
+          {/* Badge NEW/LIMITED/HOT */}
+          {displayBadge && (
             <div
               style={{
                 position: "absolute",
                 top: 12,
                 left: 12,
-                background: "#f50",
+                background: displayBadge === "LIMITED" ? "#ff4d4f" : (displayBadge === "HOT" ? "#faad14" : "#f50"),
                 color: "#fff",
                 padding: "4px 10px",
                 fontSize: "12px",
@@ -42,7 +65,7 @@ const ProductCard = ({ product }: Props) => {
                 borderRadius: 4,
               }}
             >
-              NEW
+              {displayBadge}
             </div>
           )}
           {/* {product.isBestSeller && (
@@ -68,6 +91,11 @@ const ProductCard = ({ product }: Props) => {
             icon={liked ? <HeartFilled style={{ color: "#f50" }} /> : <HeartOutlined />}
             onClick={(e) => {
               e.stopPropagation();
+              const token = localStorage.getItem("accessToken");
+              if (!token) {
+                window.location.href = "/login";
+                return;
+              }
               setLiked(!liked);
             }}
             style={{

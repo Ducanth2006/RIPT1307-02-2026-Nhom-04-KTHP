@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getProducts, addProduct, removeProduct } from '../controllers/adminProductController';
+import { getProducts, addProduct, removeProduct, getProductStats, updateProduct } from '../controllers/adminProductController';
 
 const router = Router();
 
@@ -23,32 +23,36 @@ const router = Router();
  *         name:
  *           type: string
  *           description: Tên sản phẩm chung
- *           example: "Giày Chạy Bộ Nike Air Pegasus"
+ *           example: "Pro-Runner X1 Elite"
  *         description:
  *           type: string
  *           example: "Giày chạy bộ chuyên nghiệp, siêu nhẹ"
  *         category_id:
  *           type: integer
- *           description: ID của danh mục (Từ bảng Categories)
+ *           description: ID của danh mục (Danh mục con cuối cùng)
  *           example: 5
+ *         brand:
+ *           type: string
+ *           description: Thương hiệu sản phẩm
+ *           example: "Nike"
  *         base_price:
  *           type: number
  *           description: Giá cơ bản của sản phẩm
- *           example: 2500000
+ *           example: 149.99
  *         status:
  *           type: string
- *           enum: [Active, Hidden]
+ *           enum: [Active, Hidden, Draft]
  *           example: "Active"
  *         variants:
  *           type: array
- *           description: Danh sách các phân loại (size, màu) của sản phẩm
+ *           description: Danh sách các phân loại của sản phẩm. Nếu không có phân loại, truyền mảng 1 phần tử chứa giá/kho/SKU cơ bản.
  *           items:
  *             type: object
  *             properties:
  *               sku:
  *                 type: string
- *                 description: Mã SKU (tự tạo nếu để trống)
- *                 example: "NK-PEG-42-RED"
+ *                 description: Mã SKU
+ *                 example: "PRD-8921"
  *               size:
  *                 type: string
  *                 example: "42"
@@ -59,9 +63,14 @@ const router = Router();
  *                 type: number
  *                 description: Giá biến thể (mặc định lấy base_price nếu để trống)
  *                 example: 2500000
+ *               cost_price:
+ *                 type: number
+ *                 description: Giá vốn/nhập của biến thể (dùng để tính lợi nhuận)
+ *                 example: 1500000
  *               stock_quantity:
  *                 type: integer
- *                 example: 50
+ *                 description: Số lượng tồn kho
+ *                 example: 420
  *         images:
  *           type: array
  *           description: Danh sách link ảnh sản phẩm
@@ -70,7 +79,7 @@ const router = Router();
  *             properties:
  *               image_url:
  *                 type: string
- *                 example: "https://example.com/nike-red.jpg"
+ *                 example: "https://example.com/shoes-red.jpg"
  *               is_main:
  *                 type: boolean
  *                 example: true
@@ -78,13 +87,27 @@ const router = Router();
 
 /**
  * @swagger
- * /admin/products:
+ * /admin/products/stats:
  *   get:
- *     summary: Lấy danh sách toàn bộ sản phẩm (kèm biến thể, hình ảnh và danh mục)
+ *     summary: Lấy thống kê cho Dashboard Sản phẩm
  *     tags: ["[Admin] Products"]
  *     responses:
  *       200:
- *         description: Trả về danh sách sản phẩm siêu chi tiết
+ *         description: Trả về 4 thông số (Total Products, Active Listings, Total Stock, Low Stock Alerts)
+ *       500:
+ *         description: Lỗi hệ thống
+ */
+router.get('/stats', getProductStats);
+
+/**
+ * @swagger
+ * /admin/products:
+ *   get:
+ *     summary: Lấy danh sách toàn bộ sản phẩm
+ *     tags: ["[Admin] Products"]
+ *     responses:
+ *       200:
+ *         description: Trả về danh sách sản phẩm siêu chi tiết (đã nối sẵn ảnh chính và tính tổng tồn kho)
  *       500:
  *         description: Lỗi hệ thống
  */
@@ -111,6 +134,44 @@ router.get('/', getProducts);
  *         description: Lỗi hệ thống hoặc Rollback do thêm biến thể/ảnh thất bại
  */
 router.post('/', addProduct);
+
+/**
+ * @swagger
+ * /admin/products/{id}:
+ *   patch:
+ *     summary: Cập nhật thông tin cơ bản của sản phẩm
+ *     tags: ["[Admin] Products"]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID của sản phẩm cần cập nhật
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               base_price:
+ *                 type: number
+ *               status:
+ *                 type: string
+ *               brand:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Cập nhật thành công
+ *       400:
+ *         description: ID không hợp lệ
+ *       500:
+ *         description: Lỗi hệ thống
+ */
+router.patch('/:id', updateProduct);
 
 /**
  * @swagger

@@ -1,365 +1,489 @@
-import React, { useState } from 'react';
-import { 
-  Table, 
-  Button, 
-  Input, 
-  Tag, 
-  Space, 
-  Drawer, 
-  Form, 
-  Select, 
-  message, 
-  Tooltip
-} from 'antd';
-import { ColumnsType } from 'antd/es/table';
-import { 
-  MessageSquareWarning, 
-  Search, 
-  Eye, 
-  ExternalLink,
-  Send,
-  CheckCircle,
-  FileText
-} from 'lucide-react';
-import { Link } from 'react-router-dom';
+import React, {
+  useEffect,
+  useState,
+  useMemo,
+} from 'react';
 
+import {
+  Table,
+  Tag,
+  Space,
+  Button,
+  Drawer,
+  message,
+  Input,
+  Spin,
+  Card,
+  Row,
+  Col,
+  Select,
+  Image,
+  Statistic,
+} from 'antd';
+
+import type { ColumnsType } from 'antd/es/table';
+
+import {
+  Eye,
+  CheckCircle,
+  Send,
+  AlertTriangle,
+  Search,
+  RefreshCw,
+  Clock,
+  Settings,
+} from 'lucide-react';
+
+import {
+  getAdminComplaints,
+  getAdminComplaintById,
+  confirmAdminComplaint,
+  replyAdminComplaint,
+} from '../../services/admin/complaintService';
+
+const { TextArea } = Input;
+
+// ================= TYPES =================
 interface Complaint {
-  id: string;
-  orderId: string;
-  customerName: string;
-  customerEmail: string;
+  id: number;
+  order_id: number;
   title: string;
   content: string;
-  date: string;
-  status: 'New' | 'In Progress' | 'Closed';
-  responses?: { sender: string; text: string; time: string }[];
+  status: 'New' | 'In Progress' | 'Resolved' | 'Closed';
+  created_at: string;
+  users?: {
+    full_name?: string;
+    email?: string;
+  };
+  reply?: string;
+  images?: string[];
 }
 
-const mockComplaints: Complaint[] = [
-  {
-    id: 'CMP-2023-01',
-    orderId: 'ORD-8091',
-    customerName: 'Nguyen Van A',
-    customerEmail: 'nva@example.com',
-    title: 'Wrong item received in my order',
-    content: 'I ordered size 42, but received size 41. I need a replacement as soon as possible for my upcoming match.',
-    date: '2023-11-20 14:30',
-    status: 'New',
-    responses: []
-  },
-  {
-    id: 'CMP-2023-02',
-    orderId: 'ORD-8085',
-    customerName: 'Tran Thi B',
-    customerEmail: 'ttb@example.com',
-    title: 'Delayed shipping',
-    content: 'My order has been stuck at the sorting facility for 3 days. When can I expect to receive it?',
-    date: '2023-11-19 10:15',
-    status: 'In Progress',
-    responses: [
-      { sender: 'Admin', text: 'We apologize for the delay. We are contacting the shipping provider to expedite this.', time: '2023-11-19 11:00' }
-    ]
-  },
-  {
-    id: 'CMP-2023-03',
-    orderId: 'ORD-8050',
-    customerName: 'Le Van C',
-    customerEmail: 'lvc@example.com',
-    title: 'Product damaged on arrival',
-    content: 'The shoe box was completely crushed and there is a scratch on the left shoe.',
-    date: '2023-11-15 09:20',
-    status: 'Closed',
-    responses: [
-      { sender: 'Admin', text: 'We are very sorry for the issue. A replacement has been shipped.', time: '2023-11-15 10:30' },
-      { sender: 'Customer', text: 'Thank you, I received the replacement today.', time: '2023-11-17 14:00' }
-    ]
-  }
-];
-
 export default function ComplaintsPage() {
-  const [complaints, setComplaints] = useState<Complaint[]>(mockComplaints);
-  const [searchText, setSearchText] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('All');
-  
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [complaints, setComplaints] = useState<Complaint[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedComplaint, setSelectedComplaint] = useState<Complaint | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
   const [replyText, setReplyText] = useState('');
 
-  const filteredComplaints = complaints.filter(c => {
-    const matchesSearch = c.orderId.toLowerCase().includes(searchText.toLowerCase()) || 
-                          c.customerName.toLowerCase().includes(searchText.toLowerCase()) ||
-                          c.title.toLowerCase().includes(searchText.toLowerCase());
-    const matchesStatus = statusFilter === 'All' || c.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const [searchText, setSearchText] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
 
-  const openDrawer = (record: Complaint) => {
-    setSelectedComplaint(record);
-    setReplyText('');
-    setIsDrawerOpen(true);
+  // ================= FILTER =================
+  const filteredComplaints = useMemo(() => {
+    return complaints.filter((c) => {
+      const matchesStatus = statusFilter === 'All' || c.status === statusFilter;
+      
+      const searchLower = searchText.trim().toLowerCase();
+      if (!searchLower) return matchesStatus;
+
+      const matchesSearch = 
+        String(c.id).toLowerCase().includes(searchLower) ||
+        String(c.order_id).toLowerCase().includes(searchLower) ||
+        (c.users?.full_name && c.users.full_name.toLowerCase().includes(searchLower)) ||
+        (c.users?.email && c.users.email.toLowerCase().includes(searchLower)) ||
+        (c.content && c.content.toLowerCase().includes(searchLower));
+
+      return matchesStatus && matchesSearch;
+    });
+  }, [complaints, searchText, statusFilter]);
+
+  // ================= FETCH =================
+  const fetchComplaints = async () => {
+    try {
+      setLoading(true);
+      const data = await getAdminComplaints();
+      setComplaints(data?.data || []);
+    } catch (error) {
+      message.error('Không thể tải danh sách khiếu nại');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSendReply = () => {
-    if (!replyText.trim() || !selectedComplaint) {
-      message.error('Please enter a response message');
+  useEffect(() => {
+    fetchComplaints();
+  }, []);
+
+  // ================= STATUS TAG =================
+  const renderStatus = (status: Complaint['status']) => {
+    switch (status) {
+      case 'New':
+        return <Tag color="orange" className="rounded-full px-3 py-1 m-0">Chờ xử lý</Tag>;
+      case 'In Progress':
+        return <Tag color="processing" className="rounded-full px-3 py-1 m-0">Đang xử lý</Tag>;
+      case 'Resolved':
+        return <Tag color="success" className="rounded-full px-3 py-1 m-0">Đã giải quyết</Tag>;
+      default:
+        return <Tag className="rounded-full px-3 py-1 m-0">{status}</Tag>;
+    }
+  };
+
+  // ================= VIEW DETAIL =================
+  const handleViewDetail = async (complaint: Complaint) => {
+    try {
+      setDetailLoading(true);
+      setDrawerOpen(true);
+      const data = await getAdminComplaintById(complaint.id);
+      setSelectedComplaint(data?.data);
+    } catch (error) {
+      message.error('Không thể tải chi tiết khiếu nại');
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  // ================= CONFIRM =================
+  const handleConfirmComplaint = async () => {
+    if (!selectedComplaint) return;
+    try {
+      await confirmAdminComplaint(selectedComplaint.id);
+      message.success('Đã xác nhận khiếu nại thành công!');
+      setDrawerOpen(false);
+      fetchComplaints();
+    } catch (error) {
+      message.error('Xác nhận khiếu nại thất bại');
+    }
+  };
+
+  // ================= REPLY =================
+  const handleReplyComplaint = async () => {
+    if (!selectedComplaint) return;
+    if (!replyText.trim()) {
+      message.warning('Vui lòng nhập nội dung phản hồi');
       return;
     }
-    
-    const updatedComplaint = {
-      ...selectedComplaint,
-      responses: [
-        ...(selectedComplaint.responses || []),
-        { sender: 'Admin', text: replyText, time: new Date().toLocaleString() }
-      ],
-      status: selectedComplaint.status === 'New' ? 'In Progress' as const : selectedComplaint.status
-    };
-
-    setComplaints(prev => prev.map(c => c.id === updatedComplaint.id ? updatedComplaint : c));
-    setSelectedComplaint(updatedComplaint);
-    setReplyText('');
-    message.success('Response sent to customer');
+    try {
+      await replyAdminComplaint(selectedComplaint.id, { reply: replyText });
+      message.success('Gửi phản hồi thành công!');
+      setReplyText('');
+      setDrawerOpen(false);
+      fetchComplaints();
+    } catch (error) {
+      message.error('Gửi phản hồi thất bại');
+    }
   };
 
-  const handleUpdateStatus = (newStatus: 'New' | 'In Progress' | 'Closed') => {
-    if (!selectedComplaint) return;
-    
-    setComplaints(prev => prev.map(c => 
-      c.id === selectedComplaint.id ? { ...c, status: newStatus } : c
-    ));
-    setSelectedComplaint({ ...selectedComplaint, status: newStatus });
-    message.success(`Status updated to ${newStatus}`);
-  };
-
+  // ================= TABLE =================
   const columns: ColumnsType<Complaint> = [
     {
-      title: 'Complaint ID',
+      title: 'Mã khiếu nại',
       dataIndex: 'id',
       key: 'id',
-      className: 'font-mono text-sm',
+      width: 130,
+      render: (value) => (
+        <span className="font-semibold text-[#af101a] text-[15px]">
+          #{value}
+        </span>
+      ),
     },
     {
-      title: 'Order ID',
-      dataIndex: 'orderId',
-      key: 'orderId',
-      render: (text) => (
-        <span className="text-[#00799c] font-medium font-mono">{text}</span>
-      )
+      title: 'Mã đơn hàng',
+      dataIndex: 'order_id',
+      key: 'order_id',
+      render: (value) => (
+        <span className="font-semibold text-[#191c1e]">
+          #{value}
+        </span>
+      ),
     },
     {
-      title: 'Customer',
-      dataIndex: 'customerName',
-      key: 'customerName',
-      render: (text, record) => (
+      title: 'Khách hàng',
+      key: 'customer',
+      render: (_, record) => (
         <div>
-          <div className="font-medium">{text}</div>
-          <div className="text-xs text-gray-500">{record.customerEmail}</div>
+          <div className="font-semibold text-[15px] text-[#191c1e]">
+            {record.users?.full_name || 'Không xác định'}
+          </div>
+          <div className="text-[13px] text-[#5b403d] mt-1">
+            {record.users?.email || '—'}
+          </div>
         </div>
-      )
+      ),
     },
     {
-      title: 'Title',
-      dataIndex: 'title',
-      key: 'title',
-      ellipsis: true,
-    },
-    {
-      title: 'Date Submitted',
-      dataIndex: 'date',
-      key: 'date',
-      className: 'text-gray-500 text-sm'
-    },
-    {
-      title: 'Status',
+      title: 'Trạng thái',
       dataIndex: 'status',
       key: 'status',
-      render: (status: string) => {
-        let color = 'default';
-        if (status === 'New') color = 'error';
-        if (status === 'In Progress') color = 'processing';
-        if (status === 'Closed') color = 'success';
-        
-        return <Tag color={color}>{status}</Tag>;
-      }
+      render: (status) => renderStatus(status),
     },
     {
-      title: 'Action',
+      title: 'Thao tác',
       key: 'action',
       align: 'right',
       render: (_, record) => (
-        <Tooltip title="View Details">
-          <Button 
-            type="text" 
-            icon={<Eye size={16} />} 
-            onClick={() => openDrawer(record)} 
-            className="text-[#af101a] hover:bg-red-50" 
+        <Space>
+          <Button
+            type="text"
+            icon={<Eye size={18} />}
+            onClick={() => handleViewDetail(record)}
+            className="text-[#5b403d] hover:!text-[#af101a]"
           />
-        </Tooltip>
+        </Space>
       ),
     },
   ];
 
   return (
-    <div className="p-4 md:p-6 space-y-6 max-w-[1600px] mx-auto">
-      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+    <div className="p-4 md:p-6 max-w-[1600px] mx-auto space-y-6">
+      
+      {/* HEADER */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-[#191c1e] flex items-center gap-2">
-            <MessageSquareWarning className="text-[#af101a]" size={28} />
-            Customer Complaints
+          <h1 className="text-3xl font-bold text-[#191c1e] flex items-center gap-3">
+            <AlertTriangle size={30} className="text-[#af101a]" />
+            Quản Lý Khiếu Nại
           </h1>
-          <p className="text-[#5b403d] mt-1 text-sm">Monitor and resolve customer issues and feedback.</p>
+          <p className="text-[#5b403d] mt-2">
+            Theo dõi, phản hồi và xử lý các vấn đề từ phía khách hàng.
+          </p>
         </div>
+
+        <Space wrap>
+          <Button
+            size="large"
+            onClick={fetchComplaints}
+            icon={<RefreshCw size={16} />}
+          >
+            Làm mới
+          </Button>
+        </Space>
       </div>
 
-      <div className="bg-white border border-[#d8dadc] p-4 rounded-xl shadow-sm flex flex-col sm:flex-row gap-4 justify-between">
-        <div className="flex gap-4 flex-1">
-          <Input 
-            prefix={<Search size={16} className="text-gray-400" />} 
-            placeholder="Search by Order ID, Customer name or Title..." 
-            className="w-full sm:max-w-md rounded-lg"
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            allowClear
-          />
-          <Select
-            value={statusFilter}
-            onChange={setStatusFilter}
-            className="w-full sm:w-48"
-            options={[
-              { value: 'All', label: 'All Statuses' },
-              { value: 'New', label: 'New' },
-              { value: 'In Progress', label: 'In Progress' },
-              { value: 'Closed', label: 'Closed' },
-            ]}
-          />
-        </div>
-      </div>
-
-      <div className="bg-white rounded-xl shadow-sm border border-[#d8dadc] overflow-hidden">
-        <Table 
-          columns={columns} 
-          dataSource={filteredComplaints} 
-          rowKey="id"
-          pagination={{ pageSize: 10 }}
-          scroll={{ x: 1000 }}
-        />
-      </div>
-
-      <Drawer
-        title={<span className="font-bold text-lg flex items-center gap-2"><FileText size={20} /> Complaint Details</span>}
-        placement="right"
-        width={600}
-        onClose={() => setIsDrawerOpen(false)}
-        open={isDrawerOpen}
-      >
-        {selectedComplaint && (
-          <div className="space-y-6">
-            {/* Header / Info */}
-            <div className="bg-[#f7f9fb] p-4 rounded-xl border border-[#eceef0]">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h2 className="text-lg font-bold text-[#191c1e]">{selectedComplaint.title}</h2>
-                  <p className="text-sm text-gray-500 mt-1">ID: {selectedComplaint.id} • {selectedComplaint.date}</p>
-                </div>
-                <Tag color={
-                  selectedComplaint.status === 'New' ? 'error' : 
-                  selectedComplaint.status === 'In Progress' ? 'processing' : 'success'
-                }>
-                  {selectedComplaint.status}
-                </Tag>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4 text-sm mt-4">
-                <div>
-                  <div className="text-gray-500 mb-1">Customer</div>
-                  <div className="font-medium">{selectedComplaint.customerName}</div>
-                  <div className="text-xs text-gray-400">{selectedComplaint.customerEmail}</div>
-                </div>
-                <div>
-                  <div className="text-gray-500 mb-1">Related Order</div>
-                  <Link to="/orders" className="text-[#00799c] font-medium font-mono flex items-center gap-1 hover:underline">
-                    {selectedComplaint.orderId} <ExternalLink size={14} />
-                  </Link>
-                </div>
-              </div>
-            </div>
-
-            {/* Original Complaint */}
-            <div>
-              <h3 className="font-semibold text-[#191c1e] mb-3">Issue Description</h3>
-              <div className="bg-white border text-sm text-gray-800 border-[#d8dadc] p-4 rounded-lg shadow-sm leading-relaxed">
-                {selectedComplaint.content}
-              </div>
-            </div>
-
-            {/* Resolution History */}
-            <div>
-               <h3 className="font-semibold text-[#191c1e] mb-3">Resolution & Discussion</h3>
-               <div className="space-y-4">
-                  {selectedComplaint.responses && selectedComplaint.responses.length > 0 ? (
-                    selectedComplaint.responses.map((resp, idx) => (
-                      <div key={idx} className={`flex flex-col ${resp.sender === 'Admin' ? 'items-end' : 'items-start'}`}>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium text-xs text-gray-600">{resp.sender}</span>
-                          <span className="text-[10px] text-gray-400">{resp.time}</span>
-                        </div>
-                        <div className={`p-3 rounded-lg text-sm max-w-[85%] ${resp.sender === 'Admin' ? 'bg-[#af101a] text-white rounded-br-none' : 'bg-gray-100 text-gray-800 rounded-bl-none'}`}>
-                          {resp.text}
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-6 text-gray-400 italic text-sm">
-                      No responses yet.
-                    </div>
-                  )}
-               </div>
-            </div>
-
-            {/* Action Bar */}
-            <div className="pt-4 border-t border-[#eceef0]">
-              {selectedComplaint.status !== 'Closed' ? (
-                <>
-                  <div className="mb-3">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Reply to Customer</label>
-                    <Input.TextArea 
-                      rows={3} 
-                      placeholder="Write your response to the customer here..."
-                      value={replyText}
-                      onChange={(e) => setReplyText(e.target.value)}
-                    />
-                  </div>
-                  <div className="flex justify-between items-center mt-4">
-                    <Select
-                      value={selectedComplaint.status}
-                      onChange={handleUpdateStatus}
-                      className="w-40"
-                      options={[
-                        { value: 'New', label: 'Mark as New', disabled: true },
-                        { value: 'In Progress', label: 'Mark In Progress' },
-                        { value: 'Closed', label: 'Mark as Closed' },
-                      ]}
-                    />
-                    <Button 
-                      type="primary" 
-                      className="bg-[#af101a] hover:bg-[#930010] flex items-center gap-2"
-                      onClick={handleSendReply}
-                    >
-                      <Send size={16} /> Send Reply
-                    </Button>
-                  </div>
-                </>
-              ) : (
-                <div className="bg-green-50 text-green-700 border border-green-200 p-4 rounded-lg flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle size={20} />
-                    <span className="font-medium">This complaint has been closed.</span>
-                  </div>
-                  <Button size="small" onClick={() => handleUpdateStatus('In Progress')}>Reopen</Button>
-                </div>
-              )}
+      {/* STATS */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+        {/* Tổng khiếu nại */}
+        <div className="bg-white border border-[#e4beba] border-t-2 border-t-[#af101a] rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-[11px] font-bold text-[#5b403d] uppercase tracking-wider">
+              Tổng khiếu nại
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-[#fff2f0] flex items-center justify-center">
+              <AlertTriangle size={16} className="text-[#af101a]" />
             </div>
           </div>
-        )}
+          <div className="flex items-baseline gap-1.5">
+            <h2 className="text-2xl font-black text-[#191c1e]">
+              {complaints.length}
+            </h2>
+          </div>
+        </div>
+
+        {/* Chờ xử lý */}
+        <div className="bg-white border border-[#e4beba] rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-[11px] font-bold text-[#5b403d] uppercase tracking-wider">
+              Chờ xử lý
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-[#fff7ed] flex items-center justify-center">
+              <Clock size={16} className="text-[#f97316]" />
+            </div>
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <h2 className="text-2xl font-black text-[#191c1e]">
+              {complaints.filter((c) => c.status === 'New').length}
+            </h2>
+          </div>
+        </div>
+
+        {/* Đang xử lý */}
+        <div className="bg-white border border-[#e4beba] rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-[11px] font-bold text-[#5b403d] uppercase tracking-wider">
+              Đang xử lý
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-[#eff6ff] flex items-center justify-center">
+              <Settings size={16} className="text-blue-600" />
+            </div>
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <h2 className="text-2xl font-black text-[#191c1e]">
+              {complaints.filter((c) => c.status === 'In Progress').length}
+            </h2>
+          </div>
+        </div>
+
+        {/* Đã giải quyết */}
+        <div className="bg-white border border-[#e4beba] rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-[11px] font-bold text-[#5b403d] uppercase tracking-wider">
+              Đã giải quyết
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-[#f0fdf4] flex items-center justify-center">
+              <CheckCircle size={16} className="text-[#16a34a]" />
+            </div>
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <h2 className="text-2xl font-black text-[#191c1e]">
+              {complaints.filter((c) => c.status === 'Resolved').length}
+            </h2>
+          </div>
+        </div>
+      </div>
+
+      {/* MAIN CONTENT */}
+      <div className="bg-white border border-[#e4beba] rounded-xl shadow-sm overflow-hidden">
+        
+        {/* FILTER BAR */}
+        <div className="p-5 border-b border-[#f1dede]">
+          <div className="flex flex-wrap gap-3 items-center">
+            <Input
+              size="large"
+              placeholder="Tìm theo mã KN, đơn hàng, tên khách..."
+              prefix={<Search size={16} />}
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              allowClear
+              className="max-w-md"
+            />
+            
+            <Select
+              size="large"
+              value={statusFilter}
+              onChange={(value) => setStatusFilter(value)}
+              style={{ width: 220 }}
+              options={[
+                { value: 'All', label: 'Tất cả trạng thái' },
+                { value: 'New', label: 'Chờ xử lý' },
+                { value: 'In Progress', label: 'Đang xử lý' },
+                { value: 'Resolved', label: 'Đã giải quyết' },
+              ]}
+            />
+          </div>
+        </div>
+
+        {/* TABLE */}
+        <div className="p-4">
+          <Table
+            rowKey="id"
+            loading={loading}
+            columns={columns}
+            dataSource={filteredComplaints}
+            scroll={{ x: 1000 }}
+            pagination={{
+              pageSize: 10,
+              showSizeChanger: true
+            }}
+          />
+        </div>
+      </div>
+
+      {/* DRAWER CHI TIẾT */}
+      <Drawer
+        title={<span className="text-[18px] font-bold text-[#191c1e]">Chi tiết khiếu nại #{selectedComplaint?.id || ''}</span>}
+        open={drawerOpen}
+        onClose={() => {
+          setDrawerOpen(false);
+          setReplyText('');
+        }}
+        width={550}
+      >
+        <Spin spinning={detailLoading}>
+          {selectedComplaint && (
+            <div className="space-y-6">
+              
+              {/* HEAD INFO */}
+              <div className="grid grid-cols-2 gap-4 border-b border-[#f1dede] pb-5">
+                <div>
+                  <span className="text-[#5b403d] text-[13px] block mb-1">Mã đơn hàng</span>
+                  <span className="font-bold text-[#191c1e] text-[15px]">#{selectedComplaint.order_id}</span>
+                </div>
+                <div>
+                  <span className="text-[#5b403d] text-[13px] block mb-1">Trạng thái</span>
+                  <div>{renderStatus(selectedComplaint.status)}</div>
+                </div>
+                <div className="col-span-2 mt-2">
+                  <span className="text-[#5b403d] text-[13px] block mb-1">Khách hàng</span>
+                  <div className="font-semibold text-[#191c1e] text-[15px]">{selectedComplaint.users?.full_name || '—'}</div>
+                  <div className="text-sm text-[#5b403d]">{selectedComplaint.users?.email || '—'}</div>
+                </div>
+              </div>
+
+              {/* CONTENT INFO */}
+              <div>
+                <span className="text-[#5b403d] text-[14px] font-semibold block mb-2">Nội dung khiếu nại:</span>
+                <div className="bg-gray-50 border border-[#ead0d0] rounded-xl p-4 text-[#191c1e] text-[14px] whitespace-pre-line leading-relaxed shadow-sm">
+                  {selectedComplaint.content}
+                </div>
+              </div>
+
+              {/* IMAGES */}
+              {selectedComplaint.images && selectedComplaint.images.length > 0 && (
+                <div>
+                  <span className="text-[#5b403d] text-[14px] font-semibold block mb-3">
+                    Hình ảnh minh chứng ({selectedComplaint.images.length}):
+                  </span>
+                  <div className="flex flex-wrap gap-3">
+                    <Image.PreviewGroup>
+                      {selectedComplaint.images.map((imgUrl, idx) => (
+                        <Image
+                          key={idx}
+                          src={imgUrl}
+                          alt={`complaint-image-${idx}`}
+                          width={100}
+                          height={100}
+                          className="object-cover rounded-xl border border-[#ead0d0] shadow-sm cursor-pointer hover:opacity-85 transition-opacity"
+                        />
+                      ))}
+                    </Image.PreviewGroup>
+                  </div>
+                </div>
+              )}
+
+              {/* ACTIONS - CONFIRM */}
+              {selectedComplaint.status === 'New' && (
+                <div className="pt-4 border-t border-[#f1dede]">
+                  <Button
+                    type="primary"
+                    size="large"
+                    icon={<CheckCircle size={18} />}
+                    onClick={handleConfirmComplaint}
+                    className="w-full bg-[#af101a] hover:!bg-[#930010] border-none font-semibold rounded-xl h-[48px]"
+                  >
+                    Xác nhận tiếp nhận khiếu nại
+                  </Button>
+                </div>
+              )}
+
+              {/* ACTIONS - REPLY */}
+              {selectedComplaint.status === 'In Progress' && (
+                <div className="pt-4 border-t border-[#f1dede] space-y-3">
+                  <h3 className="font-bold text-[#191c1e] text-[16px]">Phản hồi khách hàng</h3>
+                  <TextArea
+                    rows={5}
+                    size="large"
+                    className="rounded-xl border-[#ead0d0] p-3 text-[14px]"
+                    placeholder="Nhập nội dung phản hồi, kết quả xử lý..."
+                    value={replyText}
+                    onChange={(e) => setReplyText(e.target.value)}
+                  />
+                  <Button
+                    type="primary"
+                    size="large"
+                    icon={<Send size={16} />}
+                    onClick={handleReplyComplaint}
+                    className="bg-[#15803d] hover:!bg-[#166534] border-none font-semibold rounded-xl h-[48px] w-full"
+                  >
+                    Gửi phản hồi & Giải quyết
+                  </Button>
+                </div>
+              )}
+
+              {/* PREVIOUS REPLY READONLY */}
+              {selectedComplaint.status === 'Resolved' && selectedComplaint.reply && (
+                <div className="pt-4 border-t border-[#f1dede]">
+                  <span className="text-[#15803d] text-[14px] font-semibold block mb-2">Phản hồi của hệ thống:</span>
+                  <div className="bg-[#f0fdf4] border border-[#bbf7d0] rounded-xl p-4 text-[#166534] text-[14px] whitespace-pre-line shadow-sm">
+                    {selectedComplaint.reply}
+                  </div>
+                </div>
+              )}
+
+            </div>
+          )}
+        </Spin>
       </Drawer>
     </div>
   );

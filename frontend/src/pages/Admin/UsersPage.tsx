@@ -1,79 +1,244 @@
-import React, { useState, useMemo } from 'react';
-import { Table, Button, Input, Select, Switch, Avatar, message, Tag, Space, Modal, Form, Tooltip, Popconfirm } from 'antd';
-import { Download, UserPlus, Users, BadgeCheck, Lock, Edit, Shield, Gavel, Search, Key } from 'lucide-react';
+import React, {
+  useState,
+  useMemo,
+  useEffect
+} from 'react';
+
+import dayjs from 'dayjs';
+
+import {
+  Table,
+  Button,
+  Input,
+  Select,
+  Switch,
+  Avatar,
+  message,
+  Tag,
+  Space,
+  Modal,
+  Form,
+  Tooltip,
+  Popconfirm,
+  DatePicker,
+  Card,
+  Statistic
+} from 'antd';
+
+import {
+  Download,
+  UserPlus,
+  Users,
+  Lock,
+  Edit,
+  Shield,
+  Search,
+  Trash2
+} from 'lucide-react';
+
 import type { ColumnsType } from 'antd/es/table';
+
+import {
+  getAdminUsers,
+  createAdminUser,
+  updateAdminUser,
+  toggleAdminUserLock,
+  deleteAdminUser
+} from '../../services/admin/userService';
+
+const { RangePicker } = DatePicker;
+
+// =========================
+// TYPES
+// =========================
 
 interface User {
   id: string;
   name: string;
   email: string;
+  username?: string;
+  phone?: string;
   role: 'Admin' | 'Staff' | 'Customer';
   status: 'Active' | 'Locked';
   lastLogin: string;
   createdAt: string;
 }
 
-const mockData: User[] = [
-  { id: '1', name: 'John Doe', email: 'john.doe@prosports.com', role: 'Admin', status: 'Active', lastLogin: '2023-10-27 09:41', createdAt: '2023-01-15' },
-  { id: '2', name: 'Sarah Smith', email: 's.smith@prosports.com', role: 'Staff', status: 'Active', lastLogin: '2023-10-26 14:22', createdAt: '2023-02-20' },
-  { id: '3', name: 'Mike Johnson', email: 'mike.j@external.com', role: 'Customer', status: 'Locked', lastLogin: '2023-09-15 11:05', createdAt: '2023-05-10' },
-  { id: '4', name: 'Amanda Lee', email: 'amanda.lee@external.com', role: 'Customer', status: 'Active', lastLogin: '2023-10-27 08:15', createdAt: '2023-06-01' },
-];
-
 export default function UsersPage() {
-  const [users, setUsers] = useState<User[]>(mockData);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [roleFilter, setRoleFilter] = useState<'All' | 'Admin' | 'Staff' | 'Customer'>('All');
-  
-  // Pagination state (simulated ?page=1&limit=20)
+  const [createdDateFilter, setCreatedDateFilter] = useState<any>(null);
+
+  // PAGINATION
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
 
-  // Modal State
+  // MODAL
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [saving, setSaving] = useState(false);
   const [form] = Form.useForm();
 
+  // =========================
+  // LOAD USERS
+  // =========================
+
+  const loadUsers = async () => {
+    try {
+      setLoading(true);
+      const res = await getAdminUsers();
+      setUsers(res.data || []);
+    } catch (err: any) {
+      message.error(
+        'Không thể tải danh sách tài khoản: ' +
+          (err.response?.data?.message || err.message)
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  // =========================
+  // FILTER USERS
+  // =========================
+
   const filteredUsers = useMemo(() => {
-    return users.filter(item => {
+    return users.filter((item) => {
+      // ROLE
       let matchRole = true;
-      if (roleFilter !== 'All') matchRole = item.role === roleFilter;
-      
+      if (roleFilter !== 'All') {
+        matchRole = item.role === roleFilter;
+      }
+
+      // SEARCH
       let matchSearch = true;
       if (searchText) {
         const lowerSearch = searchText.toLowerCase();
-        matchSearch = item.name.toLowerCase().includes(lowerSearch) || item.email.toLowerCase().includes(lowerSearch);
+        matchSearch =
+          item.name.toLowerCase().includes(lowerSearch) ||
+          item.email.toLowerCase().includes(lowerSearch) ||
+          !!item.username?.toLowerCase().includes(lowerSearch) ||
+          !!item.phone?.toLowerCase().includes(lowerSearch);
       }
-      
-      return matchRole && matchSearch;
+
+      // DATE
+      let matchDate = true;
+      if (createdDateFilter && createdDateFilter.length === 2) {
+        const startDate = createdDateFilter[0].startOf('day');
+        const endDate = createdDateFilter[1].endOf('day');
+        const createdAt = dayjs(item.createdAt);
+        matchDate = createdAt.isAfter(startDate) && createdAt.isBefore(endDate);
+      }
+
+      return matchRole && matchSearch && matchDate;
     });
-  }, [users, roleFilter, searchText]);
+  }, [users, roleFilter, searchText, createdDateFilter]);
+
+  // =========================
+  // EXPORT CSV
+  // =========================
 
   const handleExport = () => {
-    message.success('Successfully exported user list (CSV)');
-  };
+    try {
+      const headers = [
+        'Mã tài khoản',
+        'Họ tên',
+        'Email',
+        'Username',
+        'Số điện thoại',
+        'Vai trò',
+        'Trạng thái',
+        'Ngày tạo'
+      ];
 
-  const handleToggleLock = (checked: boolean, record: User) => {
-    const newStatus = checked ? 'Active' : 'Locked';
-    
-    setUsers(prev => prev.map(u => {
-      if (u.id === record.id) {
-        return { ...u, status: newStatus };
-      }
-      return u;
-    }));
+      const dataRows = filteredUsers.map((u) => [
+        u.id,
+        u.name,
+        u.email,
+        u.username || '',
+        u.phone || '',
+        u.role === 'Admin' ? 'Quản trị viên' : u.role === 'Staff' ? 'Nhân viên' : 'Khách hàng',
+        u.status === 'Active' ? 'Đang hoạt động' : 'Đã khóa',
+        u.createdAt
+      ]);
 
-    if (newStatus === 'Locked') {
-      message.warning(`Account ${record.email} has been locked.`);
-    } else {
-      message.success(`Unlocked account ${record.email}.`);
+      const BOM = '\uFEFF';
+      const csvContent =
+        BOM +
+        [
+          headers.join(','),
+          ...dataRows.map((row) =>
+            row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')
+          )
+        ].join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+
+      link.setAttribute('href', url);
+      link.setAttribute('download', `Danh_Sach_Nguoi_Dung_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      message.success('Xuất danh sách người dùng thành công!');
+    } catch {
+      message.error('Xuất danh sách thất bại');
     }
   };
+
+  // =========================
+  // LOCK USER
+  // =========================
+
+  const handleToggleLock = async (checked: boolean, record: User) => {
+    const isLocked = !checked;
+
+    try {
+      await toggleAdminUserLock(record.id, isLocked);
+
+      setUsers((prev) =>
+        prev.map((u) => {
+          if (u.id === record.id) {
+            return { ...u, status: checked ? 'Active' : 'Locked' };
+          }
+          return u;
+        })
+      );
+
+      if (isLocked) {
+        message.warning(`Tài khoản ${record.email} đã bị khóa`);
+      } else {
+        message.success(`Đã mở khóa tài khoản ${record.email}`);
+      }
+    } catch (err: any) {
+      message.error(
+        'Không thể thay đổi trạng thái tài khoản: ' +
+          (err.response?.data?.message || err.message)
+      );
+    }
+  };
+
+  // =========================
+  // SHOW MODAL
+  // =========================
 
   const showModal = (user?: User) => {
     if (user) {
       setEditingUser(user);
-      form.setFieldsValue(user);
+      form.setFieldsValue({
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        newPassword: ''
+      });
     } else {
       setEditingUser(null);
       form.resetFields();
@@ -81,200 +246,404 @@ export default function UsersPage() {
     setIsModalOpen(true);
   };
 
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingUser(null);
+    form.resetFields();
+  };
+
+  // =========================
+  // SAVE USER
+  // =========================
+
   const handleModalSave = async () => {
     try {
       const values = await form.validateFields();
+      setSaving(true);
+
       if (editingUser) {
-        setUsers(prev => prev.map(u => 
-          u.id === editingUser.id ? { ...u, ...values } : u
-        ));
-        message.success('Profile updated successfully');
-      } else {
-        const newUser: User = {
-          id: Date.now().toString(),
-          ...values,
-          status: 'Active',
-          lastLogin: 'Not logged in yet',
-          createdAt: new Date().toISOString().split('T')[0]
+        const payload: any = {
+          name: values.name,
+          email: values.email,
+          role: values.role
         };
-        setUsers([...users, newUser]);
-        message.success('New account added successfully');
+        if (values.newPassword && values.newPassword.trim()) {
+          payload.password = values.newPassword;
+        }
+        const res = await updateAdminUser(editingUser.id, payload);
+        message.success(res.message || 'Cập nhật thông tin tài khoản thành công!');
+        await loadUsers();
+        closeModal();
+      } else {
+        const payload = {
+          name: values.name,
+          email: values.email,
+          password: values.password,
+          role: values.role
+        };
+        const res = await createAdminUser(payload);
+        message.success(res.message || 'Tạo tài khoản mới thành công!');
+        await loadUsers();
+        closeModal();
       }
-      setIsModalOpen(false);
-    } catch (error) {
-      // Validate failed
+    } catch (err: any) {
+      if (err.errorFields) return;
+      message.error(err.response?.data?.message || 'Lưu thông tin tài khoản thất bại');
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleRevokeTokens = (userId: string) => {
-    message.success(`Revoked all JWT Tokens (Blacklisted). User ID: ${userId} will be logged out immediately.`);
+  // =========================
+  // DELETE USER
+  // =========================
+
+  const handleDeleteUser = async (userId: string, userName?: string) => {
+    try {
+      await deleteAdminUser(userId);
+      message.success(`Đã xóa tài khoản ${userName || ''} thành công!`);
+      await loadUsers();
+    } catch (err: any) {
+      message.error(
+        'Không thể xóa tài khoản: ' + (err.response?.data?.message || err.message)
+      );
+    }
   };
 
+  // =========================
+  // TABLE COLUMNS
+  // =========================
+
   const columns: ColumnsType<User> = [
-    { 
-      title: 'Full Name', 
-      dataIndex: 'name', 
+    {
+      title: 'Họ và tên',
+      dataIndex: 'name',
       render: (_, record) => (
         <div className="flex items-center gap-3">
-          <Avatar className={record.role === 'Admin' ? 'bg-[#d32f2f]/20 text-[#d32f2f]' : 'bg-[#e0e3e5] text-[#5b403d]'}>
-            {record.name.charAt(0)}
+          <Avatar
+            className={
+              record.role === 'Admin'
+                ? 'bg-[#af101a] text-white font-bold'
+                : 'bg-[#f1dede] text-[#af101a] font-bold'
+            }
+          >
+            {record.name.charAt(0).toUpperCase()}
           </Avatar>
           <div>
-            <div className="text-sm font-medium text-[#191c1e]">{record.name}</div>
-            <div className="text-xs text-gray-500">{record.email}</div>
+            <div className="font-semibold text-[15px] text-[#191c1e]">
+              {record.name}
+            </div>
+            <div className="text-sm text-[#5b403d] mt-0.5">
+              {record.email}
+            </div>
           </div>
         </div>
       )
     },
-    { 
-      title: 'Role', 
-      dataIndex: 'role', 
+    {
+      title: 'Vai trò',
+      dataIndex: 'role',
       render: (val: string) => {
-        let color = 'default';
-        if (val === 'Admin') color = 'magenta';
-        if (val === 'Staff') color = 'blue';
-        if (val === 'Customer') color = 'green';
-        return <Tag color={color}>{val}</Tag>;
+        if (val === 'Admin') return <Tag color="red" className="rounded-full px-3 py-1">Quản trị viên</Tag>;
+        if (val === 'Staff') return <Tag color="processing" className="rounded-full px-3 py-1">Nhân viên</Tag>;
+        return <Tag color="green" className="rounded-full px-3 py-1">Khách hàng</Tag>;
       }
     },
-    { 
-      title: 'Date Created', 
-      dataIndex: 'createdAt', 
-      className: 'text-gray-500' 
+    {
+      title: 'Ngày tạo',
+      dataIndex: 'createdAt',
+      render: (val: string) => (
+        <span className="text-[#5b403d]">{dayjs(val).format('DD/MM/YYYY')}</span>
+      )
     },
-    { 
-      title: 'Status', 
-      dataIndex: 'status', 
+    {
+      title: 'Trạng thái',
+      dataIndex: 'status',
       render: (val: string, record) => (
         <div className="flex items-center gap-2">
-          <Switch 
-            size="small" 
-            checked={val === 'Active'} 
-            onChange={(checked) => handleToggleLock(checked, record)} 
+          <Switch
+            size="small"
+            checked={val === 'Active'}
+            onChange={(checked) => handleToggleLock(checked, record)}
           />
-          <span className={`text-sm ${val === 'Locked' ? 'text-red-500 font-medium' : 'text-green-600'}`}>
-            {val === 'Active' ? 'Active' : 'Locked'}
+          <span
+            className={`text-[14px] font-semibold ${
+              val === 'Locked' ? 'text-[#af101a]' : 'text-[#15803d]'
+            }`}
+          >
+            {val === 'Active' ? 'Đang hoạt động' : 'Đã khóa'}
           </span>
         </div>
       )
     },
-    { 
-      title: 'Actions', 
-      key: 'action', 
-      align: 'right', 
+    {
+      title: 'Thao tác',
+      key: 'action',
+      align: 'right',
       render: (_, record) => (
         <Space size="middle">
-          <Tooltip title="Edit Profile & Permissions">
-            <Button type="text" icon={<Edit size={16}/>} onClick={() => showModal(record)} className="text-[#00799c] hover:bg-blue-50" />
+          <Tooltip title="Chỉnh sửa thông tin">
+            <Button
+              type="text"
+              icon={<Edit size={16} />}
+              onClick={() => showModal(record)}
+              className="text-[#5b403d] hover:!text-[#af101a]"
+            />
           </Tooltip>
-          <Tooltip title="Revoke Access (Blacklist JWT)">
-            <Popconfirm title="Logout Device?" description="This action blacklists the JWT, forcing the user to log in again." onConfirm={() => handleRevokeTokens(record.id)}>
-              <Button type="text" danger icon={<Key size={16}/>} />
+
+          <Tooltip title="Xóa tài khoản">
+            <Popconfirm
+              title="Bạn có chắc chắn muốn xóa tài khoản này?"
+              description="Tài khoản sẽ bị xóa khỏi hệ thống."
+              okText="Đồng ý"
+              cancelText="Hủy"
+              okButtonProps={{ className: 'bg-[#af101a] hover:!bg-[#930010] border-none' }}
+              onConfirm={() => handleDeleteUser(record.id, record.name)}
+            >
+              <Button
+                type="text"
+                danger
+                icon={<Trash2 size={16} />}
+                className="text-[#af101a] hover:!text-[#930010]"
+              />
             </Popconfirm>
           </Tooltip>
         </Space>
       )
-    },
+    }
   ];
 
   return (
-    <div className="p-4 md:p-6 space-y-6 max-w-[1600px] mx-auto">
-      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+    <div className="p-4 md:p-6 max-w-[1600px] mx-auto space-y-6">
+      
+      {/* HEADER */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-[#191c1e]">User Management</h1>
-          <p className="text-[#5b403d] mt-1 text-sm">Manage profiles, roles, and access control.</p>
+          <h1 className="text-3xl font-bold text-[#191c1e] flex items-center gap-3">
+            <Users size={30} className="text-[#af101a]" />
+            Quản Lý Người Dùng
+          </h1>
+          <p className="text-[#5b403d] mt-2">
+            Quản lý tài khoản, phân quyền và trạng thái hoạt động trên hệ thống.
+          </p>
         </div>
-        <div className="flex gap-3">
-          <Button icon={<Download size={18} />} onClick={handleExport}>Export File</Button>
-          <Button type="primary" icon={<UserPlus size={18} />} className="bg-[#af101a] hover:bg-[#930010]" onClick={() => showModal()}>Add Account</Button>
-        </div>
+
+        <Space wrap>
+          <Button
+            size="large"
+            icon={<Download size={18} />}
+            onClick={handleExport}
+            className="border-[#ead0d0] hover:!text-[#af101a] hover:!border-[#af101a]"
+          >
+            Xuất CSV
+          </Button>
+
+          <Button
+            type="primary"
+            size="large"
+            icon={<UserPlus size={18} />}
+            className="bg-[#af101a] hover:!bg-[#930010] border-none"
+            onClick={() => showModal()}
+          >
+            Thêm tài khoản
+          </Button>
+        </Space>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {[
-          { label: 'Total Accounts', val: users.length, sub: 'Entire system', icon: Users, color: 'text-[#af101a]', bg: 'bg-[#ffdad6]/50', border: 'border-t-[#af101a]' },
-          { label: 'Admins & Staff', val: users.filter(u => u.role === 'Admin' || u.role === 'Staff').length, sub: 'Admin access rights', icon: Shield, color: 'text-[#00799c]', bg: 'bg-[#e0f2fe]' },
-          { label: 'Locked Accounts', val: users.filter(u => u.status === 'Locked').length, sub: 'Requires review', icon: Lock, color: 'text-red-600', bg: 'bg-red-50', subColor: 'text-red-600' },
-        ].map((s, i) => (
-          <div key={i} className={`bg-white border border-[#d8dadc] rounded-xl p-5 shadow-sm ${s.border ? 'border-t-4 ' + s.border : ''}`}>
-            <div className="flex justify-between items-start mb-2">
-              <span className="text-sm font-medium text-[#5b403d]">{s.label}</span>
-              <div className={`p-2 rounded-lg ${s.bg} ${s.color}`}><s.icon size={20} /></div>
+      {/* STATS */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        {/* Tổng số tài khoản */}
+        <div className="bg-white border border-[#e4beba] border-t-2 border-t-[#af101a] rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-[11px] font-bold text-[#5b403d] uppercase tracking-wider">
+              Tổng số tài khoản
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-[#fff2f0] flex items-center justify-center">
+              <Users size={16} className="text-[#af101a]" />
             </div>
-            <div className="text-3xl font-bold text-[#191c1e]">{s.val}</div>
-            <div className={`text-xs mt-1 ${s.subColor || 'text-gray-500'}`}>{s.sub}</div>
           </div>
-        ))}
+          <div className="flex items-baseline gap-1.5">
+            <h2 className="text-2xl font-black text-[#191c1e]">
+              {users.length}
+            </h2>
+          </div>
+        </div>
+
+        {/* Nhân viên & Quản trị */}
+        <div className="bg-white border border-[#e4beba] rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-[11px] font-bold text-[#5b403d] uppercase tracking-wider">
+              Nhân viên & Quản trị
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-[#eff6ff] flex items-center justify-center">
+              <Shield size={16} className="text-blue-600" />
+            </div>
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <h2 className="text-2xl font-black text-[#191c1e]">
+              {users.filter((u) => u.role === 'Admin' || u.role === 'Staff').length}
+            </h2>
+          </div>
+        </div>
+
+        {/* Tài khoản bị khóa */}
+        <div className="bg-white border border-[#e4beba] rounded-xl p-4 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-[11px] font-bold text-[#5b403d] uppercase tracking-wider">
+              Tài khoản bị khóa
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-[#fef2f2] flex items-center justify-center">
+              <Lock size={16} className="text-red-500" />
+            </div>
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <h2 className="text-2xl font-black text-[#191c1e]">
+              {users.filter((u) => u.status === 'Locked').length}
+            </h2>
+          </div>
+        </div>
       </div>
 
-      <div className="bg-white border border-[#d8dadc] rounded-xl shadow-sm flex flex-col">
-        <div className="p-4 border-b border-[#eceef0] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="flex w-full sm:w-auto">
-            <Select 
-              value={roleFilter} 
+      {/* MAIN CONTENT */}
+      <div className="bg-white border border-[#e4beba] rounded-xl shadow-sm overflow-hidden">
+        
+        {/* FILTER */}
+        <div className="p-5 border-b border-[#f1dede]">
+          <div className="flex flex-wrap gap-3 items-center">
+            <Input
+              size="large"
+              placeholder="Tìm kiếm họ tên, email, username..."
+              prefix={<Search size={16} />}
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              allowClear
+              className="max-w-md"
+            />
+
+            <Select
+              size="large"
+              value={roleFilter}
               onChange={setRoleFilter}
-              className="w-full sm:w-48 rounded-lg"
+              style={{ width: 220 }}
               options={[
-                { value: 'All', label: 'All roles' },
-                { value: 'Admin', label: 'Admin only' },
-                { value: 'Staff', label: 'Staff only' },
-                { value: 'Customer', label: 'Customer only' },
+                { value: 'All', label: 'Tất cả vai trò' },
+                { value: 'Admin', label: 'Quản trị viên' },
+                { value: 'Staff', label: 'Nhân viên' },
+                { value: 'Customer', label: 'Khách hàng' }
               ]}
             />
+
+            <RangePicker
+              size="large"
+              format="DD/MM/YYYY"
+              placeholder={['Từ ngày', 'Đến ngày']}
+              value={createdDateFilter}
+              onChange={(dates) => setCreatedDateFilter(dates)}
+              style={{ width: 280 }}
+              allowClear
+            />
           </div>
-          <Input 
-            prefix={<Search size={16} className="text-gray-400"/>} 
-            placeholder="Search by name or email..." 
-            className="w-full sm:w-64 rounded-lg"
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            allowClear
+        </div>
+
+        {/* TABLE */}
+        <div className="p-4">
+          <Table
+            columns={columns}
+            dataSource={filteredUsers}
+            rowKey="id"
+            loading={loading}
+            pagination={{
+              current: currentPage,
+              pageSize: itemsPerPage,
+              onChange: (page) => setCurrentPage(page),
+              showSizeChanger: true
+            }}
+            scroll={{ x: 1000 }}
           />
         </div>
-        <Table 
-          columns={columns} 
-          dataSource={filteredUsers} 
-          rowKey="id" 
-          pagination={{ 
-            current: currentPage,
-            pageSize: itemsPerPage,
-            onChange: (page) => setCurrentPage(page),
-            showSizeChanger: true
-          }} 
-          className="custom-table"
-          scroll={{ x: 'max-content' }}
-        />
       </div>
 
+      {/* MODAL */}
       <Modal
-        title={editingUser ? "Edit Profile" : "Add New Account"}
+        title={
+          <span className="text-[18px] font-bold text-[#191c1e]">
+            {editingUser ? 'Chỉnh sửa thông tin tài khoản' : 'Thêm tài khoản mới'}
+          </span>
+        }
         open={isModalOpen}
         onOk={handleModalSave}
-        onCancel={() => setIsModalOpen(false)}
-        okText="Save Info"
-        cancelText="Cancel"
-        okButtonProps={{ className: "bg-[#00799c] hover:bg-[#006280]" }}
+        onCancel={closeModal}
+        okText="Lưu thông tin"
+        cancelText="Hủy bỏ"
+        confirmLoading={saving}
+        okButtonProps={{ className: 'bg-[#af101a] hover:!bg-[#930010] border-none' }}
+        width={650}
+        destroyOnClose
       >
-        <Form form={form} layout="vertical" className="mt-4">
-          <Form.Item name="name" label="Full Name" rules={[{ required: true, message: 'Please enter full name' }]}>
-            <Input placeholder="John Doe" />
+        <Form form={form} layout="vertical" className="mt-5 space-y-4">
+          <Form.Item
+            name="name"
+            label="Họ và tên hiển thị"
+            rules={[{ required: true, message: 'Vui lòng nhập họ và tên hiển thị' }]}
+          >
+            <Input size="large" placeholder="Nguyễn Văn A" />
           </Form.Item>
-          <Form.Item name="email" label="Email Address" rules={[{ required: true, type: 'email', message: 'Please enter a valid email' }]}>
-            <Input placeholder="example@email.com" disabled={!!editingUser && editingUser.role === 'Admin'} />   
+
+          <Form.Item
+            name="email"
+            label="Địa chỉ Email"
+            rules={[
+              { required: true, message: 'Vui lòng nhập email' },
+              { type: 'email', message: 'Email không đúng định dạng' }
+            ]}
+          >
+            <Input
+              size="large"
+              placeholder="example@email.com"
+              disabled={!!editingUser && editingUser.role === 'Admin'}
+            />
           </Form.Item>
-          <Form.Item name="role" label="Role" rules={[{ required: true, message: 'Please select a role' }]}>
+
+          {!editingUser ? (
+            <Form.Item
+              name="password"
+              label="Mật khẩu khởi tạo"
+              rules={[
+                { required: true, message: 'Vui lòng nhập mật khẩu' },
+                { min: 6, message: 'Mật khẩu tối thiểu phải có 6 ký tự' }
+              ]}
+            >
+              <Input.Password size="large" placeholder="Nhập mật khẩu khởi tạo" />
+            </Form.Item>
+          ) : (
+            <Form.Item
+              name="newPassword"
+              label="Mật khẩu mới (Bỏ trống nếu không muốn đổi)"
+              rules={[{ min: 6, message: 'Mật khẩu tối thiểu phải có 6 ký tự' }]}
+            >
+              <Input.Password size="large" placeholder="Nhập mật khẩu mới..." />
+            </Form.Item>
+          )}
+
+          <Form.Item
+            name="role"
+            label="Vai trò / Quyền truy cập"
+            rules={[{ required: true, message: 'Vui lòng chọn vai trò' }]}
+          >
             <Select
+              size="large"
               options={[
-                { value: 'Customer', label: 'Customer' },
-                { value: 'Staff', label: 'Staff' },
-                { value: 'Admin', label: 'Admin' }
+                { value: 'Customer', label: 'Khách hàng (Customer)' },
+                { value: 'Staff', label: 'Nhân viên (Staff)' },
+                { value: 'Admin', label: 'Quản trị viên (Admin)' }
               ]}
             />
           </Form.Item>
+
           {editingUser && (
-            <div className="bg-gray-50 border border-gray-200 rounded p-3 text-sm text-gray-600">
-              <p><strong>Last Login:</strong> {editingUser.lastLogin}</p>
-              <p><strong>Account Created Date:</strong> {editingUser.createdAt}</p>
+            <div className="bg-[#f1dede]/30 border border-[#ead0d0] rounded-xl p-4 text-[14px] text-[#5b403d] mt-4">
+              <p><strong>Lần đăng nhập cuối:</strong> {editingUser.lastLogin}</p>
+              <p className="mt-1"><strong>Ngày tạo tài khoản:</strong> {editingUser.createdAt}</p>
             </div>
           )}
         </Form>

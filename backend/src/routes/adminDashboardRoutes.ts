@@ -18,10 +18,9 @@ const router = Router();
  *     tags: ["[Admin] Dashboard"]
  *     description: |
  *       Trả về các chỉ số tổng quan bao gồm:
- *       - Tổng doanh thu (totalRevenue)
- *       - Tổng số đơn hàng (totalOrders)
- *       - Tổng số người dùng (totalCustomers)
- *       - Số lượng sản phẩm đang hoạt động (activeProducts)
+ *       - KPIs: Doanh thu tháng, đơn hàng, khách hàng mới, đơn chờ xử lý (kèm % tăng trưởng so với tháng trước)
+ *       - Biểu đồ doanh thu 12 tháng gần nhất (revenueTrend)
+ *       - Top 5 sản phẩm bán chạy nhất (topProducts)
  *     responses:
  *       200:
  *         description: Lấy dữ liệu thống kê thành công
@@ -36,18 +35,60 @@ const router = Router();
  *                 data:
  *                   type: object
  *                   properties:
- *                     totalRevenue:
- *                       type: number
- *                       example: 284592000
- *                     totalOrders:
- *                       type: integer
- *                       example: 3492
- *                     totalCustomers:
- *                       type: integer
- *                       example: 12845
- *                     activeProducts:
- *                       type: integer
- *                       example: 59102
+ *                     kpis:
+ *                       type: object
+ *                       properties:
+ *                         revenueThisMonth:
+ *                           type: number
+ *                           example: 284592000
+ *                         revenueGrowth:
+ *                           type: number
+ *                           example: 14.2
+ *                         totalOrders:
+ *                           type: integer
+ *                           example: 3492
+ *                         ordersGrowth:
+ *                           type: number
+ *                           example: 5.8
+ *                         newCustomers:
+ *                           type: integer
+ *                           example: 342
+ *                         customersGrowth:
+ *                           type: number
+ *                           example: 2.4
+ *                         pendingOrders:
+ *                           type: integer
+ *                           example: 12
+ *                     revenueTrend:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           month:
+ *                             type: string
+ *                             example: "Jan"
+ *                           revenue:
+ *                             type: number
+ *                             example: 120000
+ *                     topProducts:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           rank:
+ *                             type: integer
+ *                             example: 1
+ *                           id:
+ *                             type: string
+ *                           name:
+ *                             type: string
+ *                           imageUrl:
+ *                             type: string
+ *                             nullable: true
+ *                           volume:
+ *                             type: integer
+ *                           revenue:
+ *                             type: number
  *       500:
  *         description: Lỗi hệ thống
  */

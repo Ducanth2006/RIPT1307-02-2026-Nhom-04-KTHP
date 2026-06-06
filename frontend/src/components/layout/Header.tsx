@@ -1,17 +1,69 @@
-import { Layout, Input, Badge, Button, Popover, Empty, List } from "antd";
-import { SearchOutlined, ShoppingCartOutlined, UserOutlined } from "@ant-design/icons";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Layout, Input, Badge, Button, Popover, Empty, List, Dropdown, Avatar } from "antd";
+import { SearchOutlined, ShoppingCartOutlined, UserOutlined, BellOutlined } from "@ant-design/icons";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { getCart } from "../../services/Cart/apiClient";
-import type { Cart as CartType } from "../../services/Cart/typing";
+import { getCart } from "../../services/client/cart/apiClient";
+import type { Cart as CartType } from "../../services/client/cart/typing";
+import { logout } from "../../services/client/auth/apiClient";
+import NotificationPopover from "./NotificationPopover";
 
 const { Header: AntHeader } = Layout;
 
 const Header = () => {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const searchParamVal = searchParams.get("search") || "";
+  const [searchVal, setSearchVal] = useState(searchParamVal);
+  const [prevSearchParamVal, setPrevSearchParamVal] = useState(searchParamVal);
+
+  if (searchParamVal !== prevSearchParamVal) {
+    setSearchVal(searchParamVal);
+    setPrevSearchParamVal(searchParamVal);
+  }
+
+  const handleSearch = (value: string) => {
+    const params = new URLSearchParams(searchParams);
+    if (value.trim()) {
+      params.set("search", value.trim());
+    } else {
+      params.delete("search");
+    }
+    params.set("page", "1"); // Reset trang về 1 khi tìm kiếm mới
+    navigate({
+      pathname: "/products",
+      search: params.toString(),
+    });
+  };
+
+  const [userObj, setUserObj] = useState(() => {
+    const userStr = localStorage.getItem("user");
+    return userStr ? JSON.parse(userStr) : null;
+  });
+
+  useEffect(() => {
+    const handleUserUpdate = () => {
+      const userStr = localStorage.getItem("user");
+      setUserObj(userStr ? JSON.parse(userStr) : null);
+    };
+
+    window.addEventListener("userUpdated", handleUserUpdate);
+    window.addEventListener("storage", handleUserUpdate);
+
+    return () => {
+      window.removeEventListener("userUpdated", handleUserUpdate);
+      window.removeEventListener("storage", handleUserUpdate);
+    };
+  }, []);
+
+  const userId = userObj?.id;
+  const hasToken = !!userId;
+
   const { data } = useQuery({
-    queryKey: ["cart"],
-    queryFn: () => getCart().then((res) => res.data),
+    queryKey: ["cart", userId],
+    queryFn: () => getCart(userId).then((res) => res.data),
     retry: false,
+    enabled: !!userId,
   });
 
   const cartItems: CartType.ICartItem[] = data?.data || [];
@@ -28,25 +80,21 @@ const Header = () => {
             itemLayout="horizontal"
             dataSource={cartItems.slice(0, 5)}
             renderItem={(item) => {
-              const img =
-                item.product_images?.find((i) => i.is_main)?.image_url ||
-                item.product_images?.[0]?.image_url ||
-                "/placeholder.jpg";
-              const variant = item.product_variants?.find((v) => v.id === item.selectedVariantId);
+              const img = item.imageUrl || "/placeholder.svg";
               return (
                 <List.Item>
                   <List.Item.Meta
                     avatar={<img src={img} style={{ width: 40, height: 40, objectFit: "cover" }} alt="" />}
-                    title={<div style={{ fontSize: 13, fontWeight: 600 }}>{item.name}</div>}
+                    title={<div style={{ fontSize: 13, fontWeight: 400 }}>{item.productName}</div>}
                     description={
                       <div style={{ fontSize: 12 }}>
-                        {variant ? `${variant.size} / ${variant.color}` : ""} x {item.quantity}
+                        {item.size || "N/A"} / {item.color || "N/A"} x {item.quantity}
                       </div>
                     }
                   />
-                  <div style={{ color: "#ff4d4f", fontSize: 13, fontWeight: 600 }}>
+                  <div style={{ color: "#000000ff", fontSize: 13, fontWeight: 600 }}>
                     {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(
-                      (variant?.price || item.base_price) * item.quantity,
+                      item.price * item.quantity,
                     )}
                   </div>
                 </List.Item>
@@ -55,7 +103,7 @@ const Header = () => {
           />
           <div style={{ marginTop: 15, textAlign: "right" }}>
             <Link to="/cart">
-              <Button type="primary" danger>
+              <Button type="primary">
                 Xem giỏ hàng
               </Button>
             </Link>
@@ -95,9 +143,22 @@ const Header = () => {
           zIndex: 1000,
           boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
         }}
+        className="app-header"
       >
-        <Link to="/" style={{ textDecoration: "none" }}>
+        <style>{`
+          @media (max-width: 1100px) {
+            .desktop-categories { display: none !important; }
+          }
+          @media (max-width: 768px) {
+            .header-search { width: 160px !important; }
+            .app-header { padding: 0 16px !important; }
+            .header-logo { font-size: 18px !important; }
+          }
+        `}</style>
+        <Link to="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 10 }}>
+          <img src="/favicon.svg" alt="SportStride Logo" style={{ height: 32, width: 32 }} />
           <div
+            className="header-logo"
             style={{
               fontSize: 24,
               fontWeight: 900,
@@ -105,45 +166,26 @@ const Header = () => {
               letterSpacing: -1,
             }}
           >
-            ELITE PERFORMANCE
+            SportStride
           </div>
         </Link>
 
-        <div style={{ display: "flex", gap: 32, fontWeight: 600 }}>
-          <Link to="/" style={{ color: "#ff4d4f", fontWeight: 700 }}>
-            MEN
-          </Link>
-          <Link to="/" style={{ color: "#111" }}>
-            WOMEN
-          </Link>
-          <Link to="/" style={{ color: "#111" }}>
-            KIDS
-          </Link>
-          <Link to="/" style={{ color: "#111" }}>
-            SPORTS
-          </Link>
-          <Link to="/" style={{ color: "#111" }}>
-            BRANDS
-          </Link>
-          <Link to="/" style={{ color: "#111" }}>
-            RELEASES
-          </Link>
-        </div>
-
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <Input
-            placeholder="Search"
-            prefix={<SearchOutlined />}
+            className="header-search"
+            placeholder="Tìm kiếm..."
+            prefix={
+              <SearchOutlined style={{ cursor: "pointer", color: "#888" }} onClick={() => handleSearch(searchVal)} />
+            }
+            value={searchVal}
+            onChange={(e) => setSearchVal(e.target.value)}
+            onPressEnter={() => handleSearch(searchVal)}
             style={{
-              width: 280,
+              width: 450,
               borderRadius: 30,
               backgroundColor: "#f5f5f5",
             }}
           />
-
-          <Link to="/login">
-            <Button type="text" icon={<UserOutlined />} style={{ color: "#111" }} />
-          </Link>
 
           <Popover content={cartPreview} placement="bottomRight" arrow={true}>
             <Badge count={cartCount} offset={[0, 4]}>
@@ -152,6 +194,67 @@ const Header = () => {
               </Link>
             </Badge>
           </Popover>
+
+          <NotificationPopover>
+            <Button type="text" icon={<BellOutlined />} style={{ color: "#111", fontSize: 22 }} />
+          </NotificationPopover>
+
+          {hasToken ? (
+            <Dropdown
+              menu={{
+                items: [
+                  {
+                    key: "profile",
+                    label: <Link to="/profile">Tài khoản của tôi</Link>,
+                  },
+                  {
+                    key: "orders",
+                    label: <Link to="/orders">Đơn hàng của tôi</Link>,
+                  },
+                  ...(userObj?.role === "Admin" || userObj?.role === "Staff" ? [
+                    {
+                      key: "admin",
+                      label: <Link to="/admin/dashboard">Trang quản trị</Link>,
+                    }
+                  ] : []),
+                  { type: "divider" },
+                  {
+                    key: "logout",
+                    label: (
+                      <div
+                        onClick={() => {
+                          logout();
+                        }}
+                        style={{ color: "red" }}
+                      >
+                        Đăng xuất
+                      </div>
+                    ),
+                  },
+                ],
+              }}
+              placement="bottomRight"
+              trigger={["hover"]}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", marginLeft: 8 }}>
+                <Avatar
+                  src={userObj?.avatar}
+                  style={{ backgroundColor: "#af101a", verticalAlign: "middle" }}
+                >
+                  {(userObj?.full_name || userObj?.username || "T")
+                    .replace(/\s*\([^)]*\)/g, "")
+                    .trim()[0]?.toUpperCase()}
+                </Avatar>
+                <span style={{ fontWeight: 600, color: "#111", fontSize: 14 }}>
+                  {(userObj?.full_name || userObj?.username || "Tài khoản").replace(/\s*\([^)]*\)/g, "").trim()}
+                </span>
+              </div>
+            </Dropdown>
+          ) : (
+            <Link to="/login">
+              <Button type="text" icon={<UserOutlined />} style={{ color: "#111", fontSize: 22 }} />
+            </Link>
+          )}
         </div>
       </AntHeader>
     </>

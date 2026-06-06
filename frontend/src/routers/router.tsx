@@ -11,13 +11,24 @@ import Categories from "../pages/Admin/Categories";
 import Orders from "../pages/Admin/Orders";
 import UsersPage from "../pages/Admin/UsersPage";
 import ReportsPage from "../pages/Admin/ReportsPage";
-import Support from "../pages/Admin/Support";
+import VouchersPage from "../pages/Admin/VouchersPage";
 import SettingsPage from "../pages/Admin/SettingsPage";
+import ComplaintsPage from "../pages/Admin/ComplaintsPage";
+import Inventory from "../pages/Admin/Inventory";
 import AccountProfile from "../pages/Admin/AccountProfile";
-import HelpCenter from "../pages/Admin/HelpCenter";
 import AddProduct from "../pages/Admin/AddProduct";
+import ChatPage from "../pages/Admin/ChatPage";
+import HelpCenter from "../pages/Admin/HelpCenter";
 import ProductGrid from "../pages/products/components/ProductGrid";
+import ProductDetail from "../pages/products/components/ProductDetail";
+import ProductReviewsPage from "../pages/products/ProductReviewsPage";
 import Cart from "../pages/cart/Cart";
+import Profile from "../pages/profile/Profile";
+import ClientOrders from "../pages/orders/Orders";
+import Notifications from "../pages/notifications/Notifications";
+import CollectionDetail from "../pages/products/CollectionDetail";
+import NewArrivalsPage from "../pages/products/NewArrivalsPage";
+import BestSellingProductsPage from "../pages/products/LimitedProductsPage";
 
 const router = createBrowserRouter([
   {
@@ -33,8 +44,40 @@ const router = createBrowserRouter([
         element: <ProductGrid />,
       },
       {
+        path: "products/:id",
+        element: <ProductDetail />,
+      },
+      {
+        path: "products/:id/reviews",
+        element: <ProductReviewsPage />,
+      },
+      {
         path: "cart",
         element: <Cart />,
+      },
+      {
+        path: "profile",
+        element: <Profile />,
+      },
+      {
+        path: "orders",
+        element: <ClientOrders />,
+      },
+      {
+        path: "notifications",
+        element: <Notifications />,
+      },
+      {
+        path: "collections/:id",
+        element: <CollectionDetail />,
+      },
+      {
+        path: "new-arrivals",
+        element: <NewArrivalsPage />,
+      },
+      {
+        path: "best-sellers",
+        element: <BestSellingProductsPage />,
       },
       {
         path: "login",
@@ -75,6 +118,10 @@ const router = createBrowserRouter([
         element: <Categories />,
       },
       {
+        path: "inventory",
+        element: <Inventory />,
+      },
+      {
         path: "orders",
         element: <Orders />,
       },
@@ -83,12 +130,16 @@ const router = createBrowserRouter([
         element: <UsersPage />,
       },
       {
+        path: "vouchers",
+        element: <VouchersPage />,
+      },
+      {
         path: "reports",
         element: <ReportsPage />,
       },
       {
-        path: "support",
-        element: <Support />,
+        path: "complaints",
+        element: <ComplaintsPage/>,
       },
       {
         path: "settings",
@@ -101,6 +152,10 @@ const router = createBrowserRouter([
       {
         path: "help",
         element: <HelpCenter />,
+      },
+      {
+        path: "chat",
+        element: <ChatPage />,
       },
     ],
   },

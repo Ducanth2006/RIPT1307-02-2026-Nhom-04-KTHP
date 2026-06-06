@@ -1,24 +1,121 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Form, Input, Button, Divider, message } from "antd";
 import { UserOutlined, LockOutlined, GoogleOutlined, FacebookFilled } from "@ant-design/icons";
 import { Link, useNavigate } from "react-router-dom";
-import { login } from "../../services/Auth/apiClient";
+import { useGoogleLogin } from "@react-oauth/google";
+import { login, loginGoogle, loginFacebook } from "../../services/client/auth/apiClient";
 import "./Auth.less";
 
 const Login = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
-  const onFinish = async (values) => {
+  // Khởi tạo Facebook SDK
+  useEffect(() => {
+    const win = window as any;
+    if (!win.FB) {
+      win.fbAsyncInit = function () {
+        win.FB.init({
+          appId: import.meta.env.VITE_FACEBOOK_APP_ID || "35843458815300651",
+          cookie: true,
+          xfbml: true,
+          version: "v18.0",
+        });
+      };
+
+      (function (d, s, id) {
+        var js,
+          fjs = d.getElementsByTagName(s)[0];
+        if (d.getElementById(id)) return;
+        js = d.createElement(s) as HTMLScriptElement;
+        js.id = id;
+        js.src = "https://connect.facebook.net/vi_VN/sdk.js";
+        fjs.parentNode?.insertBefore(js, fjs);
+      })(document, "script", "facebook-jssdk");
+    }
+  }, []);
+
+  const handleFacebookLogin = () => {
+    const win = window as any;
+    if (!win.FB) {
+      message.error("SDK Facebook đang được tải. Vui lòng thử lại sau giây lát.");
+      return;
+    }
+
+    win.FB.login(
+      (response: any) => {
+        if (response.authResponse) {
+          const fbAccessToken = response.authResponse.accessToken;
+          setLoading(true);
+          loginFacebook(fbAccessToken)
+            .then(({ data: res }) => {
+              localStorage.setItem("accessToken", res.token);
+              localStorage.setItem("user", JSON.stringify(res.data));
+              message.success("Đăng nhập bằng Facebook thành công!");
+              if (res.data.role === "Admin" || res.data.role === "Staff") {
+                navigate("/admin/dashboard");
+              } else {
+                navigate("/");
+              }
+            })
+            .catch((error) => {
+              const err = error as { response?: { data?: { message?: string } } };
+              message.error(err.response?.data?.message || "Đăng nhập Facebook thất bại.");
+            })
+            .finally(() => {
+              setLoading(false);
+            });
+        } else {
+          message.error("Đăng nhập bằng Facebook không thành công hoặc bị hủy.");
+        }
+      },
+      { scope: "public_profile,email" }
+    );
+  };
+
+  const handleGoogleLogin = useGoogleLogin({
+    onSuccess: async (tokenResponse: { access_token: string }) => {
+      setLoading(true);
+      try {
+        const { data: res } = await loginGoogle(tokenResponse.access_token);
+        localStorage.setItem("accessToken", res.token);
+        localStorage.setItem("user", JSON.stringify(res.data));
+        message.success("Đăng nhập bằng Google thành công!");
+        if (res.data.role === "Admin" || res.data.role === "Staff") {
+          navigate("/admin/dashboard");
+        } else {
+          navigate("/");
+        }
+      } catch (error) {
+        const err = error as { response?: { data?: { message?: string } } };
+        message.error(err.response?.data?.message || "Đăng nhập Google thất bại.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    onError: () => message.error("Đăng nhập bằng Google không thành công."),
+  });
+
+  const onFinish = async (values: any) => {
     setLoading(true);
     try {
-      const { data: res } = await login(values);
-      localStorage.setItem("token", res.data.access_token);
-      localStorage.setItem("user", JSON.stringify(res.data.user));
+      const { data: res } = await login({
+        email: values.email,
+        password: values.password,
+      });
+      localStorage.setItem("accessToken", res.token);
+      localStorage.setItem("user", JSON.stringify(res.data));
       message.success("Đăng nhập thành công!");
-      navigate("/");
+
+      // Redirect based on role if needed, or default to Home
+      if (res.data.role === "Admin" || res.data.role === "Staff") {
+        navigate("/admin/dashboard");
+      } else {
+        navigate("/");
+      }
     } catch (error) {
-      message.error("Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.", error);
+      const err = error as { response?: { data?: { message?: string } } };
+      message.error(err.response?.data?.message || "Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.");
     } finally {
       setLoading(false);
     }
@@ -31,7 +128,7 @@ const Login = () => {
         <div className="header-container">
           <div className="logo-section">
             <Link to="/" className="logo-link">
-              ELITE PERFORMANCE
+              SportStride
             </Link>
             <div className="divider"></div>
             <span className="page-title">Đăng nhập</span>
@@ -46,8 +143,7 @@ const Login = () => {
       <main
         className="auth-main"
         style={{
-          backgroundImage:
-            "url('https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=2070&auto=format&fit=crop')",
+          backgroundImage: "url('/login.png')",
         }}
       >
         <div className="form-container">
@@ -57,8 +153,14 @@ const Login = () => {
             </div>
 
             <Form name="login" onFinish={onFinish} layout="vertical" size="middle" className="auth-form">
-              <Form.Item name="username" rules={[{ required: true, message: "Vui lòng nhập tên đăng nhập!" }]}>
-                <Input prefix={<UserOutlined />} placeholder="Email/Số điện thoại/Tên đăng nhập" />
+              <Form.Item
+                name="email"
+                rules={[
+                  { required: true, message: "Vui lòng nhập email!" },
+                  { type: "email", message: "Email không hợp lệ!" },
+                ]}
+              >
+                <Input prefix={<UserOutlined />} placeholder="Email" />
               </Form.Item>
 
               <Form.Item name="password" rules={[{ required: true, message: "Vui lòng nhập mật khẩu!" }]}>
@@ -78,12 +180,12 @@ const Login = () => {
               </Divider>
 
               <div className="social-btns">
-                <Button icon={<FacebookFilled style={{ color: "#1877f2" }} />}>Facebook</Button>
-                <Button icon={<GoogleOutlined />}>Google</Button>
+                <Button icon={<FacebookFilled style={{ color: "#1877f2" }} />} onClick={handleFacebookLogin}>Facebook</Button>
+                <Button icon={<GoogleOutlined />} onClick={() => handleGoogleLogin()}>Google</Button>
               </div>
 
               <div className="switch-auth">
-                Bạn mới biết đến Elite Performance?{" "}
+                Bạn mới biết đến SportStride?{" "}
                 <Link to="/register" className="link">
                   Đăng ký
                 </Link>
@@ -102,7 +204,7 @@ const Login = () => {
             <span>CHÍNH SÁCH VẬN CHUYỂN</span>
             <span>CHÍNH SÁCH TRẢ HÀNG VÀ HOÀN TIỀN</span>
           </div>
-          <div className="copyright">© 2026 Elite Performance. Tất cả các quyền được bảo lưu.</div>
+          <div className="copyright">© 2026 SportStride. Tất cả các quyền được bảo lưu.</div>
         </div>
       </footer>
     </div>

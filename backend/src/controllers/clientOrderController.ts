@@ -1,12 +1,20 @@
 import type { Request, Response } from 'express';
-import { checkoutOrder, getUserOrders, getOrderDetails } from '../services/clientOrderService';
+import { checkoutOrder, getUserOrders, getOrderDetails, cancelOrder } from '../services/clientOrderService';
+import { getIO } from '../config/socket';
+import { sendNewOrderEmailToAdmins, sendCancelRequestEmailToAdmins } from '../services/emailService';
 
 export const createOrder = async (req: Request, res: Response): Promise<any> => {
     // Bắt đầu đếm thời gian thực thi (Performance tracking)
     const startTime = performance.now();
 
     try {
-        const { userId, shippingAddress, paymentMethod, voucherCode } = req.body;
+        const {
+            userId,
+            shippingAddress,
+            paymentMethod,
+            voucherCode,
+            cartItemIds
+        } = req.body;
 
         // 1. Validate đầu vào cơ bản
         if (!userId) {
@@ -24,8 +32,22 @@ export const createOrder = async (req: Request, res: Response): Promise<any> => 
             userId: Number(userId),
             shippingAddress,
             paymentMethod,
-            voucherCode
+            voucherCode,
+            cartItemIds
         });
+
+        // Phát tín hiệu Real-time báo cho phía Admin là có đơn hàng mới
+        try {
+            getIO().to('admins').emit('admin:orderCreated', order);
+            console.log(`📡 Đã phát sự kiện admin:orderCreated cho đơn hàng #${order.id}`);
+        } catch (socketError) {
+            console.error('❌ Lỗi khi gửi sự kiện socket (admin:orderCreated):', socketError);
+        }
+
+        // Gửi Gmail thông báo đơn hàng mới cho Admin/Staff
+        if (order && order.id) {
+            sendNewOrderEmailToAdmins(Number(order.id)).catch(err => console.error("Lỗi gửi email đơn hàng mới cho admin:", err));
+        }
 
         // Kết thúc đếm thời gian
         const endTime = performance.now();
@@ -92,5 +114,54 @@ export const getOrderById = async (req: Request, res: Response): Promise<any> =>
     } catch (error: any) {
         console.error("Lỗi getOrderById:", error);
         return res.status(404).json({ message: error.message || "Không tìm thấy đơn hàng." });
+    }
+};
+
+export const cancelOrderById = async (req: Request, res: Response): Promise<any> => {
+    try {
+        const orderId = req.params.id;
+        const { userId, cancelReason } = req.body;
+
+        if (!orderId || isNaN(Number(orderId))) {
+            return res.status(400).json({ message: "Mã đơn hàng không hợp lệ." });
+        }
+        if (!userId) {
+            return res.status(401).json({ message: "Vui lòng cung cấp userId." });
+        }
+
+        const result = await cancelOrder(Number(orderId), Number(userId), cancelReason);
+
+        // Gửi Gmail báo yêu cầu hủy đơn hàng cho các Admin
+        sendCancelRequestEmailToAdmins(Number(orderId), cancelReason || 'Khách hàng gửi yêu cầu hủy').catch(err => 
+            console.error("Lỗi gửi email yêu cầu hủy đơn hàng cho Admin:", err)
+        );
+
+        // Phát tín hiệu Real-time báo cho admin và client
+        try {
+            const status = result?.status || 'CancelRequested';
+            getIO().to('admins').emit('admin:orderCancelled', {
+                orderId: Number(orderId),
+                userId: Number(userId),
+                status: status
+            });
+            getIO().to(`user:${userId}`).emit('client:orderStatusUpdated', {
+                orderId: Number(orderId),
+                status: status,
+                userId: Number(userId)
+            });
+            console.log(`📡 Đã phát sự kiện hủy đơn hàng #${orderId} (Trạng thái mới: ${status})`);
+        } catch (socketError) {
+            console.error('❌ Lỗi khi gửi sự kiện socket (orderCancelled):', socketError);
+        }
+
+        return res.status(200).json({
+            message: "Hủy đơn hàng thành công.",
+            data: result
+        });
+    } catch (error: any) {
+        console.error("Lỗi cancelOrderById:", error);
+        // Trả về 400 nếu lỗi do nghiệp vụ (trạng thái không hợp lệ), 500 nếu lỗi hệ thống
+        const statusCode = error.message?.includes("Không thể hủy") || error.message?.includes("không tồn tại") ? 400 : 500;
+        return res.status(statusCode).json({ message: error.message || "Lỗi hệ thống khi hủy đơn hàng." });
     }
 };

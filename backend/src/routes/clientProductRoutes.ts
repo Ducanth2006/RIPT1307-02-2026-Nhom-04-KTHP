@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { getClientProducts, getClientProductById } from '../controllers/clientProductController';
+import { getClientProducts, getClientProductById, getNewArrivals, getHomepageCollections, getBestSellingProducts } from '../controllers/clientProductController';
+import { addProduct } from '../controllers/adminProductController';
 
 const router = Router();
 
@@ -70,6 +71,51 @@ router.get('/', getClientProducts);
 
 /**
  * @swagger
+ * /products/new-arrivals:
+ *   get:
+ *     summary: Lấy danh sách sản phẩm mới lên kệ (Public)
+ *     description: Trả về danh sách 10 sản phẩm mới nhất đang hoạt động (status = 'Active'), được sắp xếp theo thời gian tạo giảm dần. Mỗi sản phẩm được gắn tag status = 'NEW' để hiển thị nhãn New ở Client.
+ *     tags: [Client Products]
+ *     responses:
+ *       200:
+ *         description: Lấy danh sách sản phẩm mới lên kệ thành công
+ *       500:
+ *         description: Lỗi hệ thống
+ */
+router.get('/new-arrivals', getNewArrivals);
+
+/**
+ * @swagger
+ * /products/homepage-collections:
+ *   get:
+ *     summary: Lấy danh sách các bộ sưu tập nổi bật trang chủ (Public)
+ *     description: Trả về danh sách sản phẩm được gom nhóm theo 3 bộ sưu tập (Năng động mỗi ngày, Góc Thu - Đông, Đồ mặc thường nhật) để phục vụ hiển thị ở trang chủ.
+ *     tags: [Client Products]
+ *     responses:
+ *       200:
+ *         description: Lấy danh sách bộ sưu tập thành công
+ *       500:
+ *         description: Lỗi hệ thống
+ */
+router.get('/homepage-collections', getHomepageCollections);
+
+/**
+ * @swagger
+ * /products/best-sellers:
+ *   get:
+ *     summary: Lấy danh sách sản phẩm bán chạy (Public)
+ *     description: Trả về danh sách tối đa 10 sản phẩm bán chạy nhất được tính từ bảng chi tiết đơn hàng, hoặc fallback sang các sản phẩm có giá cao nhất nếu chưa có đơn hàng.
+ *     tags: [Client Products]
+ *     responses:
+ *       200:
+ *         description: Lấy danh sách sản phẩm bán chạy thành công
+ *       500:
+ *         description: Lỗi hệ thống
+ */
+router.get('/best-sellers', getBestSellingProducts);
+
+/**
+ * @swagger
  * /products/{id}:
  *   get:
  *     summary: Lấy chi tiết một sản phẩm (Public)
@@ -93,5 +139,6 @@ router.get('/', getClientProducts);
  *         description: Lỗi hệ thống
  */
 router.get('/:id', getClientProductById);
+router.post('/', addProduct);
 
 export default router;
