@@ -862,9 +862,6 @@ export default function Categories() {
             pagination={{
               pageSize: 10
             }}
-            scroll={{
-              x: 1200
-            }}
             locale={{
               emptyText: (
                 <Empty description="Không có dữ liệu danh mục" />
