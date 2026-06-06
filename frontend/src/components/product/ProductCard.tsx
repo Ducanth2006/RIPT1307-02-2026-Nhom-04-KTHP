@@ -27,15 +27,28 @@ const ProductCard = ({ product, badge }: Props) => {
       hoverable
       style={{ height: "100%", borderRadius: 8, overflow: "hidden" }}
       cover={
-
-        <div style={{ position: "relative", height: 280, width: "100%", overflow: "hidden", background: "#f8f9fa", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div
+          style={{
+            position: "relative",
+            height: 280,
+            backgroundColor: "#f9f9f9",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            overflow: "hidden",
+          }}
+        >
           <Image
             src={imageUrl}
             alt={product.name}
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            style={{
+              maxWidth: "100%",
+              maxHeight: "100%",
+              objectFit: "contain",
+              padding: 12,
+            }}
             preview={false}
-            fallback="/placeholder.svg"
-          />
+          /> 
 
           {/* Badge NEW/LIMITED/HOT */}
           {displayBadge && (
