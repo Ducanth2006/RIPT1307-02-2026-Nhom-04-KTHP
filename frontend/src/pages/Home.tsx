@@ -85,7 +85,7 @@ const Home = () => {
                   alt={`Hero Banner ${idx}`}
                   style={{
                     width: "100%",
-                    height: "auto",
+                    objectPosition: "center",
                     display: "block",
                   }}
                 />
