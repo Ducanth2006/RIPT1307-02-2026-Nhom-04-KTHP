@@ -110,6 +110,63 @@ export async function ensureBotUserExists() {
   }
 }
 
+function removeDiacritics(str: string): string {
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D');
+}
+
+function parseQueryCriteria(message: string) {
+  const raw = message.toLowerCase();
+  const norm = removeDiacritics(raw);
+
+  const colors: string[] = [];
+  if (/\b(trang|trang)\b/i.test(norm) || /\btrắng\b/i.test(raw)) colors.push('Trắng');
+  if (/\b(den|den)\b/i.test(norm) || /\bđen\b/i.test(raw)) colors.push('Đen');
+  if (/\bđỏ\b/i.test(raw) || /(ao|quan|giay|dep|mau|màu|size)\s+do\b/i.test(norm)) colors.push('Đỏ');
+  if (/\b(xanh)\b/i.test(norm)) colors.push('Xanh');
+  if (/\b(vang|vang)\b/i.test(norm) || /\bvàng\b/i.test(raw)) colors.push('Vàng');
+  if (/\b(hong|hong)\b/i.test(norm) || /\bhồng\b/i.test(raw)) colors.push('Hồng');
+  if (/\b(xam|xam)\b/i.test(norm) || /\bxám\b/i.test(raw)) colors.push('Xám');
+  if (/\b(nau|nau)\b/i.test(norm) || /\bnâu\b/i.test(raw)) colors.push('Nâu');
+  if (/\b(cam)\b/i.test(norm)) colors.push('Cam');
+  if (/\btím\b/i.test(raw) || /(ao|quan|giay|dep|mau|màu|size)\s+tim\b/i.test(norm)) colors.push('Tím');
+  if (/\bnavy\b/i.test(norm)) colors.push('Navy');
+  if (/\bbe\b/i.test(norm)) colors.push('Be');
+
+  let size: string | null = null;
+  const sizeMatch = norm.match(/\bsize\s*([s|m|l|xl|2xl])\b/i) || raw.match(/\bsize\s*([s|m|l|xl|2xl])\b/i);
+  if (sizeMatch && sizeMatch[1]) {
+    size = sizeMatch[1].toUpperCase();
+  } else {
+    const words = norm.split(/[\s()]+/);
+    const sizes = ['S', 'M', 'L', 'XL', '2XL'];
+    for (const w of words) {
+      const uw = w.toUpperCase();
+      if (sizes.includes(uw)) {
+        size = uw;
+        break;
+      }
+    }
+  }
+
+  if (!size) {
+    const shoeMatch = norm.match(/\b(38|39|40|41|42|43|44)\b/);
+    if (shoeMatch && shoeMatch[1]) {
+      size = shoeMatch[1];
+    }
+  }
+
+  let type: 'ao' | 'quan' | 'giay' | null = null;
+  if (/\b(ao|polo|khoac|thun|hoodie)\b/i.test(norm)) {
+    type = 'ao';
+  } else if (/\b(quan|short|jogger)\b/i.test(norm)) {
+    type = 'quan';
+  } else if (/\b(giay|dep|sneaker)\b/i.test(norm)) {
+    type = 'giay';
+  }
+
+  return { colors, size, type };
+}
+
 /**
  * Sinh vector embedding (768 chiều) từ câu hỏi của khách hàng bằng gemini-embedding-001
  */
@@ -140,107 +197,142 @@ async function getEmbedding(text: string): Promise<number[] | null> {
  * Tìm kiếm các sản phẩm trong DB khớp với từ khóa hoặc ngữ nghĩa của khách hàng để làm context
  */
 async function getRelevantProductsContext(userMessage: string): Promise<string> {
-  // 1. Thử sử dụng Semantic Search (pgvector) trước
+  // 1. Thử sử dụng Semantic Search (pgvector) trước nếu được hỗ trợ
   const embedding = await getEmbedding(userMessage);
   if (embedding) {
     try {
       const { data: semanticProducts, error: rpcError } = await supabaseClient
         .rpc("match_products", {
           query_embedding: embedding,
-          match_threshold: 0.5, // Tìm độ tương đồng tối thiểu 50%
+          match_threshold: 0.5,
           match_count: 5
         });
 
       if (!rpcError && semanticProducts && semanticProducts.length > 0) {
         console.log("🚀 Tìm kiếm ngữ nghĩa (Semantic Search) thành công!");
         return (semanticProducts as any[]).map((p: any) => `- [MÃ SẢN PHẨM: ${p.id}] ${p.name} (${p.brand}): ${new Intl.NumberFormat("vi-VN").format(p.base_price)}đ. mô tả: ${p.description || "Đồ thể thao cao cấp"}`).join("\n");
-      } else if (rpcError) {
-        console.warn("RPC match_products chưa được cài đặt hoặc bị lỗi (Chưa chạy SQL migration):", rpcError.message);
       }
     } catch (dbErr: any) {
-      console.warn("Bỏ qua lỗi truy cập pgvector, chuẩn bị chuyển sang tìm kiếm từ khóa:", dbErr?.message || dbErr);
+      console.warn("Bỏ qua lỗi truy cập pgvector, chuyển sang tìm kiếm bộ lọc:", dbErr?.message || dbErr);
     }
   }
 
-  // 2. Fallback: Tìm kiếm theo từ khóa cũ (keyword-based ilike) nếu DB chưa bật pgvector
-  console.log("⚠️ Đang chạy Fallback tìm kiếm từ khóa (ilike)...");
+  // 2. Fallback: Lấy toàn bộ sản phẩm Active và thực hiện lọc thông minh phía ứng dụng
+  console.log("⚠️ Đang chạy Bộ lọc Tìm kiếm Thông minh (Smart Memory Filter)...");
   try {
-    const cleanMsg = userMessage.toLowerCase();
-    
-    // Tách từ khóa quan trọng bằng cách loại bỏ các từ dừng thông dụng (Vietnamese Stop Words)
-    const stopWords = new Set([
-      "tôi", "tớ", "mình", "em", "shop", "cần", "tư", "vấn", "hỏi", "mua", 
-      "có", "bán", "không", "á", "nha", "xem", "tìm", "về", "sản", "phẩm", 
-      "loại", "chiếc", "cái", "của", "cho", "xin", "giá", "bao", "nhiêu", 
-      "lấy", "à", "ơi", "dạ", "chào", "hi", "hello", "với", "thế", "nào", "đi", "được"
-    ]);
+    const { data: allProducts, error } = await supabaseClient
+      .from('products')
+      .select(`
+        id,
+        name,
+        base_price,
+        brand,
+        category_id,
+        description,
+        categories (
+          id,
+          name
+        ),
+        product_variants (
+          size,
+          color,
+          stock_quantity
+        )
+      `)
+      .is('deleted_at', null)
+      .eq('status', 'Active');
 
-    const words = cleanMsg
-      .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g, " ") // Thay thế dấu câu bằng khoảng trắng
-      .split(/\s+/)
-      .filter(w => w.length >= 2 && !stopWords.has(w));
+    if (error || !allProducts || allProducts.length === 0) {
+      return "";
+    }
 
-    // Tra cứu từ đồng nghĩa / gõ sai chính tả phổ biến trong tiếng Việt thể thao
-    const synonyms: { [key: string]: string[] } = {
-      "dày": ["giày", "dép"],
-      "giay": ["giày"],
-      "ao": ["áo"],
-      "quan": ["quần"],
-      "do": ["đồ", "quần", "áo"],
-      "đồ": ["quần", "áo", "bộ"],
-      "phông": ["áo"],
-      "khoác": ["áo"],
-      "tập": ["gym", "yoga", "chạy"],
-      "đá": ["bóng", "banh", "giày"],
-      "ball": ["bóng", "rổ", "đá"],
-      "bóng": ["áo", "giày", "quần"]
-    };
+    const { colors, size, type } = parseQueryCriteria(userMessage);
 
-    let expandedKeywords = [...words];
-    for (const w of words) {
-      if (synonyms[w]) {
-        expandedKeywords.push(...synonyms[w]);
+    const filteredProducts = allProducts.filter(p => {
+      const normName = removeDiacritics(p.name.toLowerCase());
+      const normDesc = p.description ? removeDiacritics(p.description.toLowerCase()) : '';
+      const variants = p.product_variants || [];
+
+      // A. Lọc theo màu sắc (nếu có yêu cầu màu)
+      if (colors.length > 0) {
+        const hasColorVariant = variants.some((v: any) => colors.includes(v.color));
+        const nameOrDescHasColor = colors.some(col => {
+          const normCol = removeDiacritics(col.toLowerCase());
+          return normName.includes(normCol) || normDesc.includes(normCol);
+        });
+        if (!hasColorVariant && !nameOrDescHasColor) {
+          return false;
+        }
       }
-    }
-    // Loại bỏ từ trùng lặp
-    expandedKeywords = Array.from(new Set(expandedKeywords));
 
-    console.log("🔍 Từ khóa trích xuất từ câu hỏi khách hàng:", expandedKeywords);
+      // B. Lọc theo size (nếu có yêu cầu size)
+      if (size) {
+        const hasSizeVariant = variants.some((v: any) => String(v.size).toUpperCase() === size.toUpperCase() && (v.stock_quantity || 0) > 0);
+        if (!hasSizeVariant) {
+          return false;
+        }
+      }
 
-    // Tìm kiếm sản phẩm trong Database (lấy thêm cột id)
-    let query = supabaseClient.from("products").select("id, name, brand, base_price, description");
+      // C. Lọc theo loại sản phẩm (nếu có)
+      if (type) {
+        let isMatchingType = false;
+        if (type === 'ao') {
+          isMatchingType = normName.includes('ao') || normName.includes('polo') || normName.includes('khoac') || normName.includes('thun') || normName.includes('hoodie') || [1, 5, 6, 7, 8, 9, 31, 35].includes(p.category_id);
+        } else if (type === 'quan') {
+          isMatchingType = normName.includes('quan') || normName.includes('short') || normName.includes('jogger') || [2, 10, 12, 13].includes(p.category_id);
+        } else if (type === 'giay') {
+          isMatchingType = normName.includes('giay') || normName.includes('dep') || normName.includes('sneaker') || [3, 15, 16, 17, 18, 19, 37].includes(p.category_id);
+        }
+        if (!isMatchingType) {
+          return false;
+        }
+      }
 
-    if (expandedKeywords.length > 0) {
-      // Xây dựng chuỗi truy vấn 'or' cho Supabase quét cả cột name (tên sản phẩm) và cột brand (thương hiệu)
-      const orConditions = expandedKeywords
-        .flatMap(kw => [`name.ilike.%${kw}%`, `brand.ilike.%${kw}%`])
-        .join(",");
-      query = query.or(orConditions);
-    }
+      return true;
+    });
 
-    const { data: products } = await query.limit(5);
+    // Nếu lọc hết không còn sản phẩm nào, dùng fallback toàn bộ sản phẩm để tính điểm
+    const candidates = filteredProducts.length > 0 ? filteredProducts : allProducts;
 
-    if (!products || products.length === 0) {
-      // Fallback: Lấy 5 sản phẩm ngẫu nhiên/mới nhất để làm ví dụ
-      const { data: fallbackProducts } = await supabaseClient
-        .from("products")
-        .select("id, name, brand, base_price, description")
-        .limit(5);
-      if (!fallbackProducts) return "";
-      return fallbackProducts.map(p => `- [MÃ SẢN PHẨM: ${p.id}] ${p.name} (${p.brand}): ${new Intl.NumberFormat("vi-VN").format(p.base_price)}đ.`).join("\n");
-    }
+    const scoredProducts = candidates.map(p => {
+      let matchScore = 0;
+      const normName = removeDiacritics(p.name.toLowerCase());
+      const normDesc = p.description ? removeDiacritics(p.description.toLowerCase()) : '';
+      const categoryName = removeDiacritics(((Array.isArray(p.categories) ? p.categories[0]?.name : (p.categories as any)?.name) || '').toLowerCase());
 
-    return products.map(p => `- [MÃ SẢN PHẨM: ${p.id}] ${p.name} (${p.brand}): ${new Intl.NumberFormat("vi-VN").format(p.base_price)}đ. mô tả: ${p.description || "Đồ thể thao cao cấp"}`).join("\n");
+      const stopwords = ['tôi', 'muốn', 'cần', 'cho', 'của', 'có', 'một', 'và', 'với', 'để', 'được', 'bạn', 'này', 'theo', 'cái', 'hãy', 'xem', 'tìm', 'mua', 'gợi', 'ý', 'áo', 'quần', 'giày'];
+      const words = removeDiacritics(userMessage.toLowerCase()).split(/\s+/).filter(w => w.length > 1 && !stopwords.includes(w));
+      for (const w of words) {
+        const wordRegex = new RegExp(`\\b${w}\\b`, 'i');
+        if (wordRegex.test(normName) || wordRegex.test(categoryName) || wordRegex.test(normDesc)) {
+          matchScore += 5;
+        }
+      }
+
+      return { ...p, matchScore };
+    });
+
+    const finalCandidates = scoredProducts
+      .sort((a, b) => b.matchScore - a.matchScore)
+      .slice(0, 5);
+
+    return finalCandidates.map(p => {
+      const colorsStr = Array.from(new Set((p.product_variants || []).map((v: any) => v.color).filter(Boolean))).join(', ');
+      const sizesStr = Array.from(new Set((p.product_variants || []).map((v: any) => v.size).filter(Boolean))).join(', ');
+      return `- [MÃ SẢN PHẨM: ${p.id}] Tên: ${p.name}, Hãng: ${p.brand || 'Khác'}, Giá: ${new Intl.NumberFormat("vi-VN").format(p.base_price)}đ, Chất liệu/Mô tả: ${p.description || 'Đồ thể thao ProSports'}, Màu sắc: ${colorsStr || 'Đa màu'}, Size: ${sizesStr || 'Đủ size'}`;
+    }).join('\n');
+
   } catch (error) {
     console.error("Lỗi lấy context sản phẩm:", error);
     return "";
   }
 }
 
-/**
- * Gọi Gemini API để sinh câu trả lời tư vấn cho khách hàng
- */
-export async function generateBotReply(userMessage: string, history: any[] = []): Promise<{ text: string, recommendedProductId: number | null }> {
+export async function generateBotReply(
+  userMessage: string,
+  history: any[] = [],
+  activeProductContext: string = ""
+): Promise<{ text: string, recommendedProductId: number | null }> {
   if (apiKeysPool.length === 0) {
     console.warn("Cảnh báo: Không có GEMINI_API_KEY hoặc GEMINI_API_KEYS nào được cấu hình.");
     return {
@@ -283,6 +375,7 @@ Bạn là "Trợ lý AI ProSports" - đại diện tư vấn bán hàng trực t
 2. Không bịa đặt hoặc tự nghĩ ra các chương trình khuyến mãi không có thực.
 3. Nếu khách hỏi các vấn đề chính trị, tôn giáo, xã hội hoặc hỏi linh tinh, hãy khéo léo từ chối và hướng cuộc trò chuyện quay lại các sản phẩm của shop.
 4. Khi khách hàng bày tỏ sự không hài lòng, khiếu nại hoặc muốn gặp nhân viên, hãy gửi lời xin lỗi và nói: "Yêu cầu của bạn đã được chuyển đến nhân viên trực tuyến, vui lòng chờ trong giây lát để chúng tôi kết nối hỗ trợ bạn trực tiếp."
+5. KHI KHÁCH HỎI NHIỀU CÂU TRONG MỘT TIN NHẮN: Trả lời tuần tự từng ý, mỗi ý 1-2 câu ngắn gọn. KHÔNG dùng tiêu đề "Chào bạn! Shop sẽ giải đáp từng câu hỏi..." — bắt đầu trả lời ngay vào nội dung, dùng số thứ tự nếu cần. Ưu tiên tư vấn size và gợi ý sản phẩm cụ thể kèm thẻ sản phẩm.
 
 # KNOWLEDGE BASE (TRUNG TÂM KIẾN THỨC)
 
@@ -294,13 +387,22 @@ Bạn là "Trợ lý AI ProSports" - đại diện tư vấn bán hàng trực t
 - Size XXL: Cao trên 1m80 | Nặng trên 85kg
 * Lưu ý: Nếu khách ở rìa giữa hai size, khuyên chọn size lớn hơn nếu thích thoải mái, hoặc nhỏ hơn nếu muốn ôm dáng (Athletic-fit). Chủ động hỏi chiều cao & cân nặng nếu khách chưa cung cấp.
 
-## 2. Chất liệu sản phẩm:
+## 2. Chất liệu & Bảo quản:
 - Áo thun/Đồ tập: Thun lạnh thể thao cao cấp (Polyester + Spandex co giãn 4 chiều). Đặc tính: siêu thoáng mát, thấm hút mồ hôi tốt, không phai màu hay xù lông khi giặt.
 - Quần Short/Quần gió: Vải dù gió micro nhẹ tênh, nhanh khô, chống cản gió nhẹ.
+- Hướng dẫn giặt: Nên giặt bằng nước lạnh, không dùng chất tẩy mạnh, tránh phơi trực tiếp dưới ánh nắng gay gắt để bảo vệ sợi vải thun co giãn.
 
-## 3. Chính sách bán hàng:
+## 3. Tư vấn phối đồ (Mix & Match):
+- Khi khách hỏi phối đồ thế nào: Gợi ý các cách kết hợp thể thao năng động. Ví dụ: Áo thun/Polo phối với Quần Short Gió hoặc Quần Jogger thun; Giày sneaker phối với tất cổ ngắn và bộ đồ tập. Tạo vẻ ngoài khỏe khoắn, hiện đại.
+
+## 4. Chính sách bán hàng:
 - Phí vận chuyển: Đồng giá ship 30.000đ toàn quốc. Miễn phí vận chuyển cho tất cả các đơn hàng từ 500.000đ trở lên.
 - Đổi trả: Hỗ trợ đổi size hoặc đổi mẫu MIỄN PHÍ tận nhà trong vòng 7 ngày kể từ khi nhận hàng.
+
+# SẢN PHẨM KHÁCH HÀNG ĐANG XEM (NGỮ CẢNH TRANG HIỆN TẠI)
+${activeProductContext || "Không có thông tin sản phẩm khách đang xem cụ thể."}
+
+*LƯU Ý QUAN TRỌNG: Nếu câu hỏi của khách hàng chứa các đại từ chỉ định/ám chỉ như "áo này", "quần này", "mẫu này", "đồ này", "mô tả", "chất liệu", "giá cả", "phối đồ", hãy ngầm hiểu khách hàng đang hỏi về "SẢN PHẨM KHÁCH HÀNG ĐANG XEM" được mô tả ở trên để trả lời chính xác, thay vì tư vấn chung chung.*
 
 # CONTEXT (DANH SÁCH SẢN PHẨM KHỚP TRONG DB)
 Dưới đây là danh sách sản phẩm thực tế đang bán tại cửa hàng kèm theo mã sản phẩm:
@@ -316,9 +418,9 @@ Model: "Chào bạn! Với chiều cao 1m70 và nặng 70kg, bạn mặc size L 
 Khách: "Áo Puma vải gì thế shop? Có mát không?"
 Model: "Dạ áo Puma bên mình làm bằng chất liệu thun lạnh thể thao cao cấp (Polyester + Spandex) co giãn 4 chiều cực tốt, thấm hút mồ hôi hiệu quả và sờ mát tay lắm ạ! Bạn có thể tham khảo mẫu này đang rất hot của shop: [RECOMMEND: 45]"
 
-## Ví dụ 3: Khách đồng ý xem chi tiết sau khi được tư vấn
-Khách: "có" (sau khi Bot giới thiệu Giày Puma)
-Model: "Dạ đây là chi tiết về Giày Thể Thao Puma: sản phẩm được thiết kế với đế cao su chống trượt tốt, chất liệu da PU cao cấp bền bỉ. Mẫu này lên chân rất êm và tôn dáng. Shop hỗ trợ đổi size miễn phí trong 7 ngày nên bạn hoàn toàn yên tâm nha!"
+## Ví dụ 3: Khách hỏi về chất liệu sản phẩm đang xem
+Khách: "mẫu này vải gì thế shop?" (Khi đang xem sản phẩm có mô tả chất liệu thun lạnh)
+Model: "Dạ sản phẩm bạn đang xem được làm bằng chất liệu thun lạnh cao cấp, có độ co giãn 4 chiều tuyệt vời và thấm hút mồ hôi cực tốt ạ. Rất phù hợp cho các hoạt động thể thao hay mặc năng động hàng ngày đó ạ!"
 
 # QUY ĐỊNH GỢI Ý SẢN PHẨM (MẮT XÍCH QUAN TRỌNG)
 Nếu bạn đề xuất hoặc tư vấn cụ thể một sản phẩm nào đó trong danh sách có sẵn ở phần CONTEXT cho khách hàng, bạn phải gọi công cụ (tool) \`recommend_product\` và truyền đúng ID của sản phẩm đó.
@@ -385,7 +487,7 @@ Chỉ được chọn mã sản phẩm thực tế có trong danh sách CONTEXT 
         contents: contents, // Sử dụng native chat history array thay vì ghép text
         config: {
           systemInstruction: systemInstruction,
-          maxOutputTokens: 500,
+          maxOutputTokens: 1200,
           temperature: 0.7,
           tools: [{ functionDeclarations: [recommendProductDeclaration] }] as any // Đăng ký tool gửi card sản phẩm
         }

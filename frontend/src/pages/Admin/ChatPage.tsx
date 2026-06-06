@@ -8,7 +8,8 @@ import {
   CloseCircleOutlined,
   CheckCircleOutlined,
   InfoCircleOutlined,
-  RobotOutlined
+  RobotOutlined,
+  LeftOutlined
 } from "@ant-design/icons";
 
 // ID của Bot User — phải khớp với BOT_USER_ID trong backend .env
@@ -33,6 +34,14 @@ export default function ChatPage() {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const [activeTab, setActiveTab] = useState("all"); // all, waiting, assigned_me
+
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -300,9 +309,18 @@ export default function ChatPage() {
   const showLockScreen = isWaiting || isLockedForMe;
 
   return (
-    <div style={{ display: "flex", height: "calc(100vh - 120px)", backgroundColor: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 4px 16px rgba(0,0,0,0.06)", fontFamily: "sans-serif" }}>
+    <div style={{ 
+      display: "flex", 
+      height: isMobile ? "100%" : "calc(100vh - 120px)", 
+      backgroundColor: "#fff", 
+      borderRadius: isMobile ? 0 : 12, 
+      overflow: "hidden", 
+      boxShadow: isMobile ? "none" : "0 4px 16px rgba(0,0,0,0.06)", 
+      fontFamily: "sans-serif" 
+    }}>
       {/* 🟢 CỘT TRÁI: DANH SÁCH PHÒNG CHAT */}
-      <div style={{ width: 340, borderRight: "1px solid #f0f0f0", display: "flex", flexDirection: "column" }}>
+      {(!isMobile || !activeRoom) && (
+        <div style={{ width: isMobile ? "100%" : 340, borderRight: "1px solid #f0f0f0", display: "flex", flexDirection: "column" }}>
         <div style={{ padding: "16px 16px 8px 16px", borderBottom: "1px solid #f0f0f0" }}>
           <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "#1f1f1f", display: "flex", alignItems: "center", gap: 8 }}>
             <MessageOutlined style={{ color: "#af101a" }} /> Kênh Hỗ Trợ Khách Hàng
@@ -403,10 +421,12 @@ export default function ChatPage() {
             />
           )}
         </div>
-      </div>
+        </div>
+      )}
 
       {/* 🔴 CỘT PHẢI: KHÔNG GIAN CHAT HỖ TRỢ */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", backgroundColor: "#f5f5f5" }}>
+      {(!isMobile || activeRoom) && (
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", backgroundColor: "#f5f5f5" }}>
         {!activeRoom ? (
           <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <Result
@@ -418,12 +438,20 @@ export default function ChatPage() {
         ) : (
           <>
             {/* Header phòng chat */}
-            <div style={{ padding: "12px 24px", backgroundColor: "#ffffff", borderBottom: "1px solid #e8e8e8", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <Avatar src={activeRoom.client?.avatar} icon={<UserOutlined />} style={{ backgroundColor: "#87d068" }} />
-                <div>
-                  <h4 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>{activeRoom.client?.full_name}</h4>
-                  <p style={{ margin: 0, fontSize: 11, color: "#8c8c8c" }}>{activeRoom.client?.email}</p>
+            <div style={{ padding: isMobile ? "12px 12px" : "12px 24px", backgroundColor: "#ffffff", borderBottom: "1px solid #e8e8e8", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 6 : 12, minWidth: 0 }}>
+                {isMobile && (
+                  <Button 
+                    type="text" 
+                    icon={<LeftOutlined />} 
+                    onClick={() => setActiveRoom(null)} 
+                    style={{ marginRight: 2, padding: 0, width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center" }}
+                  />
+                )}
+                <Avatar src={activeRoom.client?.avatar} icon={<UserOutlined />} style={{ backgroundColor: "#87d068", flexShrink: 0 }} />
+                <div style={{ minWidth: 0 }}>
+                  <h4 style={{ margin: 0, fontSize: 14, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{activeRoom.client?.full_name}</h4>
+                  <p style={{ margin: 0, fontSize: 10, color: "#8c8c8c", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{activeRoom.client?.email}</p>
                 </div>
               </div>
 
@@ -458,7 +486,7 @@ export default function ChatPage() {
                 /* 🛡️ MÀN HÌNH KHÓA (LOCK SCREEN) */
                 <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(245, 245, 245, 0.95)", zIndex: 10, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", padding: 24 }}>
                   <Card
-                    style={{ width: 420, borderRadius: 12, boxShadow: "0 4px 12px rgba(0,0,0,0.08)", textAlign: "center" }}
+                    style={{ width: isMobile ? "90%" : 420, maxWidth: "100%", borderRadius: 12, boxShadow: "0 4px 12px rgba(0,0,0,0.08)", textAlign: "center" }}
                   >
                     <LockOutlined style={{ fontSize: 48, color: "#faad14", marginBottom: 16 }} />
                     
@@ -495,7 +523,7 @@ export default function ChatPage() {
               ) : null}
 
               {/* Danh sách tin nhắn */}
-              <div style={{ flex: 1, overflowY: "auto", padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
+              <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? 12 : 24, display: "flex", flexDirection: "column", gap: isMobile ? 10 : 16 }}>
                 {loadingMessages ? (
                   <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: 100 }}>
                     <Spin size="medium" />
@@ -600,7 +628,7 @@ export default function ChatPage() {
               </div>
 
               {/* Ô Nhập nội dung tin nhắn */}
-              <div style={{ padding: "16px 24px", backgroundColor: "#ffffff", borderTop: "1px solid #e8e8e8", display: "flex", gap: 12 }}>
+              <div style={{ padding: isMobile ? "12px 12px" : "16px 24px", backgroundColor: "#ffffff", borderTop: "1px solid #e8e8e8", display: "flex", gap: isMobile ? 8 : 12 }}>
                 <Input
                   placeholder="Nhập tin nhắn phản hồi khách hàng..."
                   value={inputValue}
@@ -621,6 +649,7 @@ export default function ChatPage() {
           </>
         )}
       </div>
+      )}
     </div>
   );
 }

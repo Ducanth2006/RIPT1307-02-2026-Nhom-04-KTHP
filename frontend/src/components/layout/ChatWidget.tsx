@@ -28,11 +28,40 @@ interface ProductPreview {
   id: number; name: string; brand: string; base_price: number; image_url: string;
 }
 
-// ── Render **bold** markdown đơn giản ──────────────────────────
-function renderMarkdown(text: string) {
-  return text.split(/(\*\*.*?\*\*)/g).map((part, i) => {
+// ── Render **bold** & [link](url) markdown đơn giản ──────────────────────────
+function renderMarkdown(text: string, navigate: any, setIsOpen: (open: boolean) => void) {
+  const regex = /(\*\*.*?\*\*|\[.*?\]\(.*?\))/g;
+  return text.split(regex).map((part, i) => {
     if (part.startsWith("**") && part.endsWith("**")) {
       return <strong key={i} style={{ fontWeight: 700, color: "#1f1f1f" }}>{part.slice(2, -2)}</strong>;
+    }
+    if (part.startsWith("[") && part.includes("](")) {
+      const match = part.match(/\[(.*?)\]\((.*?)\)/);
+      if (match) {
+        const linkText = match[1];
+        const linkUrl = match[2];
+        const isExternal = linkUrl.startsWith("http");
+        if (isExternal) {
+          return (
+            <a key={i} href={linkUrl} target="_blank" rel="noopener noreferrer" style={{ color: "#af101a", textDecoration: "underline", fontWeight: 700 }}>
+              {linkText}
+            </a>
+          );
+        } else {
+          return (
+            <span
+              key={i}
+              onClick={() => {
+                setIsOpen(false);
+                navigate(linkUrl);
+              }}
+              style={{ color: "#af101a", textDecoration: "underline", fontWeight: 700, cursor: "pointer" }}
+            >
+              {linkText}
+            </span>
+          );
+        }
+      }
     }
     return <span key={i}>{part}</span>;
   });
@@ -100,9 +129,12 @@ export default function ChatWidget() {
       }
     };
     startChat();
-    // Sync isOpenRef khi isOpen thay đổi
-    isOpenRef.current = isOpen;
   }, [userId, isOpen]);
+
+  // Đồng bộ trạng thái mở/đóng widget vào ref để tránh stale closure trong socket listener
+  useEffect(() => {
+    isOpenRef.current = isOpen;
+  }, [isOpen]);
 
   // Socket real-time — chỉ đăng ký 1 lần duy nhất khi userId có giá trị
   // Dùng isOpenRef để đọc giá trị isOpen mới nhất mà không cần re-register listener
@@ -193,7 +225,13 @@ export default function ChatWidget() {
     // Xóa suggestions khi user gửi tin (không cần hiện lại cho đến khi bot reply)
     setCurrentSuggestions([]);
     try {
-      await sendClientMessage({ roomId, userId, message_type: "text", content: text });
+      await sendClientMessage({
+        roomId,
+        userId,
+        message_type: "text",
+        content: text,
+        active_product_id: pendingProduct?.id || undefined
+      });
       triggerBotTyping();
     } catch { message.error("Lỗi khi gửi tin nhắn."); }
     finally { setIsSending(false); }
@@ -201,8 +239,6 @@ export default function ChatWidget() {
 
   // Suggestions đặc biệt → điều hướng sang trang thay vì gửi tin nhắn AI
   const NAVIGATE_SUGGESTIONS: Record<string, string> = {
-    "🛒 Hướng dẫn mua & thanh toán": "/cart",
-    "❌ Hướng dẫn tự Hủy Đơn Hàng": "/orders",
     "📦 Xem đơn hàng": "/orders",
   };
 
@@ -303,9 +339,35 @@ export default function ChatWidget() {
                     ? <><UserOutlined style={{ fontSize: 12, color: "#6ee7b7" }} /> {staffInfo}</>
                     : <>SportStride AI <Sparkles size={13} color="#facc15" fill="#facc15" /></>}
                 </div>
-                {staffInfo
-                  ? <span style={{ color: "#4ade80", fontSize: 10 }}>● Nhân viên đang hỗ trợ trực tiếp</span>
-                  : <span style={{ color: "#9ca3af", fontSize: 10 }}>Trợ lý thời trang &amp; dịch vụ tự động</span>}
+                {staffInfo ? (
+                  <span style={{ color: "#4ade80", fontSize: 10, display: "flex", alignItems: "center", gap: 4 }}>
+                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e", display: "inline-block" }} />
+                    Nhân viên đang hỗ trợ trực tiếp
+                  </span>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                    <span style={{ color: "#9ca3af", fontSize: 10 }}>Trợ lý thời trang &amp; dịch vụ tự động</span>
+                    <span style={{
+                      color: "#facc15",
+                      fontSize: 10,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 4,
+                      fontWeight: 500,
+                      animation: "pulseText 2s infinite ease-in-out"
+                    }}>
+                      <span style={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: "50%",
+                        background: "#facc15",
+                        display: "inline-block",
+                        boxShadow: "0 0 6px #facc15"
+                      }} />
+                      Đang chờ kết nối với nhân viên...
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
             <button onClick={handleToggle} style={{ background: "none", border: "none", color: "#9ca3af", cursor: "pointer", padding: 4, borderRadius: 6, display: "flex" }}
@@ -400,34 +462,14 @@ export default function ChatWidget() {
                         fontSize: 13, lineHeight: 1.5, boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
                         wordBreak: "break-word", whiteSpace: "pre-wrap"
                       }}>
-                        {renderMarkdown(msg.content || "")}
+                        {renderMarkdown(msg.content || "", navigate, setIsOpen)}
                       </div>
                     )}
 
                     {/* Timestamp */}
                     <span style={{ fontSize: 10, color: "#9ca3af" }}>{formatTime(msg.created_at)}</span>
 
-                    {/* Suggestion chips — chỉ hiện sau tin bot CUỐI CÙNG khi phòng waiting */}
-                    {bot && !own && roomStatus === "waiting" &&
-                      msg.id === [...messages].filter(m => isBot(m)).pop()?.id &&
-                      currentSuggestions.length > 0 && (
-                        <div style={{ display: "flex", flexDirection: "column", gap: 5, marginTop: 4 }}>
-                          <span style={{ fontSize: 10, color: "#9ca3af", paddingLeft: 2 }}>💡 Gợi ý tiếp theo — nhấn để hỏi nhanh:</span>
-                          <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-                            {currentSuggestions.map((sug, i) => (
-                              <button key={i} onClick={() => handleSuggestionClick(sug)}
-                                style={{
-                                  padding: "4px 10px", fontSize: 11, background: "#fff",
-                                  border: "1px solid #e5e7eb", borderRadius: 999, cursor: "pointer",
-                                  color: "#374151", transition: "all 0.15s", display: "flex", alignItems: "center"
-                                }}
-                                onMouseEnter={e => { e.currentTarget.style.borderColor = "#af101a"; e.currentTarget.style.color = "#af101a"; }}
-                                onMouseLeave={e => { e.currentTarget.style.borderColor = "#e5e7eb"; e.currentTarget.style.color = "#374151"; }}
-                              >{sug}</button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+
                   </div>
                 </div>
               );
@@ -458,6 +500,46 @@ export default function ChatWidget() {
                 <div style={{ display: "flex", gap: 4 }}>
                   <button onClick={handleSendProduct} style={{ fontSize: 11, padding: "3px 9px", background: "#af101a", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer" }}>Gửi</button>
                   <button onClick={() => { setPendingProduct(null); sessionStorage.removeItem("pending_chat_product"); }} style={{ fontSize: 11, padding: "3px 9px", background: "#f3f4f6", border: "none", borderRadius: 6, cursor: "pointer" }}>Hủy</button>
+                </div>
+              </div>
+            )}
+
+            {/* Suggestion chips — Hiển thị cố định ở dưới cùng khung chat */}
+            {roomStatus === "waiting" && !isBotTyping && messages.length > 0 && currentSuggestions && currentSuggestions.length > 0 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, padding: "8px 0 4px 0" }}>
+                <span style={{ fontSize: 11, color: "#9ca3af", fontWeight: 500 }}>💡 Gợi ý nhanh:</span>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {currentSuggestions.map((sug, i) => (
+                    <button
+                      key={i}
+                      onClick={() => handleSuggestionClick(sug)}
+                      style={{
+                        padding: "6px 12px",
+                        fontSize: 11,
+                        background: "#fff",
+                        border: "1px solid #e5e7eb",
+                        borderRadius: 999,
+                        cursor: "pointer",
+                        color: "#374151",
+                        transition: "all 0.15s",
+                        display: "flex",
+                        alignItems: "center",
+                        boxShadow: "0 1px 2px rgba(0,0,0,0.05)"
+                      }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.borderColor = "#af101a";
+                        e.currentTarget.style.color = "#af101a";
+                        e.currentTarget.style.background = "#fff1f2";
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.borderColor = "#e5e7eb";
+                        e.currentTarget.style.color = "#374151";
+                        e.currentTarget.style.background = "#fff";
+                      }}
+                    >
+                      {sug}
+                    </button>
+                  ))}
                 </div>
               </div>
             )}
@@ -510,6 +592,7 @@ export default function ChatWidget() {
         @keyframes chatPing { 0%,100%{transform:scale(1);opacity:.3} 50%{transform:scale(1.4);opacity:.15} }
         @keyframes botBounce { 0%,60%,100%{transform:translateY(0);opacity:.3} 30%{transform:translateY(-5px);opacity:1} }
         @keyframes slideUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes pulseText { 0%,100%{opacity:0.65} 50%{opacity:1} }
       `}</style>
     </div>
   );
