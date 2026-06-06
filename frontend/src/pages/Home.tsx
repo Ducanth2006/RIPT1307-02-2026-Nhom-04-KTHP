@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button, Row, Col, Typography, Carousel } from "antd";
 import {
@@ -20,8 +20,27 @@ const { Title, Text } = Typography;
 const Home = () => {
   const [genderFilter, setGenderFilter] = useState<string | undefined>(undefined);
   const carouselRef = useRef<any>(null);
-
   const navigate = useNavigate();
+
+  const [userObj, setUserObj] = useState(() => {
+    const userStr = localStorage.getItem("user");
+    return userStr ? JSON.parse(userStr) : null;
+  });
+
+  useEffect(() => {
+    const handleUserUpdate = () => {
+      const userStr = localStorage.getItem("user");
+      setUserObj(userStr ? JSON.parse(userStr) : null);
+    };
+
+    window.addEventListener("userUpdated", handleUserUpdate);
+    window.addEventListener("storage", handleUserUpdate);
+
+    return () => {
+      window.removeEventListener("userUpdated", handleUserUpdate);
+      window.removeEventListener("storage", handleUserUpdate);
+    };
+  }, []);
 
   const heroImages = [
     { img: '/2.png', categoryId: 42 },
@@ -232,47 +251,50 @@ const Home = () => {
 
       <HomepageCollections />
 
-
-
-      <div
-        style={{
-          background: "#000",
-          color: "#fff",
-          padding: "100px 40px 80px",
-        }}
-      >
-        <div style={{ maxWidth: 1200, margin: "0 auto", textAlign: "center" }}>
-          <Title level={2} style={{ color: "#fff", marginBottom: 4 }}>
-            Đăng Ký Ngay &amp; Nhận Voucher 15%
-          </Title>
-          <Text
-            style={{
-              fontSize: 18,
-              display: "block",
-              marginBottom: 4,
-              maxWidth: 600,
-              marginLeft: "auto",
-              marginRight: "auto",
-            }}
-          >
-            Hãy trở thành thành viên của SportStride và nhận ngay Voucher 15%.
-          </Text>
-          <Button
-            size="large"
-            style={{
-              backgroundColor: "#af101a",
-              color: "#fff",
-              height: 56,
-              padding: "0 48px",
-              fontSize: 18,
-              fontWeight: 700,
-              border: "none",
-            }}
-          >
-            Đăng Ký Ngay
-          </Button>
+      {!userObj && (
+        <div
+          style={{
+            background: "#000",
+            color: "#fff",
+            padding: "100px 40px 80px",
+          }}
+        >
+          <div style={{ maxWidth: 1200, margin: "0 auto", textAlign: "center" }}>
+            <Title level={2} style={{ color: "#fff", marginBottom: 4 }}>
+              Đăng Ký Ngay &amp; Nhận Voucher 15%
+            </Title>
+            <Text
+              style={{
+                fontSize: 18,
+                display: "block",
+                marginBottom: 4,
+                maxWidth: 600,
+                marginLeft: "auto",
+                marginRight: "auto",
+              }}
+            >
+              Hãy trở thành thành viên của SportStride và nhận ngay Voucher 15%.
+            </Text>
+            <Button
+              size="large"
+              onClick={() => navigate("/register")}
+              style={{
+                backgroundColor: "#af101a",
+                color: "#fff",
+                height: 56,
+                padding: "0 48px",
+                fontSize: 18,
+                fontWeight: 700,
+                border: "none",
+                cursor: "pointer",
+              }}
+            >
+              Đăng Ký Ngay
+            </Button>
+          </div>
         </div>
-      </div>    </>
+      )}
+    </>
   );
 };
 

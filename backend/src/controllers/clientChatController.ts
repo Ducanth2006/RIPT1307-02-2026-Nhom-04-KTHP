@@ -120,7 +120,7 @@ async function triggerBotReply(roomId: number, clientId: number, activeProductId
             isStaticResponse = true;
         }
         // ── Nhóm 1: Vận chuyển & Phí ship ──────────────────────────────
-        else if (/\b(phi\s*ship|phi\s*van\s*chuyen|ship\s*bao\s*nhieu|gia\s*ship|cuoc\s*ship|mien\s*phi\s*ship|free\s*ship|giao\s*hang|van\s*chuyen|freeship|ship\s*cod|khi\s*nao\s*nhan|bao\s*lau\s*den|ship\s*tinh|ship\s*nhiu)\b/.test(norm)) {
+        else if (/\b(phi\s*ship|phi\s*van\s*chuyen|ship\s*bao\s*nhieu|gia\s*ship|cuoc\s*ship|mien\s*phi\s*ship|free\s*ship|giao\s*hang|van\s*chuyen|freeship|ship\s*cod|khi\s*nao\s*nhan|bao\s*lau\s*den|ship\s*tinh|ship\s*nhiu|co\s*ship\s*khong|ship\s*khong|ship\s*ve|ship\s*di|giao\s*hang\s*khong)\b/.test(norm)) {
             botText = 'Dạ shop hỗ trợ giao hàng toàn quốc với phí ship **đồng giá 30.000đ**. Đơn hàng từ **500.000đ trở lên** được **miễn phí vận chuyển** hoàn toàn ạ! Thời gian giao hàng thường từ 2-5 ngày tuỳ khu vực.';
             isStaticResponse = true;
         }
@@ -135,7 +135,7 @@ async function triggerBotReply(roomId: number, clientId: number, activeProductId
             isStaticResponse = true;
         }
         // ── Nhóm 4: Hướng dẫn mua hàng & thanh toán ──────────────────
-        else if (/\b(mua\s*hang|thanh\s*toan|dat\s*hang|cach\s*mua|huong\s*dan\s*mua|phuong\s*thuc\s*thanh\s*toan|cod|ngan\s*hang|chuyen\s*khoan|huong\s*dan\s*dat)\b/.test(norm)) {
+        else if (/\b(mua\s*hang|thanh\s*toan|dat\s*hang|cach\s*mua|huong\s*dan\s*mua|phuong\s*thuc\s*thanh\s*toan|cod|ngan\s*hang|chuyen\s*khoan|huong\s*dan\s*dat|mua\s*sao|dat\s*sao)\b/.test(norm)) {
             botText = 'Dạ, để đặt hàng bạn chọn sản phẩm → chọn size/màu → **Thêm vào giỏ** → vào [Giỏ hàng](/cart) và thanh toán ạ!\n\nShop hỗ trợ các hình thức thanh toán:\n- **COD** (Thanh toán khi nhận hàng)\n- **Chuyển khoản ngân hàng**\n- **Ví điện tử** (MoMo, ZaloPay)';
             isStaticResponse = true;
         }
@@ -146,7 +146,7 @@ async function triggerBotReply(roomId: number, clientId: number, activeProductId
             isStaticResponse = true;
         }
         // ── Nhóm 6: Tính size / bảng size ────────────────────────────
-        else if (/\b(tinh\s*size|bang\s*size|chon\s*size|size\s*bao\s*nhieu|nen\s*mac\s*size|size\s*nao\s*vua|tu\s*van\s*size|sz\s*gi|bang\s*sz)\b/.test(norm)) {
+        else if (/\b(tinh\s*size|bang\s*size|chon\s*size|size\s*bao\s*nhieu|nen\s*mac\s*size|size\s*nao\s*vua|tu\s*van\s*size|sz\s*gi|bang\s*sz|size\s*(s|m|l|xl|xxl|2xl)|sz\s*(s|m|l|xl|xxl|2xl)|tu\s*van\s*sz|mac\s*sz|mac\s*size)\b/.test(norm)) {
             botText = '**Bảng size quần áo thể thao ProSports:**\n- **Size S**: Cao 1m50–1m60 | Nặng 45–55kg\n- **Size M**: Cao 1m60–1m68 | Nặng 55–65kg\n- **Size L**: Cao 1m68–1m75 | Nặng 65–75kg\n- **Size XL**: Cao 1m75–1m82 | Nặng 75–85kg\n- **Size XXL**: Cao trên 1m80 | Nặng trên 85kg\n\n💡 Bạn muốn tôi tư vấn size chính xác hơn? Hãy cho tôi biết **chiều cao và cân nặng** của bạn nhé!';
             isStaticResponse = true;
         }
@@ -156,17 +156,17 @@ async function triggerBotReply(roomId: number, clientId: number, activeProductId
             isStaticResponse = true;
         }
         // ── Nhóm 8: Giờ hoạt động / Liên hệ ─────────────────────────
-        else if (/\b(gio\s*lam\s*viec|gio\s*hoat\s*dong|lam\s*viec\s*may\s*gio|hotline|so\s*dien\s*thoai|lien\s*he|dia\s*chi|cua\s*hang|dia\s*chi\s*shop|showroom|chi\s*nhanh)\b/.test(norm)) {
+        else if (/\b(gio\s*lam\s*viec|gio\s*hoat\s*dong|lam\s*viec\s*may\s*gio|hotline|so\s*dien\s*thoai|sdt|lien\s*he|dia\s*chi|cua\s*hang|dia\s*chi\s*shop|showroom|chi\s*nhanh|o\s*dau|cho\s*nao|o\s*khu\s*vuc\s*nao)\b/.test(norm)) {
             botText = '**Thông tin liên hệ ProSports:**\n- 🕐 Giờ hỗ trợ trực tuyến: **7:00 – 22:00** mỗi ngày\n- 📞 Hotline: **1800-xxxx** (Miễn phí)\n- 📍 Địa chỉ: Xem [tại đây](/about)\n\nNgoài giờ hỗ trợ, bạn có thể để lại tin nhắn — nhân viên sẽ phản hồi sớm nhất khi trực tuyến ạ!';
             isStaticResponse = true;
         }
         // ── Nhóm 9: Voucher / Mã giảm giá ───────────────────────────
-        else if (/\b(voucher|ma\s*giam\s*gia|khuyen\s*mai|sale|giam\s*gia|uu\s*dai|ma\s*coupon|code\s*giam)\b/.test(norm)) {
+        else if (/\b(voucher|ma\s*giam\s*gia|khuyen\s*mai|sale|giam\s*gia|uu\s*dai|ma\s*coupon|code\s*giam|km|gg|ma\s*gg|ma\s*km|chiet\s*khau|code)\b/.test(norm)) {
             botText = 'Dạ, các mã giảm giá và voucher khuyến mãi của shop được cập nhật thường xuyên trên trang chủ và tại mục [Voucher của tôi](/vouchers)! Bạn có thể xem và lưu voucher trước khi thanh toán ạ 🎁';
             isStaticResponse = true;
         }
         // ── Nhóm 10: Chào hỏi đơn giản ──────────────────────────────
-        else if (/^(xin\s*chao|chao\s*shop|hello|hi|alo|hey|chao|bonjour|good\s*morning|chao\s*ban)[\s!.]*$/.test(norm)) {
+        else if (/^(xin\s*chao|chao\s*shop|hello|hi|alo|hey|chao|bonjour|good\s*morning|chao\s*ban)(\s*(a|nhe|oi|nha|admin|nhe\s*shop|nha\s*shop))*[\s!.]*$/.test(norm)) {
             botText = 'Xin chào bạn! 👋 Tôi là **Trợ lý AI ProSports**, rất vui được hỗ trợ bạn hôm nay!\n\nBạn cần tư vấn về sản phẩm, size, hay có câu hỏi gì về đơn hàng? Cứ hỏi tôi nhé, hoặc chọn một gợi ý phía dưới để bắt đầu nhanh hơn ạ 😊';
             isStaticResponse = true;
         }
@@ -179,12 +179,12 @@ async function triggerBotReply(roomId: number, clientId: number, activeProductId
         // ══ GIAI ĐOẠN TRƯỚC KHI MUA — Tâm lý lo ngại, cân nhắc ══════════
 
         // ── Nhóm 12: Hàng có sẵn / Tồn kho ─────────────────────────
-        else if (/\b(con\s*hang|co\s*san|het\s*hang|con\s*size|con\s*mau|het\s*size|het\s*mau|ton\s*kho|hang\s*co\s*san|still\s*available|con\s*k\s*shop|sold\s*out)\b/.test(norm)) {
+        else if (/\b(con\s*hang|co\s*san|het\s*hang|con\s*size|con\s*mau|het\s*size|het\s*mau|ton\s*kho|hang\s*co\s*san|still\s*available|con\s*k\s*shop|sold\s*out|con\s*khong|con\s*ko|co\s*san\s*ko|san\s*ko|con\s*sz|con\s*size\s*ko|het\s*chua)\b/.test(norm)) {
             botText = 'Dạ tồn kho sản phẩm được cập nhật **real-time** theo từng màu sắc và size ạ! Bạn có thể kiểm tra trực tiếp trên trang sản phẩm — nếu size/màu nào **hết hàng** sẽ hiện nút **"Hết hàng"** và không cho thêm vào giỏ.\n\nNếu size bạn muốn đã hết, hãy để lại thông tin để shop báo ngay khi có hàng về nhé ạ! 📦';
             isStaticResponse = true;
         }
         // ── Nhóm 13: Hàng có chính hãng không / Nguồn gốc ──────────
-        else if (/\b(chinh\s*hang|hang\s*that|hang\s*chinh\s*hieu|chinh\s*goc|nguon\s*goc|auth|authentic|fake|nhai|gia|hang\s*gia|bao\s*dam\s*chinh)\b/.test(norm)) {
+        else if (/\b(chinh\s*hang|hang\s*that|hang\s*chinh\s*hieu|chinh\s*goc|nguon\s*goc|auth|authentic|fake|nhai|gia|hang\s*gia|bao\s*dam\s*chinh|real|chinh\s*hang\s*ko|chinh\s*hang\s*khong|hang\s*chuan|chuan\s*auth)\b/.test(norm)) {
             botText = 'Dạ shop **cam kết 100% hàng chính hãng** được nhập khẩu và phân phối chính thức ạ! 🏅\n\nTất cả sản phẩm tại ProSports đều có:\n- **Tem chính hãng** kèm mã QR xác thực\n- **Hoá đơn VAT** theo yêu cầu\n- Chế độ **đổi trả miễn phí 7 ngày** nếu phát hiện lỗi sản xuất\n\nBạn cứ yên tâm mua sắm ạ! 💪';
             isStaticResponse = true;
         }
@@ -194,7 +194,7 @@ async function triggerBotReply(roomId: number, clientId: number, activeProductId
             isStaticResponse = true;
         }
         // ── Nhóm 15: Thời gian giao hàng bao lâu ───────────────────
-        else if (/\b(bao\s*lau\s*nhan\s*hang|may\s*ngay|may\s*hom|giao\s*bao\s*lau|khi\s*nao\s*nhan|nhanh\s*khong|giao\s*nhanh|express|dat\s*bay|toc\s*do\s*giao)\b/.test(norm)) {
+        else if (/\b(bao\s*lau\s*nhan\s*hang|may\s*ngay|may\s*hom|giao\s*bao\s*lau|khi\s*nao\s*nhan|nhanh\s*khong|giao\s*nhanh|express|dat\s*bay|toc\s*do\s*giao|bao\s*lau\s*toi|bao\s*lau\s*co|khi\s*nao\s*co|khi\s*nao\s*giao|giao\s*hoa\s*toc|ship\s*hoa\s*toc|giao\s*trong\s*ngay)\b/.test(norm)) {
             botText = 'Dạ thời gian giao hàng dự kiến:\n- 🏙️ **Nội thành TP.HCM / Hà Nội**: 1–2 ngày\n- 🌆 **Tỉnh thành lớn khác**: 2–3 ngày\n- 🗺️ **Vùng xa, hải đảo**: 4–7 ngày\n\n⚡ Shop hỗ trợ **giao hàng hoả tốc** (same-day) tại TP.HCM cho đơn đặt trước **12:00 trưa** với phí phụ thêm. Bạn cần giao gấp hãy cho shop biết nhé!';
             isStaticResponse = true;
         }
@@ -250,7 +250,7 @@ async function triggerBotReply(roomId: number, clientId: number, activeProductId
             isStaticResponse = true;
         }
         // ── Nhóm 25: Địa chỉ / Cửa hàng vật lý ────────────────────
-        else if (/\b(cua\s*hang\s*o\s*dau|co\s*showroom\s*khong|co\s*shop\s*offline|den\s*xem\s*truc\s*tiep|thu\s*do\s*truoc|try\s*on)\b/.test(norm)) {
+        else if (/\b(cua\s*hang\s*o\s*dau|co\s*showroom\s*khong|co\s*shop\s*offline|den\s*xem\s*truc\s*tiep|thu\s*do\s*truoc|try\s*on|o\s*dau|cho\s*nao|o\s*khu\s*vuc\s*nao|showroom\s*o\s*dau|tiem\s*o\s*dau|dia\s*chi\s*o\s*dau)\b/.test(norm)) {
             botText = 'Dạ ProSports hiện **tập trung kinh doanh online** để tối ưu chi phí và mang lại giá tốt nhất cho bạn ạ! 💻\n\nTuy nhiên bạn hoàn toàn yên tâm vì:\n- **Ảnh thực tế** 360° từ nhiều góc độ\n- **Chính sách đổi trả miễn phí 7 ngày** nếu không ưng\n- **Tư vấn size chi tiết** qua chat này\n\nBạn cần thêm hình ảnh hay thông tin gì về sản phẩm cụ thể không ạ?';
             isStaticResponse = true;
         }
