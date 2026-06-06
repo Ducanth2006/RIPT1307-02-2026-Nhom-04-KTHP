@@ -445,7 +445,7 @@ export const capNhatTrangThaiDonHang = async (
                 console.error("Lỗi gửi email từ chối hủy đơn cho khách hàng:", err)
             );
 
-            return dinhDangDonHangChoAdmin(donCapNhat);
+            return await chiTietDonHang(orderId);
         }
         throw new Error(
             `Đơn hàng đã ở trạng thái "${status}".`
@@ -773,7 +773,7 @@ export const capNhatTrangThaiDonHang = async (
             console.error("Lỗi khi tạo thông báo trạng thái đơn hàng:", err);
         }
 
-        return donCapNhat;
+        return await chiTietDonHang(orderId);
     } catch (error: any) {
         for (
             let i = daCapNhatKho.length - 1;
