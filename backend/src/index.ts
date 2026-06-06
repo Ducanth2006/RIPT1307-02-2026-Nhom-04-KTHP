@@ -37,7 +37,7 @@ import clientChatRoutes from './routes/clientChatRoutes';
 import clientChatbotRoutes from './routes/clientChatbotRoutes';
 
 const app = express();
-const port = process.env.PORT || 5001;
+const PORT = Number(process.env.PORT) || 5001;
 
 // =============================================================
 // 🌐 CORS - Cho phép Frontend gọi API từ domain khác
@@ -156,6 +156,17 @@ app.use('/api/chat', clientChatRoutes);
 app.use('/api/chatbot', clientChatbotRoutes);
 
 // =============================================================
+// 🏥 HEALTH CHECK & ROOT PATH
+// =============================================================
+app.get('/', (req: Request, res: Response) => {
+    res.status(200).send("SportStride API Server is running");
+});
+
+app.get('/healthz', (req: Request, res: Response) => {
+    res.status(200).send("OK");
+});
+
+// =============================================================
 // ❌ XỬ LÝ LỖI TẬP TRUNG
 // =============================================================
 // Middleware xử lý lỗi 404 (Route không tồn tại)
@@ -172,8 +183,8 @@ app.use((err: any, req: Request, res: Response, next: express.NextFunction) => {
 const server = createServer(app);
 initSocket(server);
 
-server.listen(port, () => {
-    console.log(`✅ Server đang chạy tại: http://localhost:${port}`);
-    console.log(`📚 Swagger Admin:  http://localhost:${port}/api/docs/admin`);
-    console.log(`📚 Swagger Client: http://localhost:${port}/api/docs/client`);
+server.listen(PORT, '0.0.0.0', () => {
+    console.log(`✅ Server đang chạy tại cổng: ${PORT}`);
+    console.log(`📚 Swagger Admin:  http://localhost:${PORT}/api/docs/admin`);
+    console.log(`📚 Swagger Client: http://localhost:${PORT}/api/docs/client`);
 });
