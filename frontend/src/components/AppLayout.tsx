@@ -181,6 +181,42 @@ export default function AppLayout() {
     };
   }, [userId, queryClient]);
 
+  // Real-time: Lắng nghe sự kiện thay đổi vai trò (phân quyền)
+  useEffect(() => {
+    if (!userId) return;
+
+    const handleUserRoleUpdated = (data: { userId: string | number; role: string }) => {
+      console.log("📡 Nhận thông tin phân quyền mới từ Socket:", data);
+      if (Number(data.userId) === Number(userId)) {
+        const currentUserStr = localStorage.getItem("user");
+        if (currentUserStr) {
+          const user = JSON.parse(currentUserStr);
+          // Chỉ cập nhật nếu role thực sự thay đổi
+          if (user.role !== data.role) {
+            user.role = data.role;
+            localStorage.setItem("user", JSON.stringify(user));
+            
+            // Kích hoạt sự kiện để Header và các components khác render lại
+            window.dispatchEvent(new Event("userUpdated"));
+
+            notification.info({
+              message: "👑 Cập nhật quyền truy cập",
+              description: `Tài khoản của bạn đã thay đổi vai trò thành: ${data.role === 'Admin' ? 'Quản trị viên (Admin)' : (data.role === 'Staff' ? 'Nhân viên (Staff)' : 'Khách hàng')}.`,
+              placement: "bottomRight",
+              duration: 6
+            });
+          }
+        }
+      }
+    };
+
+    socket.on('client:userRoleUpdated', handleUserRoleUpdated);
+
+    return () => {
+      socket.off('client:userRoleUpdated', handleUserRoleUpdated);
+    };
+  }, [userId]);
+
   const { data: notificationsRes } = useQuery({
     queryKey: ["notifications", userId],
     queryFn: () => getNotificationsApi(userId!).then((res) => res.data),
