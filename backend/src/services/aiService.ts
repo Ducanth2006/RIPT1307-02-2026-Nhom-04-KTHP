@@ -38,10 +38,12 @@ function rotateApiKey() {
   console.warn(`⚠️ Đạt giới hạn hạn mức (Rate Limit) cho API Key index ${oldIndex}. Đang xoay vòng sang API Key dự phòng index ${currentKeyIndex}.`);
 }
 
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 /**
- * Thực thi lệnh gọi API với cơ chế tự động xoay vòng Key khi gặp lỗi Rate Limit (429 / Resource Exhausted)
+ * Thực thi lệnh gọi API với cơ chế tự động xoay vòng Key khi gặp lỗi Rate Limit (429), Server Busy (503), hoặc Internal Error (500)
  */
-async function executeWithRetry<T>(fn: (ai: GoogleGenAI) => Promise<T>, maxRetries = apiKeysPool.length): Promise<T> {
+async function executeWithRetry<T>(fn: (ai: GoogleGenAI) => Promise<T>, maxRetries = Math.max(3, apiKeysPool.length)): Promise<T> {
   let attempts = 0;
   while (attempts < maxRetries) {
     const { ai } = getAIClient();
@@ -49,22 +51,39 @@ async function executeWithRetry<T>(fn: (ai: GoogleGenAI) => Promise<T>, maxRetri
       return await fn(ai);
     } catch (err: any) {
       const errorMessage = (err?.message || String(err)).toLowerCase();
-      // Nhận diện lỗi Rate limit (429, Resource exhausted, Quota exceeded)
-      const isRateLimit = 
-        errorMessage.includes("429") || 
-        errorMessage.includes("exhausted") || 
-        errorMessage.includes("quota") ||
-        errorMessage.includes("limit");
+      const statusCode = err?.status || err?.statusCode;
 
-      if (isRateLimit && apiKeysPool.length > 1) {
-        rotateApiKey();
+      // Nhận diện lỗi cần xoay vòng key hoặc thử lại:
+      // - 429 (Rate Limit / Quota Exceeded)
+      // - 503 (Unavailable / High Demand)
+      // - 500 (Internal Server Error)
+      const shouldRetry =
+        statusCode === 429 ||
+        statusCode === 503 ||
+        statusCode === 500 ||
+        errorMessage.includes("429") ||
+        errorMessage.includes("exhausted") ||
+        errorMessage.includes("quota") ||
+        errorMessage.includes("limit") ||
+        errorMessage.includes("503") ||
+        errorMessage.includes("unavailable") ||
+        errorMessage.includes("demand");
+
+      if (shouldRetry) {
         attempts++;
-      } else {
-        throw err;
+        if (attempts < maxRetries) {
+          if (apiKeysPool.length > 1) {
+            rotateApiKey();
+          }
+          // Nghỉ 1 giây trước khi thử lại để tránh dồn dập vào máy chủ đang bận
+          await delay(1000);
+          continue;
+        }
       }
+      throw err;
     }
   }
-  throw new Error("Tất cả các API Keys trong danh sách cấu hình đều đã vượt quá giới hạn cuộc gọi.");
+  throw new Error("Tất cả cuộc gọi thử lại hoặc API Keys đều thất bại.");
 }
 
 /**
@@ -303,7 +322,8 @@ async function getRelevantProductsContext(userMessage: string): Promise<string> 
       const stopwords = ['tôi', 'muốn', 'cần', 'cho', 'của', 'có', 'một', 'và', 'với', 'để', 'được', 'bạn', 'này', 'theo', 'cái', 'hãy', 'xem', 'tìm', 'mua', 'gợi', 'ý', 'áo', 'quần', 'giày'];
       const words = removeDiacritics(userMessage.toLowerCase()).split(/\s+/).filter(w => w.length > 1 && !stopwords.includes(w));
       for (const w of words) {
-        const wordRegex = new RegExp(`\\b${w}\\b`, 'i');
+        const escapedW = w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const wordRegex = new RegExp(`\\b${escapedW}\\b`, 'i');
         if (wordRegex.test(normName) || wordRegex.test(categoryName) || wordRegex.test(normDesc)) {
           matchScore += 5;
         }
@@ -480,19 +500,38 @@ Chỉ được chọn mã sản phẩm thực tế có trong danh sách CONTEXT 
       });
     }
 
-    // Thực hiện gọi API sinh nội dung qua cơ chế xoay vòng Key dự phòng
-    const response = await executeWithRetry(async (aiClient) => {
-      return await aiClient.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: contents, // Sử dụng native chat history array thay vì ghép text
-        config: {
-          systemInstruction: systemInstruction,
-          maxOutputTokens: 1200,
-          temperature: 0.7,
-          tools: [{ functionDeclarations: [recommendProductDeclaration] }] as any // Đăng ký tool gửi card sản phẩm
-        }
+    // Thực hiện gọi API sinh nội dung qua cơ chế xoay vòng Key dự phòng và Model Fallback
+    let response;
+    try {
+      response = await executeWithRetry(async (aiClient) => {
+        return await aiClient.models.generateContent({
+          model: "gemini-2.5-flash",
+          contents: contents, // Sử dụng native chat history array thay vì ghép text
+          config: {
+            systemInstruction: systemInstruction,
+            maxOutputTokens: 1200,
+            temperature: 0.7,
+            tools: [{ functionDeclarations: [recommendProductDeclaration] }] as any // Đăng ký tool gửi card sản phẩm
+          }
+        });
       });
-    });
+    } catch (primaryModelError: any) {
+      console.warn("⚠️ Model chính gemini-2.5-flash lỗi, đang chuyển sang model dự phòng gemini-1.5-flash. Chi tiết lỗi:", primaryModelError.message || primaryModelError);
+      
+      // Thử lại với gemini-1.5-flash
+      response = await executeWithRetry(async (aiClient) => {
+        return await aiClient.models.generateContent({
+          model: "gemini-1.5-flash",
+          contents: contents,
+          config: {
+            systemInstruction: systemInstruction,
+            maxOutputTokens: 1200,
+            temperature: 0.7,
+            tools: [{ functionDeclarations: [recommendProductDeclaration] }] as any
+          }
+        });
+      });
+    }
 
     let replyText = response.text || "";
     let recommendedProductId: number | null = null;

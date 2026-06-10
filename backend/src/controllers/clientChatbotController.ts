@@ -430,7 +430,8 @@ async function searchProducts(message: string): Promise<{
         const stopwords = ['tôi', 'muốn', 'cần', 'cho', 'của', 'có', 'một', 'và', 'với', 'để', 'được', 'bạn', 'này', 'theo', 'cái', 'hãy', 'xem', 'tìm', 'mua', 'gợi', 'ý'];
         const words = removeDiacritics(lower).split(/\s+/).filter(w => w.length > 1 && !stopwords.includes(w));
         for (const w of words) {
-            const wordRegex = new RegExp(`\\b${w}\\b`, 'i');
+            const escapedW = w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const wordRegex = new RegExp(`\\b${escapedW}\\b`, 'i');
             if (wordRegex.test(normName) || wordRegex.test(categoryName)) {
                 matchScore += 5;
             }

@@ -1,3 +1,7 @@
+import dns from 'dns';
+// Ép phân giải DNS ưu tiên IPv4 trước để tránh lỗi ENETUNREACH trên Render
+dns.setDefaultResultOrder('ipv4first');
+
 import express from 'express';
 import type { Request, Response } from 'express';
 import cors from 'cors';
