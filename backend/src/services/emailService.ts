@@ -12,12 +12,15 @@ const getTransporter = () => {
     }
 
     return nodemailer.createTransport({
-        service: 'gmail',
+        host: 'smtp.gmail.com',
+        port: 587,
+        secure: false,
         auth: {
             user,
             pass
-        }
-    });
+        },
+        family: 4
+    } as any);
 };
 
 const formatMoney = (amount: number) => {
