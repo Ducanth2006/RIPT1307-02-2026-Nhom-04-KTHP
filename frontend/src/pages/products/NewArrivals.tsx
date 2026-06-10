@@ -68,10 +68,12 @@ const NewArrivals = () => {
       <div style={{ position: "relative", marginBottom: "28px", borderRadius: "16px", overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.08)" }}>
         <Link to="/new-arrivals">
           <img
-            src="/new-arrivals.png"
+            src="/bst2.png"
             alt="Sản phẩm mới"
             style={{
                width: "100%",
+               aspectRatio: "3/1",
+               objectFit: "cover",
                height: "auto",
                display: "block",
                transition: "transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)",
