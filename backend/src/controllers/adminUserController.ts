@@ -7,6 +7,7 @@ import {
     deleteAdminUser
 } from '../services/adminUserService';
 import { blacklistToken } from '../services/authService';
+import { getIO } from '../config/socket';
 
 // 1. Lấy danh sách người dùng
 export const getAllUsers = async (req: Request, res: Response) => {
@@ -78,6 +79,17 @@ export const updateUser = async (req: Request, res: Response): Promise<any> => {
             username,
             password
         });
+
+        // Phát sự kiện real-time thông báo cập nhật quyền / thông tin cho khách hàng
+        try {
+            getIO().to(`user:${userId}`).emit('client:userRoleUpdated', {
+                userId: userId,
+                role: updatedUser.role
+            });
+            console.log(`📡 Đã phát sự kiện client:userRoleUpdated cho User #${userId}, vai trò mới: ${updatedUser.role}`);
+        } catch (socketError) {
+            console.error('❌ Lỗi khi gửi sự kiện socket (userRoleUpdated):', socketError);
+        }
 
         res.status(200).json({
             message: "Cập nhật thông tin tài khoản thành công!",
