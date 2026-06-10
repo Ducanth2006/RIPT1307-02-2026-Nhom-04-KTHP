@@ -64,11 +64,11 @@ function detectIntent(message: string): Intent {
     const noDiac = removeDiacritics(lower);
 
     // 1. Phân biệt rõ "tìm kiếm sản phẩm theo size" với "tính size/tư vấn size"
-    const isSearchRequest = noDiac.includes('chon do') || 
-                            noDiac.includes('mua he') || 
-                            noDiac.includes('mua dong') || 
-                            noDiac.includes('tim') || 
-                            /\b(ao|quan|giay|dep)\b/i.test(noDiac);
+    const isSearchRequest = noDiac.includes('chon do') ||
+        noDiac.includes('mua he') ||
+        noDiac.includes('mua dong') ||
+        noDiac.includes('tim') ||
+        /\b(ao|quan|giay|dep)\b/i.test(noDiac);
 
     if (isSearchRequest) {
         return 'PRODUCT_SEARCH';
@@ -212,7 +212,7 @@ function parseQueryCriteria(message: string) {
 
     // 1. Trích xuất màu sắc (tránh trùng khớp với các từ động từ/danh từ khác như "tìm", "đồ")
     const colors: string[] = [];
-    
+
     // Trắng
     if (/\b(trang|trang)\b/i.test(norm) || /\btrắng\b/i.test(raw)) colors.push('Trắng');
     // Đen
@@ -398,13 +398,13 @@ async function searchProducts(message: string): Promise<{
 
     const typeLabel = type ? (
         type === 'ao' ? 'Áo' :
-        type === 'quan' ? 'Quần' :
-        type === 'giay' ? 'Giày' :
-        type === 'mu' ? 'Mũ/Nón' :
-        type === 'balo' ? 'Balo' :
-        type === 'tui' ? 'Túi' :
-        type === 'tat' ? 'Tất/Vớ' :
-        type === 'binh_nuoc' ? 'Bình nước' : ''
+            type === 'quan' ? 'Quần' :
+                type === 'giay' ? 'Giày' :
+                    type === 'mu' ? 'Mũ/Nón' :
+                        type === 'balo' ? 'Balo' :
+                            type === 'tui' ? 'Túi' :
+                                type === 'tat' ? 'Tất/Vớ' :
+                                    type === 'binh_nuoc' ? 'Bình nước' : ''
     ) : '';
 
     // Nếu không tìm thấy sản phẩm nào khớp tiêu chí tối thiểu
@@ -452,10 +452,29 @@ async function searchProducts(message: string): Promise<{
     }).join('\n');
 
     // 5. Gọi Gemini để chọn lựa chính xác sản phẩm phù hợp
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (apiKey) {
+    const apiKeysPool = (process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY || "")
+        .split(",")
+        .map(k => k.trim())
+        .filter(k => k.length > 0);
+
+    if (apiKeysPool.length > 0) {
         try {
-            const geminiResult = await callGeminiForRecommendation(apiKey, message, compactDBText);
+            let geminiResult: string | null = null;
+            let lastError: any = null;
+
+            for (const key of apiKeysPool) {
+                try {
+                    geminiResult = await callGeminiForRecommendation(key, message, compactDBText);
+                    if (geminiResult) break;
+                } catch (err: any) {
+                    lastError = err;
+                    console.warn(`⚠️ API Key ${key.substring(0, 10)}... bị lỗi: ${err.message || err}. Đang thử Key tiếp theo...`);
+                }
+            }
+
+            if (!geminiResult && lastError) {
+                throw lastError;
+            }
             if (geminiResult) {
                 const idMatch = geminiResult.match(/\[RECOMMENDED_IDS:\s*([\d\s,]+)\]/i);
                 let recommendedIds: number[] = [];
@@ -468,7 +487,7 @@ async function searchProducts(message: string): Promise<{
 
                 // Lấy chi tiết thông tin các sản phẩm được Gemini chọn
                 let recommendedProducts = finalCandidates.filter(p => recommendedIds.includes(p.id));
-                
+
                 // Nếu Gemini không trả về ID hợp lệ, dùng các candidates hàng đầu (tối đa 5 sản phẩm)
                 if (recommendedProducts.length === 0) {
                     recommendedProducts = finalCandidates.slice(0, 5);

@@ -11,6 +11,7 @@ import {
   MinusOutlined,
   PlusOutlined,
   ThunderboltOutlined,
+  MessageOutlined,
 } from "@ant-design/icons";
 import { getProductById } from "../../../services/client/product/apiClient";
 import { addToCartApi } from "../../../services/client/cart/apiClient";
@@ -196,6 +197,28 @@ const ProductDetail = () => {
     });
   };
 
+  const handleChatWithShop = () => {
+    if (!product) return;
+    const token = localStorage.getItem("accessToken");
+    if (!token || !userId) {
+      message.warning("Vui lòng đăng nhập để chat hỗ trợ");
+      navigate("/login");
+      return;
+    }
+    
+    const productInfo = {
+      id: product.id,
+      name: product.name,
+      brand: product.brand,
+      base_price: selectedVariant?.price || product.base_price,
+      image_url: mainImage
+    };
+    sessionStorage.setItem("pending_chat_product", JSON.stringify(productInfo));
+    
+    const event = new CustomEvent("open_chat_widget");
+    window.dispatchEvent(event);
+  };
+
   if (loading)
     return (
       <div className="product-loading">
@@ -241,6 +264,7 @@ const ProductDetail = () => {
                 isAdding={addToCartMutation.isPending}
                 onBuyNow={handleBuyNow}
                 isBuyingNow={buyNowMutation.isPending}
+                onChatWithShop={handleChatWithShop}
                 selectedColor={selectedColor}
                 setSelectedColor={setSelectedColor}
                 selectedSize={selectedSize}
@@ -310,6 +334,7 @@ interface ProductInfoProps {
   isAdding: boolean;
   onBuyNow: () => void;
   isBuyingNow: boolean;
+  onChatWithShop: () => void;
   selectedColor: string | null;
   setSelectedColor: (color: string | null) => void;
   selectedSize: string | null;
@@ -330,6 +355,7 @@ const ProductInfo = ({
   isAdding,
   onBuyNow,
   isBuyingNow,
+  onChatWithShop,
   selectedColor,
   setSelectedColor,
   selectedSize,
@@ -483,7 +509,7 @@ const ProductInfo = ({
           </div>
         </div>
         <div className="action-group">
-          <div className="action-main-btns">
+          <div className="action-main-btns" style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             <Button
               type="default"
               size="large"
@@ -503,6 +529,20 @@ const ProductInfo = ({
               onClick={onBuyNow}
             >
               Mua ngay
+            </Button>
+            <Button
+              type="default"
+              size="large"
+              icon={<MessageOutlined />}
+              onClick={onChatWithShop}
+              style={{
+                borderColor: "#af101a",
+                color: "#af101a",
+                fontWeight: 600,
+                height: "40px"
+              }}
+            >
+              Chat với Shop
             </Button>
           </div>
         </div>

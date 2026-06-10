@@ -19,6 +19,7 @@ import adminUserRoutes from './routes/adminUserRoutes';
 import adminComplaintRoutes from './routes/adminComplaintRoutes';
 import adminSettingRoutes from './routes/adminSettingRoutes';
 import adminReportRoutes from './routes/adminReportRoutes';
+import adminChatRoutes from './routes/adminChatRoutes';
 
 // ── Client Routes (Khách mua hàng) ────────────────────────────
 import clientProductRoutes from './routes/clientProductRoutes';
@@ -32,21 +33,34 @@ import clientNotificationRoutes from './routes/clientNotificationRoutes';
 import clientAuthRoutes from './routes/clientAuthRoutes';
 import clientVoucherRoutes from './routes/clientVoucherRoutes';
 import clientOrderRoutes from './routes/clientOrderRoutes';
+import clientChatRoutes from './routes/clientChatRoutes';
 import clientChatbotRoutes from './routes/clientChatbotRoutes';
 
 const app = express();
-const port = process.env.PORT || 5001;
+const PORT = Number(process.env.PORT) || 5001;
 
 // =============================================================
 // 🌐 CORS - Cho phép Frontend gọi API từ domain khác
 // =============================================================
+const allowedOrigins = [
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://localhost:3000',
+    'https://clothingstore-backend-oa20.onrender.com',
+    'https://ript-1307-02-2026-nhom-04-kthp-fron.vercel.app'
+];
+
 app.use(cors({
-    origin: [
-        'http://localhost:5173',  // Vite dev server (Frontend)
-        'http://localhost:5174',  // Vite fallback port
-        'http://localhost:3000',  // Fallback nếu dùng CRA
-        'https://clothingstore-backend-oa20.onrender.com'// deploy render
-    ],
+    origin: (origin, callback) => {
+        if (!origin) return callback(null, true);
+        const isAllowed = allowedOrigins.includes(origin) || 
+                          origin.endsWith('.vercel.app');
+        if (isAllowed) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true
@@ -132,6 +146,7 @@ app.use('/api/admin/users', adminUserRoutes);
 app.use('/api/admin/complaints', adminComplaintRoutes);
 app.use('/api/admin/settings', adminSettingRoutes);
 app.use('/api/admin/reports', adminReportRoutes);
+app.use('/api/admin/chat', adminChatRoutes);
 
 // =============================================================
 // 🛍️ CLIENT APIs - Dành cho giao diện Khách mua hàng
@@ -149,7 +164,19 @@ app.use('/api/complaints', clientComplaintRoutes);
 app.use('/api/notifications', clientNotificationRoutes);
 app.use('/api/auth', clientAuthRoutes);
 app.use('/api/vouchers', clientVoucherRoutes);
+app.use('/api/chat', clientChatRoutes);
 app.use('/api/chatbot', clientChatbotRoutes);
+
+// =============================================================
+// 🏥 HEALTH CHECK & ROOT PATH
+// =============================================================
+app.get('/', (req: Request, res: Response) => {
+    res.status(200).send("SportStride API Server is running");
+});
+
+app.get('/healthz', (req: Request, res: Response) => {
+    res.status(200).send("OK");
+});
 
 // =============================================================
 // ❌ XỬ LÝ LỖI TẬP TRUNG
@@ -168,8 +195,8 @@ app.use((err: any, req: Request, res: Response, next: express.NextFunction) => {
 const server = createServer(app);
 initSocket(server);
 
-server.listen(port, () => {
-    console.log(`✅ Server đang chạy tại: http://localhost:${port}`);
-    console.log(`📚 Swagger Admin:  http://localhost:${port}/api/docs/admin`);
-    console.log(`📚 Swagger Client: http://localhost:${port}/api/docs/client`);
+server.listen(PORT, '0.0.0.0', () => {
+    console.log(`✅ Server đang chạy tại cổng: ${PORT}`);
+    console.log(`📚 Swagger Admin:  http://localhost:${PORT}/api/docs/admin`);
+    console.log(`📚 Swagger Client: http://localhost:${PORT}/api/docs/client`);
 });

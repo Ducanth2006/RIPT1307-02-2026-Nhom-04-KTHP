@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken";
 
 const JWT_SECRET = process.env.JWT_SECRET || "prosports_secret_key";
 
-// ── REGISTER ──────────────────────────────────────────────────────────────────
+// ── REGISTER 
 export const registerUser = async (payload: { email: string; password: string; full_name?: string }) => {
   const { email, password, full_name } = payload;
 
@@ -43,7 +43,7 @@ export const registerUser = async (payload: { email: string; password: string; f
   return { user: newUser, token };
 };
 
-// ── LOGIN ─────────────────────────────────────────────────────────────────────
+// ── LOGIN
 export const loginUser = async (payload: { email: string; password: string }) => {
   const { email, password } = payload;
 
@@ -81,7 +81,7 @@ export const loginUser = async (payload: { email: string; password: string }) =>
   return { user: safeUser, token };
 };
 
-// ── BLACKLIST TOKEN STORE (In-memory) ────────────────────────────────────────
+// ── BLACKLIST TOKEN STORE (In-memory)
 const tokenBlacklist = new Set<string>();
 
 export const blacklistToken = (token: string): void => {
@@ -92,14 +92,14 @@ export const isTokenBlacklisted = (token: string): boolean => {
   return tokenBlacklist.has(token);
 };
 
-// ── LOGOUT ────────────────────────────────────────────────────────────────────
+// ── LOGOUT
 export const logoutUser = async (token: string) => {
   if (!token) throw new Error("Không tìm thấy token.");
   blacklistToken(token);
   return true;
 };
 
-// ── GOOGLE LOGIN ──────────────────────────────────────────────────────────────
+// ── GOOGLE LOGIN
 export const loginGoogleUser = async (token: string) => {
   if (!token) throw new Error("Vui lòng cung cấp token Google.");
 
@@ -143,7 +143,7 @@ export const loginGoogleUser = async (token: string) => {
   return { user, token: appToken };
 };
 
-// ── FACEBOOK LOGIN ─────────────────────────────────────────────────────────────
+// ── FACEBOOK LOGIN 
 export const loginFacebookUser = async (token: string) => {
   if (!token) throw new Error("Vui lòng cung cấp token Facebook.");
 
@@ -152,7 +152,7 @@ export const loginFacebookUser = async (token: string) => {
 
   const fbData = await response.json() as any;
   const { email, name, picture } = fbData;
-  
+
   // Facebook đôi khi không trả về email nếu tài khoản đăng ký bằng số điện thoại hoặc không public email.
   // Trong trường hợp đó, dùng id@facebook.com để đảm bảo email là duy nhất và không bị NULL.
   const userEmail = email || `${fbData.id}@facebook.com`;
