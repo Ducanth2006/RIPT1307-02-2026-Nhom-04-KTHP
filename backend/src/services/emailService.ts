@@ -1,5 +1,13 @@
 import supabaseClient from '../config/supabase';
 
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://ript-1307-02-2026-nhom-04-kthp-fron.vercel.app';
+
+const getProxyImageUrl = (url: string) => {
+    if (!url) return 'https://roijqlkzkwezvkfckunm.supabase.co/storage/v1/object/public/products/default.png';
+    // Sử dụng proxy images.weserv.nl để resize và ép kiểu về JPG (tương thích 100% với Gmail)
+    return `https://images.weserv.nl/?url=${encodeURIComponent(url)}&w=150&output=jpg`;
+};
+
 // Brevo (Sendinblue) HTTP API - gửi email qua port 443 (không bị Render Free chặn)
 // Chỉ cần xác minh Gmail, KHÔNG cần sở hữu domain riêng
 const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
@@ -150,7 +158,8 @@ export const sendOrderStatusEmailToClient = async (orderId: number, status: stri
             const variant = item.product_variants;
             const product = variant?.products;
             const images = product?.product_images || [];
-            const mainImage = images.find((img: any) => img.is_main)?.image_url || images[0]?.image_url || 'https://roijqlkzkwezvkfckunm.supabase.co/storage/v1/object/public/products/default.png';
+            const rawImage = images.find((img: any) => img.is_main)?.image_url || images[0]?.image_url || 'https://roijqlkzkwezvkfckunm.supabase.co/storage/v1/object/public/products/default.png';
+            const mainImage = getProxyImageUrl(rawImage);
 
             itemsHtml += `
                 <tr style="border-bottom: 1px solid #eee;">
@@ -209,7 +218,7 @@ export const sendOrderStatusEmailToClient = async (orderId: number, status: stri
 
                     <!-- Button CTA -->
                     <div style="text-align: center; margin-top: 35px; margin-bottom: 10px;">
-                        <a href="http://localhost:5173/orders?openOrderId=${order.id}" 
+                        <a href="${FRONTEND_URL}/orders?openOrderId=${order.id}" 
                            style="background-color: #af101a; color: #ffffff; text-decoration: none; padding: 12px 30px; font-weight: bold; border-radius: 6px; display: inline-block; font-size: 15px; box-shadow: 0 4px 6px rgba(175, 16, 26, 0.2);">
                            Xem chi tiết đơn hàng
                         </a>
@@ -279,9 +288,10 @@ export const sendNewOrderEmailToAdmins = async (orderId: number) => {
             .eq('id', order.user_id)
             .single();
 
-        const customerName = order.shipping_address?.nguoiNhan || user?.full_name || 'Khách hàng';
+        const customerName = order.shipping_address?.nguoiNhan || order.shipping_address?.fullName || user?.full_name || 'Khách hàng';
         const customerEmail = user?.email || 'Chưa cung cấp';
-        const customerPhone = order.shipping_address?.soDienThoai || 'Chưa cung cấp';
+        const customerPhone = order.shipping_address?.soDienThoai || order.shipping_address?.phone || 'Chưa cung cấp';
+        const customerAddress = order.shipping_address?.diaChiChiTiet || order.shipping_address?.address || (typeof order.shipping_address === 'string' ? order.shipping_address : '---');
 
         // Lấy danh sách admin
         const adminEmails = await getAdminEmails();
@@ -298,7 +308,8 @@ export const sendNewOrderEmailToAdmins = async (orderId: number) => {
             const variant = item.product_variants;
             const product = variant?.products;
             const images = product?.product_images || [];
-            const mainImage = images.find((img: any) => img.is_main)?.image_url || images[0]?.image_url || 'https://roijqlkzkwezvkfckunm.supabase.co/storage/v1/object/public/products/default.png';
+            const rawImage = images.find((img: any) => img.is_main)?.image_url || images[0]?.image_url || 'https://roijqlkzkwezvkfckunm.supabase.co/storage/v1/object/public/products/default.png';
+            const mainImage = getProxyImageUrl(rawImage);
 
             itemsHtml += `
                 <tr style="border-bottom: 1px solid #eee;">
@@ -346,7 +357,7 @@ export const sendNewOrderEmailToAdmins = async (orderId: number) => {
                         </tr>
                         <tr>
                             <td style="padding: 4px 0; vertical-align: top;"><strong>Địa chỉ giao:</strong></td>
-                            <td>${order.shipping_address?.diaChiChiTiet || order.shipping_address || '---'}</td>
+                            <td>${customerAddress}</td>
                         </tr>
                     </table>
 
@@ -372,7 +383,7 @@ export const sendNewOrderEmailToAdmins = async (orderId: number) => {
 
                     <!-- Button CTA -->
                     <div style="text-align: center; margin-top: 35px; margin-bottom: 10px;">
-                        <a href="http://localhost:5173/admin/orders?openOrderId=${order.id}" 
+                        <a href="${FRONTEND_URL}/admin/orders?openOrderId=${order.id}" 
                            style="background-color: #191c1e; color: #ffffff; text-decoration: none; padding: 12px 30px; font-weight: bold; border-radius: 6px; display: inline-block; font-size: 14px; border: 1px solid #af101a;">
                            Duyệt đơn hàng ngay
                         </a>
@@ -434,7 +445,7 @@ export const sendNewComplaintEmailToAdmins = async (complaintId: number) => {
                     .single();
                 if (order && order.shipping_address) {
                     const addr = typeof order.shipping_address === 'string' ? JSON.parse(order.shipping_address) : order.shipping_address;
-                    customerPhone = addr.soDienThoai || '---';
+                    customerPhone = addr.soDienThoai || addr.phone || '---';
                 }
             } catch (e) {
                 console.error("Lỗi lấy SĐT cho khiếu nại:", e);
@@ -486,7 +497,7 @@ export const sendNewComplaintEmailToAdmins = async (complaintId: number) => {
 
                     <!-- Button CTA -->
                     <div style="text-align: center; margin-top: 30px; margin-bottom: 10px;">
-                        <a href="http://localhost:5173/admin/complaints" 
+                        <a href="${FRONTEND_URL}/admin/complaints" 
                            style="background-color: #191c1e; color: #ffffff; text-decoration: none; padding: 12px 30px; font-weight: bold; border-radius: 6px; display: inline-block; font-size: 14px; border: 1px solid #d32f2f;">
                            Đến trang xử lý khiếu nại
                         </a>
@@ -572,7 +583,7 @@ export const sendComplaintReplyEmailToClient = async (complaintId: number) => {
 
                     <!-- Button CTA -->
                     <div style="text-align: center; margin-top: 35px; margin-bottom: 10px;">
-                        <a href="http://localhost:5173/profile?tab=complaints" 
+                        <a href="${FRONTEND_URL}/profile?tab=complaints" 
                            style="background-color: #af101a; color: #ffffff; text-decoration: none; padding: 12px 30px; font-weight: bold; border-radius: 6px; display: inline-block; font-size: 15px; box-shadow: 0 4px 6px rgba(175, 16, 26, 0.2);">
                            Xem phản hồi trên trang cá nhân
                         </a>
@@ -673,7 +684,8 @@ export const sendCancelRequestEmailToAdmins = async (orderId: number, cancelReas
             const variant = item.product_variants;
             const product = variant?.products;
             const images = product?.product_images || [];
-            const mainImage = images.find((img: any) => img.is_main)?.image_url || images[0]?.image_url || 'https://roijqlkzkwezvkfckunm.supabase.co/storage/v1/object/public/products/default.png';
+            const rawImage = images.find((img: any) => img.is_main)?.image_url || images[0]?.image_url || 'https://roijqlkzkwezvkfckunm.supabase.co/storage/v1/object/public/products/default.png';
+            const mainImage = getProxyImageUrl(rawImage);
 
             itemsHtml += `
                 <tr style="border-bottom: 1px solid #eee;">
@@ -720,7 +732,7 @@ export const sendCancelRequestEmailToAdmins = async (orderId: number, cancelReas
                         </tr>
                         <tr>
                             <td style="padding: 4px 0;"><strong>Số điện thoại:</strong></td>
-                            <td>${order.shipping_address?.soDienThoai || '---'}</td>
+                            <td>${order.shipping_address?.soDienThoai || order.shipping_address?.phone || '---'}</td>
                         </tr>
                         <tr>
                             <td style="padding: 4px 0; vertical-align: top;"><strong>Lý do hủy:</strong></td>
@@ -750,7 +762,7 @@ export const sendCancelRequestEmailToAdmins = async (orderId: number, cancelReas
 
                     <!-- Button CTA -->
                     <div style="text-align: center; margin-top: 30px; margin-bottom: 10px;">
-                        <a href="http://localhost:5173/admin/orders" 
+                        <a href="${FRONTEND_URL}/admin/orders" 
                            style="background-color: #191c1e; color: #ffffff; text-decoration: none; padding: 12px 30px; font-weight: bold; border-radius: 6px; display: inline-block; font-size: 14px; border: 1px solid #d32f2f;">
                            Đến trang quản lý đơn hàng
                         </a>
@@ -836,7 +848,8 @@ export const sendCancelRejectionEmailToClient = async (orderId: number) => {
             const variant = item.product_variants;
             const product = variant?.products;
             const images = product?.product_images || [];
-            const mainImage = images.find((img: any) => img.is_main)?.image_url || images[0]?.image_url || 'https://roijqlkzkwezvkfckunm.supabase.co/storage/v1/object/public/products/default.png';
+            const rawImage = images.find((img: any) => img.is_main)?.image_url || images[0]?.image_url || 'https://roijqlkzkwezvkfckunm.supabase.co/storage/v1/object/public/products/default.png';
+            const mainImage = getProxyImageUrl(rawImage);
 
             itemsHtml += `
                 <tr style="border-bottom: 1px solid #eee;">
@@ -892,7 +905,7 @@ export const sendCancelRejectionEmailToClient = async (orderId: number) => {
 
                     <!-- Button CTA -->
                     <div style="text-align: center; margin-top: 30px; margin-bottom: 10px;">
-                        <a href="http://localhost:5173/account/orders/${order.id}" 
+                        <a href="${FRONTEND_URL}/account/orders/${order.id}" 
                            style="background-color: #191c1e; color: #ffffff; text-decoration: none; padding: 12px 30px; font-weight: bold; border-radius: 6px; display: inline-block; font-size: 14px;">
                            Xem chi tiết đơn hàng
                         </a>
