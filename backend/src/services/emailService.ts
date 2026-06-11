@@ -1,26 +1,16 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import supabaseClient from '../config/supabase';
 
-// Lấy Transporter
-const getTransporter = () => {
-    const user = process.env.EMAIL_USER;
-    const pass = process.env.EMAIL_PASS;
+// Khởi tạo Resend client (gửi email qua HTTP API - port 443, không bị Render Free chặn như SMTP port 587)
+const getResendClient = () => {
+    const apiKey = process.env.RESEND_API_KEY;
 
-    if (!user || !pass) {
-        console.warn('⚠️ EMAIL NOTIFICATION: EMAIL_USER hoặc EMAIL_PASS chưa cấu hình trong .env. Log nội dung email ra Console.');
+    if (!apiKey) {
+        console.warn('⚠️ EMAIL NOTIFICATION: RESEND_API_KEY chưa cấu hình trong .env. Log nội dung email ra Console.');
         return null;
     }
 
-    return nodemailer.createTransport({
-        host: 'smtp.gmail.com',
-        port: 587,
-        secure: false,
-        auth: {
-            user,
-            pass
-        },
-        family: 4
-    } as any);
+    return new Resend(apiKey);
 };
 
 const formatMoney = (amount: number) => {
@@ -90,7 +80,7 @@ export const sendOrderStatusEmailToClient = async (orderId: number, status: stri
             return;
         }
 
-        const transporter = getTransporter();
+        const resend = getResendClient();
 
         // Trạng thái tiếng Việt và lời nhắn tương ứng
         let statusTitle = '';
@@ -208,14 +198,14 @@ export const sendOrderStatusEmailToClient = async (orderId: number, status: stri
             </div>
         `;
 
-        if (transporter) {
-            await transporter.sendMail({
-                from: `"SportStride" <${process.env.EMAIL_USER}>`,
-                to: user.email,
+        if (resend) {
+            await resend.emails.send({
+                from: process.env.RESEND_FROM_EMAIL || 'SportStride <onboarding@resend.dev>',
+                to: [user.email],
                 subject: `[SportStride] Cập nhật đơn hàng #${order.id} - ${statusTitle}`,
                 html: emailHtml
             });
-            console.log(`✉️ Đã gửi Gmail thông báo trạng thái "${statusTitle}" cho khách hàng ${user.email}`);
+            console.log(`✉️ Đã gửi Email thông báo trạng thái "${statusTitle}" cho khách hàng ${user.email}`);
         } else {
             console.log(`[EMAIL LOG - MOCK] Gửi tới: ${user.email} | Tiêu đề: [SportStride] Cập nhật đơn hàng #${order.id} - ${statusTitle}`);
         }
@@ -275,7 +265,7 @@ export const sendNewOrderEmailToAdmins = async (orderId: number) => {
             return;
         }
 
-        const transporter = getTransporter();
+        const resend = getResendClient();
 
         // Xây dựng danh sách sản phẩm trong HTML
         let itemsHtml = '';
@@ -372,14 +362,14 @@ export const sendNewOrderEmailToAdmins = async (orderId: number) => {
             </div>
         `;
 
-        if (transporter) {
-            await transporter.sendMail({
-                from: `"SportStride System" <${process.env.EMAIL_USER}>`,
-                to: adminEmails.join(','),
+        if (resend) {
+            await resend.emails.send({
+                from: process.env.RESEND_FROM_EMAIL || 'SportStride <onboarding@resend.dev>',
+                to: adminEmails,
                 subject: `[SportStride ERP] Đơn hàng mới #${order.id} chờ duyệt`,
                 html: emailHtml
             });
-            console.log(`✉️ Đã gửi Gmail báo đơn hàng mới #${order.id} tới: ${adminEmails.join(', ')}`);
+            console.log(`✉️ Đã gửi Email báo đơn hàng mới #${order.id} tới: ${adminEmails.join(', ')}`);
         } else {
             console.log(`[EMAIL LOG - MOCK] Gửi tới Admins: ${adminEmails.join(', ')} | Tiêu đề: [SportStride ERP] Đơn hàng mới #${order.id} chờ duyệt`);
         }
@@ -431,7 +421,7 @@ export const sendNewComplaintEmailToAdmins = async (complaintId: number) => {
         const adminEmails = await getAdminEmails();
         if (adminEmails.length === 0) return;
 
-        const transporter = getTransporter();
+        const resend = getResendClient();
 
         const emailHtml = `
             <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
@@ -487,14 +477,14 @@ export const sendNewComplaintEmailToAdmins = async (complaintId: number) => {
             </div>
         `;
 
-        if (transporter) {
-            await transporter.sendMail({
-                from: `"SportStride System" <${process.env.EMAIL_USER}>`,
-                to: adminEmails.join(','),
+        if (resend) {
+            await resend.emails.send({
+                from: process.env.RESEND_FROM_EMAIL || 'SportStride <onboarding@resend.dev>',
+                to: adminEmails,
                 subject: `[SportStride ERP] Có khiếu nại mới từ khách hàng: ${complaint.subject}`,
                 html: emailHtml
             });
-            console.log(`✉️ Đã gửi Gmail báo khiếu nại mới #${complaintId} tới: ${adminEmails.join(', ')}`);
+            console.log(`✉️ Đã gửi Email báo khiếu nại mới #${complaintId} tới: ${adminEmails.join(', ')}`);
         } else {
             console.log(`[EMAIL LOG - MOCK] Gửi tới Admins: ${adminEmails.join(', ')} | Tiêu đề: [SportStride ERP] Có khiếu nại mới: ${complaint.subject}`);
         }
@@ -532,7 +522,7 @@ export const sendComplaintReplyEmailToClient = async (complaintId: number) => {
             return;
         }
 
-        const transporter = getTransporter();
+        const resend = getResendClient();
 
         const emailHtml = `
             <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
@@ -575,14 +565,14 @@ export const sendComplaintReplyEmailToClient = async (complaintId: number) => {
             </div>
         `;
 
-        if (transporter) {
-            await transporter.sendMail({
-                from: `"SportStride Support" <${process.env.EMAIL_USER}>`,
-                to: user.email,
+        if (resend) {
+            await resend.emails.send({
+                from: process.env.RESEND_FROM_EMAIL || 'SportStride <onboarding@resend.dev>',
+                to: [user.email],
                 subject: `[SportStride] Phản hồi về khiếu nại #${complaint.id} - ${complaint.subject || ''}`,
                 html: emailHtml
             });
-            console.log(`✉️ Đã gửi Gmail phản hồi khiếu nại #${complaint.id} cho khách hàng ${user.email}`);
+            console.log(`✉️ Đã gửi Email phản hồi khiếu nại #${complaint.id} cho khách hàng ${user.email}`);
         } else {
             console.log(`[EMAIL LOG - MOCK] Gửi tới: ${user.email} | Tiêu đề: [SportStride] Phản hồi khiếu nại #${complaint.id}`);
         }
@@ -653,7 +643,7 @@ export const sendCancelRequestEmailToAdmins = async (orderId: number, cancelReas
         const adminEmails = staffList.map(u => u.email).filter(Boolean) as string[];
         if (adminEmails.length === 0) return;
 
-        const transporter = getTransporter();
+        const resend = getResendClient();
 
         // Xây dựng danh sách sản phẩm trong HTML
         let itemsHtml = '';
@@ -753,14 +743,14 @@ export const sendCancelRequestEmailToAdmins = async (orderId: number, cancelReas
             </div>
         `;
 
-        if (transporter) {
-            await transporter.sendMail({
-                from: `"SportStride System" <${process.env.EMAIL_USER}>`,
-                to: adminEmails.join(','),
+        if (resend) {
+            await resend.emails.send({
+                from: process.env.RESEND_FROM_EMAIL || 'SportStride <onboarding@resend.dev>',
+                to: adminEmails,
                 subject: `[SportStride ERP] Yêu cầu hủy đơn hàng mới: #${order.id}`,
                 html: emailHtml
             });
-            console.log(`✉️ Đã gửi Gmail báo yêu cầu hủy đơn hàng #${orderId} tới: ${adminEmails.join(', ')}`);
+            console.log(`✉️ Đã gửi Email báo yêu cầu hủy đơn hàng #${orderId} tới: ${adminEmails.join(', ')}`);
         } else {
             console.log(`[EMAIL LOG - MOCK] Gửi tới Admins: ${adminEmails.join(', ')} | Tiêu đề: [SportStride ERP] Yêu cầu hủy đơn hàng #${orderId}`);
         }
@@ -817,7 +807,7 @@ export const sendCancelRejectionEmailToClient = async (orderId: number) => {
             return;
         }
 
-        const transporter = getTransporter();
+        const resend = getResendClient();
 
         // Xây dựng danh sách sản phẩm trong HTML
         let itemsHtml = '';
@@ -896,14 +886,14 @@ export const sendCancelRejectionEmailToClient = async (orderId: number) => {
             </div>
         `;
 
-        if (transporter) {
-            await transporter.sendMail({
-                from: `"SportStride Support" <${process.env.EMAIL_USER}>`,
-                to: user.email,
+        if (resend) {
+            await resend.emails.send({
+                from: process.env.RESEND_FROM_EMAIL || 'SportStride <onboarding@resend.dev>',
+                to: [user.email],
                 subject: `[SportStride] Yêu cầu hủy đơn hàng #${order.id} đã bị từ chối`,
                 html: emailHtml
             });
-            console.log(`✉️ Đã gửi Gmail từ chối hủy đơn hàng #${orderId} cho khách hàng ${user.email}`);
+            console.log(`✉️ Đã gửi Email từ chối hủy đơn hàng #${orderId} cho khách hàng ${user.email}`);
         } else {
             console.log(`[EMAIL LOG - MOCK] Gửi tới: ${user.email} | Tiêu đề: [SportStride] Từ chối hủy đơn hàng #${order.id}`);
         }
